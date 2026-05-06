@@ -43,6 +43,8 @@ db.connect((err) => {
                 dni VARCHAR(20),
                 sueldo_base DECIMAL(10, 2),
                 tipo_pension VARCHAR(50)
+                adelantos DECIMAL(10, 2) DEFAULT 0.00,
+                faltas DECIMAL(10, 2) DEFAULT 0.00,
             );`;
 
             db.query(createTableQuery, (err) => {

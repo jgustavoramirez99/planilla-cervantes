@@ -102,8 +102,10 @@
                             <tr>
                                 <th>Docente / DNI</th>
                                 <th>Sueldo Base</th>
-                                <th>Desc. Ley (13%)</th>
-                                <th>Desc. Pensión / Tardanzas</th>
+                                <th>Desc. Ley AFP (13%)</th>
+                                <th>Adelantos</th>
+                                <th>Faltas</th>
+                                <th>Desc. Pensión x Hijos / Tardanzas</th>
                                 <th>Sueldo Neto</th>
                                 <th>Acciones</th>
                             </tr>
@@ -163,13 +165,12 @@
     let docentesData = [];
     let userRole = '';
 
-    // Manejo del Login (Simulado para la demo)
+    // Manejo del Login
     document.getElementById('form-login').addEventListener('submit', function(e) {
         e.preventDefault();
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
 
-        // Lógica de acceso
         if(u === 'admin_cervantes' && p === 'cervantes2026') {
             iniciarSistema('MASTER');
         } else if(u === 'usuario_gustavo' && p === 'gustavo123') {
@@ -184,7 +185,6 @@
         document.getElementById('seccion-login').style.display = 'none';
         document.getElementById('seccion-principal').style.display = 'block';
         document.getElementById('badge-rol').innerText = `ROL: ${rol}`;
-        
         cargarDatosServidor();
     }
 
@@ -193,27 +193,34 @@
     }
 
     function cargarDatosServidor() {
-    // CAMBIA ESTA LÍNEA:
-    fetch('https://planilla-cervantes.onrender.com/api/docentes') 
-        .then(response => response.json())
-        .then(data => {
-            docentesData = data;
-            renderizarTabla();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('tabla-cuerpo').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al conectar con el servidor</td></tr>';
-        });
+        fetch('https://planilla-cervantes.onrender.com/api/docentes') 
+            .then(response => response.json())
+            .then(data => {
+                docentesData = data;
+                renderizarTabla();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('tabla-cuerpo').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error al conectar con el servidor</td></tr>';
+            });
     }
+
     function renderizarTabla() {
         const cuerpoTabla = document.getElementById('tabla-cuerpo');
         cuerpoTabla.innerHTML = '';
         const esAuxiliar = (userRole === 'AUXILIAR');
 
         docentesData.forEach(docente => {
-            const sueldoBase = parseFloat(docente.sueldo_base);
+            // --- LÓGICA DE CÁLCULO ACTUALIZADA ---
+            const sueldoBase = parseFloat(docente.sueldo_base) || 0;
             const descLey = sueldoBase * 0.13;
-            const sueldoInicialNeto = sueldoBase - descLey;
+            
+            // Capturamos los nuevos datos que vienen del servidor (Aiven)
+            const adelantos = parseFloat(docente.adelantos) || 0;
+            const faltas = parseFloat(docente.faltas) || 0;
+
+            // Calculamos el Neto restando TODO
+            const sueldoNetoFinal = sueldoBase - descLey - adelantos - faltas;
 
             cuerpoTabla.innerHTML += `
                 <tr class="fila-docente">
@@ -223,6 +230,11 @@
                     </td>
                     <td class="fw-bold text-dark">S/ ${sueldoBase.toFixed(2)}</td>
                     <td class="text-danger">- S/ ${descLey.toFixed(2)}</td>
+                    
+                    <!-- NUEVAS COLUMNAS VISIBLES -->
+                    <td class="text-warning fw-bold">- S/ ${adelantos.toFixed(2)}</td>
+                    <td class="text-danger fw-bold">- S/ ${faltas.toFixed(2)}</td>
+
                     <td>
                         <div class="d-flex flex-column gap-1">
                             <div class="input-group input-group-sm">
@@ -240,12 +252,13 @@
                         </div>
                     </td>
                     <td class="fw-bold text-success h5">
-                        S/ <span class="neto-individual" id="neto-${docente.dni}" data-base="${sueldoInicialNeto}">
-                            ${sueldoInicialNeto.toFixed(2)}
+                        S/ <span class="neto-individual" id="neto-${docente.dni}" 
+                                 data-base="${sueldoNetoFinal}">
+                            ${sueldoNetoFinal.toFixed(2)}
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-pdf shadow-sm" onclick="generarBoletaPDF('${docente.dni}', '${docente.nombre}', ${sueldoBase})">
+                        <button class="btn btn-sm btn-pdf shadow-sm" onclick="generarBoletaPDF('${docente.dni}', '${docente.nombre}', ${sueldoBase}, ${adelantos}, ${faltas})">
                             <i class="fa-solid fa-file-pdf"></i> Boleta
                         </button>
                     </td>
@@ -255,17 +268,17 @@
         actualizarEstadisticas();
     }
 
-    // Recálculo en Vivo
+    // Recálculo en Vivo (Considerando adelantos y faltas base)
     document.addEventListener('input', function(e) {
         if (e.target.classList.contains('input-calculo')) {
             const dni = e.target.dataset.dni;
             const spanNeto = document.getElementById(`neto-${dni}`);
-            const sueldoInicialNeto = parseFloat(spanNeto.dataset.base);
+            const baseConDescuentosFijos = parseFloat(spanNeto.dataset.base);
             
             const descPension = parseFloat(document.getElementById(`pension-${dni}`).value) || 0;
             const descTardanza = parseFloat(document.getElementById(`tardanza-${dni}`).value) || 0;
             
-            const nuevoNeto = sueldoInicialNeto - descPension - descTardanza;
+            const nuevoNeto = baseConDescuentosFijos - descPension - descTardanza;
             spanNeto.innerText = nuevoNeto.toFixed(2);
             
             actualizarEstadisticas();
@@ -280,22 +293,24 @@
         document.getElementById('stat-planilla-total').innerText = `S/ ${sumaTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
     }
 
-    // PDF con Plantilla Dinámica
-    async function generarBoletaPDF(dni, nombre, sueldoBase) {
+    // PDF con Boleta Completa
+    async function generarBoletaPDF(dni, nombre, sueldoBase, adelantos, faltas) {
         const { jsPDF } = window.jspdf;
         const descPension = parseFloat(document.getElementById(`pension-${dni}`).value) || 0;
         const descTardanza = parseFloat(document.getElementById(`tardanza-${dni}`).value) || 0;
         const descLey = sueldoBase * 0.13;
-        const neto = sueldoBase - descLey - descPension - descTardanza;
+        
+        const neto = sueldoBase - descLey - adelantos - faltas - descPension - descTardanza;
 
         document.getElementById('pdf-nombre').innerText = nombre;
         document.getElementById('pdf-dni').innerText = dni;
         document.getElementById('pdf-neto').innerText = `S/ ${neto.toFixed(2)}`;
 
-        // Llenado de tabla interna del PDF
         document.getElementById('pdf-tabla-cuerpo').innerHTML = `
             <tr><td style="border:1px solid #ddd;padding:10px;">Sueldo Básico</td><td style="text-align:right;padding:10px;">S/ ${sueldoBase.toFixed(2)}</td><td>-</td></tr>
             <tr><td style="border:1px solid #ddd;padding:10px;">Aporte Ley (13%)</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${descLey.toFixed(2)}</td></tr>
+            <tr><td style="border:1px solid #ddd;padding:10px;">Adelantos</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${adelantos.toFixed(2)}</td></tr>
+            <tr><td style="border:1px solid #ddd;padding:10px;">Faltas</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${faltas.toFixed(2)}</td></tr>
             <tr><td style="border:1px solid #ddd;padding:10px;">Pensión / Otros</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${descPension.toFixed(2)}</td></tr>
             <tr><td style="border:1px solid #ddd;padding:10px;">Tardanzas</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${descTardanza.toFixed(2)}</td></tr>
         `;
