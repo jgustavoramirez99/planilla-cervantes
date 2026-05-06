@@ -32,7 +32,7 @@ db.connect((err) => {
 
         const createTableQuery = `
         CREATE TABLE docentes (
-            id_docente INT PRIMARY KEY,
+            id_docente INT PRIMARY KEY AUTO_INCREMENT,
             nombre VARCHAR(255),
             dni VARCHAR(20),
             sueldo_base DECIMAL(10, 2),
@@ -48,7 +48,7 @@ db.connect((err) => {
 
             const insertDataQuery = `
             INSERT INTO docentes (id_docente, nombre, dni, sueldo_base, tipo_pension, adelantos, faltas, pension, tardanza) VALUES
-            (1, 'Juan Perez', '12345678', 2500.00, 'AFP', 0, 0, 0, 0),
+            (1, 'JUAN PEREZ', '12345678', 2500.00, 'AFP', 0, 0, 0, 0),
             (2, 'ARIZOLA TINTAYA, Reyna Del Pilar', '1', 1800.00, 'AFP', 0, 0, 0, 0),
             (3, 'ARONE ROMERO, Liseth', '2', 1500.00, 'ONP', 0, 0, 0, 0),
             (4, 'BURGA ALCALA, Romulo Moroni', '3', 1800.00, 'AFP', 0, 0, 0, 0),
@@ -91,12 +91,13 @@ db.connect((err) => {
 
             db.query(insertDataQuery, (err) => {
                 if (err) console.error("Error en carga inicial:", err);
-                else console.log("¡Éxito! Base de datos de Cervantes School lista.");
+                else console.log("¡Éxito! Base de datos de Cervantes School lista con modales.");
             });
         });
     });
 });
 
+// Obtener todos los docentes
 app.get('/api/docentes', (req, res) => {
     const sql = "SELECT * FROM docentes ORDER BY nombre ASC";
     db.query(sql, (err, result) => {
@@ -105,15 +106,22 @@ app.get('/api/docentes', (req, res) => {
     });
 });
 
+// Actualizar docente desde el Modal
 app.put('/api/docentes/:id', (req, res) => {
     const { id } = req.params;
-    const { nombre, dni, sueldo_base, adelantos, faltas, pension, tardanza } = req.body;
-    const sql = `UPDATE docentes SET nombre=?, dni=?, sueldo_base=?, adelantos=?, faltas=?, pension=?, tardanza=? WHERE id_docente=?`;
-    db.query(sql, [nombre, dni, sueldo_base, adelantos, faltas, pension, tardanza, id], (err) => {
-        if (err) return res.status(500).json({ error: "Error al actualizar" });
-        res.json({ message: "Sincronizado" });
+    const { sueldo_base, adelantos, faltas, pension, tardanza } = req.body;
+    
+    // Solo actualizamos los valores numéricos que vienen del modal
+    const sql = `UPDATE docentes SET sueldo_base=?, adelantos=?, faltas=?, pension=?, tardanza=? WHERE id_docente=?`;
+    
+    db.query(sql, [sueldo_base, adelantos, faltas, pension, tardanza, id], (err, result) => {
+        if (err) {
+            console.error("Error al actualizar docente ID " + id + ":", err);
+            return res.status(500).json({ error: "Error al actualizar en la base de datos" });
+        }
+        res.json({ message: "Datos actualizados correctamente" });
     });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor de Planilla corriendo en puerto ${PORT}`));
