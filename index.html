@@ -92,14 +92,14 @@
                     <div class="h3 mb-0" id="stat-planilla-total">S/ 0.00</div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3" id="filtro-mes-container">
                 <label class="small fw-bold text-muted">PERIODO LABORAL</label>
                 <select id="filtro-mes" class="form-select shadow-sm" onchange="cargarDatosServidor()">
                     <option value="5">Mayo 2026</option>
                     <option value="6">Junio 2026</option>
                 </select>
             </div>
-            <div class="col-md-3 text-end d-flex align-items-end">
+            <div class="col-md-3 text-end d-flex align-items-end" id="buscador-container">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
                     <input type="text" id="buscador" class="form-control border-start-0 shadow-sm" placeholder="Buscar docente...">
@@ -108,7 +108,7 @@
         </div>
 
         <!-- SECCIÓN DE GRÁFICOS -->
-        <div class="row mb-4">
+        <div class="row mb-4" id="graficos-container">
             <div class="col-md-8">
                 <div class="card shadow-sm p-3 h-100">
                     <h6 class="fw-bold"><i class="fa-solid fa-chart-line me-2"></i>Distribución de Pagos Netos</h6>
@@ -212,11 +212,16 @@
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
         // Validación simple para tu demo
+        let rol = '';
         if(u === 'admin_cervantes' && p === 'cervantes2026') {
-            iniciarSistema('MASTER');
-        } else { 
-            alert("Credenciales incorrectas. Intenta con admin_cervantes"); 
+            rol = 'admin';
+        } else if(u === 'jaime_ramirez' && p === 'boleta2026') {
+            rol = 'user';
+        } else {
+            alert("Credenciales incorrectas. Intenta con admin_cervantes o jaime_ramirez");
+            return;
         }
+        iniciarSistema(rol);
     });
 
     function iniciarSistema(rol) {
@@ -224,7 +229,14 @@
         document.getElementById('seccion-login').style.display = 'none';
         document.getElementById('seccion-principal').style.display = 'block';
         document.getElementById('banner-bienvenida').style.display = 'block';
-        document.getElementById('badge-rol').innerText = `MODO: ${rol}`;
+        document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
+        
+        // Ocultar elementos para usuarios normales
+        if (rol === 'user') {
+            document.getElementById('filtro-mes-container').style.display = 'none';
+            document.getElementById('buscador-container').style.display = 'none';
+            document.getElementById('graficos-container').style.display = 'none';
+        }
         
         // Limpiamos el buscador por si acaso quedó algo escrito
         document.getElementById('buscador').value = '';
@@ -243,6 +255,11 @@
             
             if (docentesData.length === 0) {
                 console.warn("La base de datos respondió pero no hay registros.");
+            }
+
+            // Filtrar datos si es usuario normal
+            if (userRole === 'user') {
+                docentesData = docentesData.filter(d => d.dni === '76758994'); // DNI de Jaime Gustavo Ramirez Ramirez
             }
 
             renderizarTabla(docentesData); // Pasamos los datos directamente
@@ -270,14 +287,13 @@
         const faltas = Number(d.faltas) || 0;
         const pension = Number(d.pension) || 0;
         const tardanza = Number(d.tardanza) || 0;
-        
-        const descPilar = sb * 0.13; // Cálculo de AFP
-        const totalDeducciones = descPilar + adelantos + faltas + pension + tardanza;
-        const neto = sb - totalDeducciones;
+        // Determinar si mostrar botones de edición
+        const botonesEdicion = userRole === 'admin' ? 
+            `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
 
         cuerpo.innerHTML += `
             <tr class="fila-docente">
-                <td onclick="abrirModal(${d.id_docente})">
+                <td onclick="${userRole === 'admin' ? `abrirModal(${d.id_docente})` : ''}">
                     <div class="fw-bold text-dark">${d.nombre}</div>
                     <small class="text-muted text-uppercase">DNI: ${d.dni}</small>
                 </td>
@@ -292,8 +308,14 @@
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
                         <button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>
+                        ${botonesEdicion}
+                <td class="text-center">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
+                        <button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>
                         <button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>
                     </div>
+        if (userRole === 'user') return; // Usuarios normales no buscan
                 </td>
             </tr>`;
     });
@@ -302,7 +324,7 @@
     // Lógica del buscador corregida
     document.getElementById('buscador').addEventListener('input', function() {
         const query = this.value.toLowerCase().trim();
-        const filtrados = docentesData.filter(d => 
+        const filtrados = docentesDat || userRole === 'user') return; // No mostrar gráficos para usuarios normalesd => 
             d.nombre.toLowerCase().includes(query) || 
             d.dni.includes(query)
         );
@@ -319,11 +341,18 @@
         const ctx = document.getElementById('chartPlanilla').getContext('2d');
         chartPrincipal = new Chart(ctx, {
             type: 'bar',
+        if (userRole === 'user') {
+            // Para usuarios normales, no mostrar estadísticas globales
+            document.getElementById('stat-total-personal').innerText = '1';
+            document.getElementById('stat-planilla-total').innerText = 'Ver Boleta';
+            return;
+        }
             data: {
                 labels: nombres,
                 datasets: [{ label: 'Sueldo Neto (Top 5)', data: netos, backgroundColor: '#3498db' }]
             },
             options: { responsive: true, maintainAspectRatio: false }
+        if (userRole !== 'admin') return; // Solo admin puede editar
         });
     }
 
@@ -336,7 +365,8 @@
         document.getElementById('stat-total-personal').innerText = data.length;
         document.getElementById('stat-planilla-total').innerText = `S/ ${totalNeto.toLocaleString('es-PE', {minimumFractionDigits:2})}`;
     }
-
+if (userRole !== 'admin') return; // Solo admin puede guardar cambios
+        
     // Modal
     function abrirModal(id) {
         const d = docentesData.find(doc => doc.id_docente == id);
@@ -422,7 +452,8 @@
     doc.setTextColor(100);
     doc.text("Puente Piedra, Lima - Perú", 105, 26, { align: "center" });
     doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 32, { align: "center" });
-    
+    // doc.text("Educamos con amor, disciplina y honestidad", 105, 26, {allign: "center"});
+
     doc.setDrawColor(200);
     doc.line(15, 38, 195, 38);
 
