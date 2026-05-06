@@ -4,8 +4,15 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const path = require('path'); // Asegúrate de que esta línea esté arriba con los otros 'require'
+
 app.use(cors());
 app.use(express.json());
+
+// --- ESTA ES LA LÍNEA QUE FALTA ---
+// Le dice a Node que sirva tu index.html y tus estilos CSS
+app.use(express.static(path.join(__dirname, './')));
+
 
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
