@@ -9,33 +9,46 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
         .header-colegio { background: #2c3e50; color: white; padding: 20px; border-bottom: 5px solid #e74c3c; }
         .card { border: none; border-radius: 15px; }
         .stats-card { background: #ffffff; border-left: 5px solid #3498db; transition: transform 0.3s; }
+        .stats-card:hover { transform: translateY(-5px); }
+        
+        .logo-img { max-height: 80px; object-fit: contain; } 
+        
         #seccion-login { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); }
         .login-card { width: 100%; max-width: 400px; padding: 2.5rem; border-radius: 20px; background: rgba(255, 255, 255, 0.95); }
+        .welcome-banner { background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745; margin-bottom: 20px; display: none; }
+        
+        .fila-docente { cursor: pointer; transition: 0.2s; }
         .fila-docente:hover { background-color: #f8f9fa !important; }
         .badge-neto { font-size: 1rem; padding: 8px 12px; border-radius: 8px; }
+        
+        /* Contenedor de gráficos */
+        .chart-container { position: relative; height: 250px; width: 100%; }
     </style>
 </head>
 <body>
 
 <div id="seccion-login">
     <div class="card login-card shadow-lg text-center">
-        <h3 class="fw-bold text-primary mb-4">Cervantes School</h3>
+        <img src="logo.png" alt="Logo" class="logo-img mx-auto mb-3" onerror="this.src='https://i.imgur.com/8mXm6Z0.png'">
+        <h4 class="text-muted mb-1">I.E.P. Cervantes School</h4>
+        <h3 class="fw-bold text-primary mb-4">Sistema de Planillas</h3>
         <form id="form-login" class="text-start">
             <div class="mb-3">
                 <label class="form-label small fw-bold">Usuario</label>
-                <input type="text" id="user" class="form-control" required>
+                <input type="text" id="user" class="form-control" placeholder="Ingrese usuario" required>
             </div>
             <div class="mb-3">
                 <label class="form-label small fw-bold">Contraseña</label>
-                <input type="password" id="pass" class="form-control" required>
+                <input type="password" id="pass" class="form-control" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">INGRESAR</button>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">INGRESAR AL SISTEMA</button>
         </form>
     </div>
 </div>
@@ -43,143 +56,371 @@
 <div id="seccion-principal" style="display: none;">
     <div class="header-colegio shadow">
         <div class="container d-flex justify-content-between align-items-center">
-            <h2 class="m-0 fw-light">Control de <span class="fw-bold">Planillas</span></h2>
-            <div class="text-end">
-                <span id="badge-rol" class="badge bg-danger d-block mb-1"></span>
-                <button class="btn btn-outline-light btn-sm" onclick="location.reload()">Salir</button>
+            <div class="d-flex align-items-center gap-3">
+                <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://i.imgur.com/8mXm6Z0.png'">
+                <h2 class="m-0 fw-light">Control de <span class="fw-bold">Planillas</span></h2>
+            </div>
+            <div class="text-end text-white">
+                <span id="badge-rol" class="badge bg-danger mb-1 d-block"></span>
+                <button class="btn btn-outline-light btn-sm" onclick="location.reload()">Cerrar Sesión</button>
             </div>
         </div>
     </div>
 
     <div class="container mt-4 mb-5">
-        <div class="row g-3 mb-4" id="stats-container">
-            <div class="col-md-6">
+        <div id="banner-bienvenida" class="welcome-banner shadow-sm">
+            <i class="fa-solid fa-user-tie me-2"></i> <strong>Bienvenido al Panel de Control</strong> - I.E.P. Cervantes School.
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
                 <div class="card stats-card shadow-sm p-3">
+                    <div class="text-muted small fw-bold">DOCENTES ACTIVOS</div>
+                    <div class="h3 mb-0" id="stat-total-personal">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card shadow-sm p-3" style="border-left-color: #2ecc71;">
                     <div class="text-muted small fw-bold">PLANILLA NETA TOTAL</div>
                     <div class="h3 mb-0" id="stat-planilla-total">S/ 0.00</div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card stats-card shadow-sm p-3" style="border-left-color: #2ecc71;">
-                    <div class="text-muted small fw-bold">PERIODO</div>
-                    <select id="filtro-mes" class="form-select border-0 p-0" onchange="cargarDatos()">
-                        <option value="5">Mayo 2026</option>
-                        <option value="6">Junio 2026</option>
-                    </select>
+            <div class="col-md-3" id="filtro-mes-container">
+                <label class="small fw-bold text-muted">PERIODO LABORAL</label>
+                <select id="filtro-mes" class="form-select shadow-sm" onchange="cargarDatosServidor()">
+                    <option value="5">Mayo 2026</option>
+                    <option value="6">Junio 2026</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-end d-flex align-items-end" id="buscador-container">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" id="buscador" class="form-control border-start-0 shadow-sm" placeholder="Buscar docente...">
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4" id="graficos-container">
+            <div class="col-md-8">
+                <div class="card shadow-sm p-3 h-100">
+                    <h6 class="fw-bold"><i class="fa-solid fa-chart-line me-2"></i>Distribución de Pagos Netos</h6>
+                    <div class="chart-container">
+                        <canvas id="chartPlanilla"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 h-100">
+                    <h6 class="fw-bold text-center">Gasto vs Retenciones</h6>
+                    <div class="chart-container">
+                        <canvas id="chartDona"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="card shadow-lg">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-dark text-center">
-                        <tr>
-                            <th class="text-start">Docente</th>
-                            <th>Sueldo Base</th>
-                            <th>Neto a Pagar</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-cuerpo"></tbody>
-                </table>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark text-center">
+                            <tr>
+                                <th class="text-start">Docente / DNI</th>
+                                <th>Sueldo Base</th>
+                                <th>Deducciones</th>
+                                <th>Neto a Pagar</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-cuerpo"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Actualizar Planilla</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-id">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nombre</label>
+                    <input type="text" id="edit-nombre" class="form-control bg-light" readonly>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold">Sueldo Base (S/)</label>
+                        <input type="number" id="edit-sb" class="form-control border-primary">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold">Adelantos</label>
+                        <input type="number" id="edit-al" class="form-control">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-4 mb-3">
+                        <label class="form-label small fw-bold text-danger">Faltas</label>
+                        <input type="number" id="edit-fl" class="form-control">
+                    </div>
+                    <div class="col-4 mb-3">
+                        <label class="form-label small fw-bold text-danger">Pensión</label>
+                        <input type="number" id="edit-pen" class="form-control">
+                    </div>
+                    <div class="col-4 mb-3">
+                        <label class="form-label small fw-bold text-danger">Tardanza</label>
+                        <input type="number" id="edit-tar" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success px-4" onclick="guardarCambiosModal()">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Sincronizar Datos
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    let currentUser = {};
-    const miModal = new bootstrap.Modal(document.getElementById('modalEditar')); // Asegúrate de tener el modal de tu código anterior
+    let docentesData = [];
+    let userRole = '';
+    let userDni = '';
+    let chartPrincipal, chartDona;
+    
+    // Configuración de API
+    const API_URL = 'https://planilla-cervantes.onrender.com/api/docentes';
+    const SERVER_BASE = 'https://planilla-cervantes.onrender.com';
+    const miModal = new bootstrap.Modal(document.getElementById('modalEditar'));
 
-    document.getElementById('form-login').addEventListener('submit', async (e) => {
+    // --- MODIFICACIÓN LOGIN: Validación corregida ---
+    document.getElementById('form-login').addEventListener('submit', function(e) {
         e.preventDefault();
-        const user = document.getElementById('user').value;
-        const pass = document.getElementById('pass').value;
-
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user, pass })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            currentUser = data;
-            document.getElementById('seccion-login').style.display = 'none';
-            document.getElementById('seccion-principal').style.display = 'block';
-            document.getElementById('badge-rol').innerText = data.role.toUpperCase();
-            
-            // Ocultar stats si no es admin
-            if(data.role !== 'admin') {
-                document.getElementById('stats-container').style.display = 'none';
-            }
-            
-            cargarDatos();
+        const u = document.getElementById('user').value.trim();
+        const p = document.getElementById('pass').value.trim();
+        
+        let rol = '';
+        if(u === 'admin_cervantes' && p === 'cervantes2026') {
+            rol = 'admin';
+        } else if(u === 'jaime_ramirez' && p === 'boleta2026') {
+            rol = 'user';
+            userDni = '76758994'; // DNI asociado a Jaime
         } else {
-            alert("Acceso denegado");
+            alert("Acceso denegado. Verifique usuario y contraseña.");
+            return;
         }
+        
+        iniciarSistema(rol);
     });
 
-    async function cargarDatos() {
-        const mes = document.getElementById('filtro-mes').value;
-        const res = await fetch(`/api/docentes?mes=${mes}`, {
-            headers: {
-                'x-user-role': currentUser.role,
-                'x-user-dni': currentUser.dni
-            }
-        });
-        const docentes = await res.json();
-        renderizarTabla(docentes);
+    function iniciarSistema(rol) {
+        userRole = rol;
+        document.getElementById('seccion-login').style.display = 'none';
+        document.getElementById('seccion-principal').style.display = 'block';
+        document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
+        
+        if (rol === 'user') {
+            document.getElementById('filtro-mes-container').style.display = 'none';
+            document.getElementById('buscador-container').style.display = 'none';
+            document.getElementById('graficos-container').style.display = 'none';
+            document.getElementById('banner-bienvenida').innerHTML = '<i class="fa-solid fa-user me-2"></i> <strong>Bienvenido Jaime Gustavo</strong> - Consulta de Boleta.';
+        }
+        
+        document.getElementById('banner-bienvenida').style.display = 'block';
+        cargarDatosServidor();
     }
 
-    function renderizarTabla(docentes) {
+    async function cargarDatosServidor() {
+        try {
+            const mesActual = document.getElementById('filtro-mes').value;
+            const response = await fetch(`${API_URL}?mes=${mesActual}`);
+            if (!response.ok) throw new Error('Servidor no disponible');
+            
+            docentesData = await response.json();
+            
+            // Filtrado automático según el rol
+            let datosAMostrar = docentesData;
+            if (userRole === 'user') {
+                datosAMostrar = docentesData.filter(d => d.dni === userDni);
+            }
+
+            renderizarTabla(datosAMostrar);
+            actualizarTotales(datosAMostrar);
+            if(userRole === 'admin') actualizarGraficos();
+            
+        } catch (error) {
+            console.error("Error:", error);
+            alert("No se pudo conectar con el servidor en Render.");
+        }
+    }
+
+    function renderizarTabla(lista) {
         const cuerpo = document.getElementById('tabla-cuerpo');
         cuerpo.innerHTML = '';
-        let totalNetoGlobal = 0;
 
-        docentes.forEach(d => {
-            const sb = Number(d.sueldo_base);
-            const neto = sb - (sb * 0.13) - Number(d.adelantos) - Number(d.faltas) - Number(d.pension) - Number(d.tardanza);
-            totalNetoGlobal += neto;
+        if (lista.length === 0) {
+            cuerpo.innerHTML = '<tr><td colspan="5" class="text-center p-4">No hay datos disponibles</td></tr>';
+            return;
+        }
+
+        lista.forEach(d => {
+            const sb = Number(d.sueldo_base) || 0;
+            const adelantos = Number(d.adelantos) || 0;
+            const faltas = Number(d.faltas) || 0;
+            const pension = Number(d.pension) || 0;
+            const tardanza = Number(d.tardanza) || 0;
+            
+            const descPilar = sb * 0.13;
+            const totalDeducciones = descPilar + adelantos + faltas + pension + tardanza;
+            const neto = sb - totalDeducciones;
+
+            const botonWhatsApp = (userRole === 'admin' && d.dni === '76758994') ?
+                `<button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
+
+            const botonEditar = userRole === 'admin' ? 
+                `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
 
             cuerpo.innerHTML += `
-                <tr class="text-center">
-                    <td class="text-start">
-                        <strong>${d.nombre}</strong><br><small>DNI: ${d.dni}</small>
-                    </td>
-                    <td>S/ ${sb.toFixed(2)}</td>
-                    <td><span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span></td>
+                <tr class="fila-docente">
                     <td>
+                        <div class="fw-bold">${d.nombre}</div>
+                        <small class="text-muted">DNI: ${d.dni}</small>
+                    </td>
+                    <td class="text-center">S/ ${sb.toFixed(2)}</td>
+                    <td class="text-center text-danger small">- S/ ${totalDeducciones.toFixed(2)}</td>
+                    <td class="text-center">
+                        <span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span>
+                    </td>
+                    <td class="text-center">
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-danger" onclick="descargarPDF(${d.id_docente})">
-                                <i class="fa-solid fa-file-pdf"></i>
-                            </button>
-                            ${currentUser.role === 'admin' ? `
-                                <button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp('${d.nombre}', ${neto.toFixed(2)}, ${d.id_docente})">
-                                    <i class="fa-brands fa-whatsapp"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                            ` : ''}
+                            <button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
+                            ${botonWhatsApp}
+                            ${botonEditar}
                         </div>
                     </td>
                 </tr>`;
         });
-        document.getElementById('stat-planilla-total').innerText = `S/ ${totalNetoGlobal.toFixed(2)}`;
     }
 
-    async function enviarWhatsApp(nombre, sueldo, id) {
-        const filename = `boleta_${id}.pdf`;
-        // El servidor nos da el link mágico configurado con tu número
-        const res = await fetch(`/api/whatsapp-link?nombre=${nombre}&sueldo=${sueldo}&filename=${filename}`);
-        const data = await res.json();
-        window.open(data.link, '_blank');
+    // --- MODIFICACIÓN WHATSAPP: Enlace directo con datos ---
+    async function enviarWhatsApp(id) {
+        const d = docentesData.find(doc => doc.id_docente == id);
+        if (!d) return;
+
+        const sb = Number(d.sueldo_base) || 0;
+        const neto = sb - (sb * 0.13) - (Number(d.adelantos) || 0) - (Number(d.faltas) || 0);
+
+        const mensaje = `Hola *${d.nombre}*, se ha generado tu planilla de *Mayo 2026*.%0A%0A*Monto Neto:* S/ ${neto.toFixed(2)}%0A%0AFavor de acercarse a promotoría para el pago correspondiente.`;
+        const whatsappUrl = `https://wa.me/51943706872?text=${mensaje}`;
+        
+        window.open(whatsappUrl, '_blank');
     }
 
-    // Nota: Aquí debes mantener tus funciones de generarPDF y abrirModal 
-    // pero asegúrate de que usen la lógica de "currentUser" para seguridad.
+    function actualizarTotales(data) {
+        if (userRole === 'user') {
+            document.getElementById('stat-total-personal').innerText = '1';
+            document.getElementById('stat-planilla-total').innerText = 'Privado';
+            return;
+        }
+        let totalNeto = 0;
+        data.forEach(d => {
+            const sb = parseFloat(d.sueldo_base) || 0;
+            totalNeto += sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0);
+        });
+        document.getElementById('stat-total-personal').innerText = data.length;
+        document.getElementById('stat-planilla-total').innerText = `S/ ${totalNeto.toFixed(2)}`;
+    }
+
+    // Resto de funciones (PDF, Gráficos, Modal) se mantienen igual...
+    async function generarBoletaPDF(id) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const d = docentesData.find(doc => doc.id_docente == id);
+        if (!d) return;
+
+        const sb = Number(d.sueldo_base) || 0;
+        const descPilar = sb * 0.13;
+        const neto = sb - descPilar - (Number(d.adelantos)||0) - (Number(d.faltas)||0);
+
+        doc.setFontSize(16);
+        doc.text("I.E.P. CERVANTES SCHOOL", 105, 20, { align: "center" });
+        doc.setFontSize(10);
+        doc.text("BOLETA DE PAGO - MAYO 2026", 105, 30, { align: "center" });
+        doc.line(20, 35, 190, 35);
+        
+        doc.text(`Docente: ${d.nombre}`, 20, 50);
+        doc.text(`DNI: ${d.dni}`, 20, 60);
+        doc.text(`Sueldo Base: S/ ${sb.toFixed(2)}`, 20, 75);
+        doc.text(`Descuentos Ley (13%): S/ ${descPilar.toFixed(2)}`, 20, 85);
+        doc.text(`Adelantos/Faltas: S/ ${(Number(d.adelantos)+Number(d.faltas)).toFixed(2)}`, 20, 95);
+        
+        doc.setFontSize(12);
+        doc.setFont("", "bold");
+        doc.text(`TOTAL NETO: S/ ${neto.toFixed(2)}`, 20, 115);
+        
+        doc.save(`Boleta_${d.nombre}.pdf`);
+    }
+
+    function abrirModal(id) {
+        const d = docentesData.find(doc => doc.id_docente == id);
+        if(!d) return;
+        document.getElementById('edit-id').value = d.id_docente;
+        document.getElementById('edit-nombre').value = d.nombre;
+        document.getElementById('edit-sb').value = d.sueldo_base;
+        document.getElementById('edit-al').value = d.adelantos;
+        document.getElementById('edit-fl').value = d.faltas;
+        document.getElementById('edit-pen').value = d.pension;
+        document.getElementById('edit-tar').value = d.tardanza;
+        miModal.show();
+    }
+
+    async function guardarCambiosModal() {
+        const id = document.getElementById('edit-id').value;
+        const payload = {
+            adelantos: document.getElementById('edit-al').value,
+            faltas: document.getElementById('edit-fl').value,
+            pension: document.getElementById('edit-pen').value,
+            tardanza: document.getElementById('edit-tar').value,
+            mes: document.getElementById('filtro-mes').value
+        };
+        
+        try {
+            const res = await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) { 
+                miModal.hide(); 
+                cargarDatosServidor(); 
+            }
+        } catch (e) { alert("Error al conectar con la base de datos"); }
+    }
+
+    function actualizarGraficos() {
+        const ctx = document.getElementById('chartPlanilla').getContext('2d');
+        if(chartPrincipal) chartPrincipal.destroy();
+        
+        chartPrincipal = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: docentesData.slice(0,5).map(d => d.nombre.split(' ')[0]),
+                datasets: [{
+                    label: 'Sueldos Base',
+                    data: docentesData.slice(0,5).map(d => d.sueldo_base),
+                    backgroundColor: '#3498db'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 </script>
+
 </body>
 </html>
