@@ -255,40 +255,49 @@
     }
 
     function renderizarTabla(lista) {
-        const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = '';
+    const cuerpo = document.getElementById('tabla-cuerpo');
+    cuerpo.innerHTML = '';
 
-        if (lista.length === 0) {
-            cuerpo.innerHTML = '<tr><td colspan="5" class="text-center p-4">No se encontraron resultados</td></tr>';
-            return;
-        }
-
-        lista.forEach(d => {
-            const sb = parseFloat(d.sueldo_base) || 0;
-            const descPilar = sb * 0.13; // Ejemplo AFP
-            const neto = sb - descPilar - (parseFloat(d.adelantos)||0) - (parseFloat(d.faltas)||0) - (parseFloat(d.pension)||0) - (parseFloat(d.tardanza)||0);
-
-            cuerpo.innerHTML += `
-                <tr class="fila-docente">
-                    <td onclick="abrirModal(${d.id_docente})">
-                        <div class="fw-bold text-dark">${d.nombre}</div>
-                        <small class="text-muted text-uppercase">DNI: ${d.dni}</small>
-                    </td>
-                    <td class="text-center">S/ ${sb.toFixed(2)}</td>
-                    <td class="text-center text-danger small">
-                        - S/ ${(descPilar + (d.adelantos||0) + (d.faltas||0) + (d.pension||0) + (d.tardanza||0)).toFixed(2)}
-                    </td>
-                    <td class="text-center"><span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span></td>
-                    <td class="text-center">
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
-                            <button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>
-                        </div>
-                    </td>
-                </tr>`;
-        });
+    if (!lista || lista.length === 0) {
+        cuerpo.innerHTML = '<tr><td colspan="5" class="text-center p-4">No se encontraron resultados</td></tr>';
+        return;
     }
+
+    lista.forEach(d => {
+        // BLINDAJE: Convertimos todo a número a la fuerza para evitar el error de la consola
+        const sb = Number(d.sueldo_base) || 0;
+        const adelantos = Number(d.adelantos) || 0;
+        const faltas = Number(d.faltas) || 0;
+        const pension = Number(d.pension) || 0;
+        const tardanza = Number(d.tardanza) || 0;
+        
+        const descPilar = sb * 0.13; // Cálculo de AFP
+        const totalDeducciones = descPilar + adelantos + faltas + pension + tardanza;
+        const neto = sb - totalDeducciones;
+
+        cuerpo.innerHTML += `
+            <tr class="fila-docente">
+                <td onclick="abrirModal(${d.id_docente})">
+                    <div class="fw-bold text-dark">${d.nombre}</div>
+                    <small class="text-muted text-uppercase">DNI: ${d.dni}</small>
+                </td>
+                <td class="text-center">S/ ${sb.toFixed(2)}</td>
+                <td class="text-center text-danger small">
+                    - S/ ${totalDeducciones.toFixed(2)}
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span>
+                </td>
+                <td class="text-center">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
+                        <button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+    });
+}
 
     // Lógica del buscador corregida
     document.getElementById('buscador').addEventListener('input', function() {
