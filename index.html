@@ -374,6 +374,120 @@
             }
         } catch (e) { alert("Error al guardar"); }
     }
+    async function generarBoletaPDF(id) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const d = docentesData.find(doc => doc.id_docente == id);
+    
+    if (!d) return;
+
+    // --- 1. PREPARACIÓN DE DATOS (Blindaje numérico) ---
+    const sb = Number(d.sueldo_base) || 0;
+    const adelantos = Number(d.adelantos) || 0;
+    const faltas = Number(d.faltas) || 0;
+    const pension = Number(d.pension) || 0;
+    const tardanza = Number(d.tardanza) || 0;
+    
+    const descPilar = sb * 0.13; // Retención de ley
+    const totalDeducciones = descPilar + adelantos + faltas + pension + tardanza;
+    const neto = sb - totalDeducciones;
+
+    // --- 2. LOGO / INSIGNIA ---
+    try {
+        // Intentamos cargar la insignia. Asegúrate que el archivo se llame logo.png en tu carpeta
+        const img = new Image();
+        img.src = 'logo.png'; 
+        
+        await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = () => {
+                console.warn("No se encontró logo.png, generando PDF sin imagen.");
+                resolve();
+            };
+        });
+
+        if (img.complete && img.naturalWidth !== 0) {
+            doc.addImage(img, 'PNG', 15, 10, 25, 25);
+        }
+    } catch (e) {
+        console.error("Error al procesar la insignia:", e);
+    }
+
+    // --- 3. ENCABEZADO INSTITUCIONAL ---
+    doc.setFontSize(14);
+    doc.setTextColor(40, 74, 117); // Azul profesional
+    doc.text("I.E.P. CERVANTES SCHOOL", 105, 20, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("Puente Piedra, Lima - Perú", 105, 26, { align: "center" });
+    doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 32, { align: "center" });
+    
+    doc.setDrawColor(200);
+    doc.line(15, 38, 195, 38);
+
+    // --- 4. INFORMACIÓN DEL TRABAJADOR ---
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.setFont("", "bold");
+    doc.text("DATOS DEL DOCENTE", 15, 45);
+    doc.setFont("", "normal");
+    doc.text(`Nombre: ${d.nombre}`, 15, 52);
+    doc.text(`DNI: ${d.dni}`, 15, 58);
+    doc.text(`Periodo: Mayo 2026`, 140, 52);
+
+    // --- 5. CUADRO DE CONCEPTOS ---
+    // Encabezados de tabla
+    doc.setFillColor(245, 245, 245);
+    doc.rect(15, 65, 180, 8, 'F');
+    doc.setFont("", "bold");
+    doc.text("CONCEPTO", 20, 70);
+    doc.text("INGRESOS", 110, 70);
+    doc.text("DESCUENTOS", 155, 70);
+    
+    doc.setFont("", "normal");
+    // Filas
+    doc.text("Sueldo Básico Mensual", 20, 80);
+    doc.text(`S/ ${sb.toFixed(2)}`, 110, 80);
+
+    doc.text("Aportes de Ley (13%)", 20, 88);
+    doc.text(`S/ ${descPilar.toFixed(2)}`, 155, 88);
+
+    doc.text("Adelantos Recibidos", 20, 96);
+    doc.text(`S/ ${adelantos.toFixed(2)}`, 155, 96);
+
+    doc.text("Faltas / Tardanzas", 20, 104);
+    doc.text(`S/ ${(faltas + tardanza).toFixed(2)}`, 155, 104);
+
+    // Línea de totales
+    doc.line(15, 110, 195, 110);
+    doc.setFont("", "bold");
+    doc.text("TOTAL NETO A PAGAR:", 90, 118);
+    doc.setFontSize(12);
+    doc.text(`S/ ${neto.toFixed(2)}`, 155, 118);
+
+    // --- 6. SECCIÓN DE FIRMAS ---
+    doc.setFontSize(9);
+    doc.setFont("", "normal");
+    
+    // Firma Promotoría
+    doc.line(35, 160, 85, 160);
+    doc.text("Lic. Edgar Cervantes", 60, 165, { align: "center" });
+    doc.text("Promotoría", 60, 170, { align: "center" });
+
+    // Firma Trabajador
+    doc.line(125, 160, 175, 160);
+    doc.text(d.nombre, 150, 165, { align: "center" });
+    doc.text("Firma del Trabajador", 150, 170, { align: "center" });
+
+    // Pie de página
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text("Este documento es una constancia de pago generada por el Sistema de Planilla Digital.", 105, 190, { align: "center" });
+
+    // Descargar el archivo
+    doc.save(`Boleta_Cervantes_${d.nombre.replace(/\s+/g, '_')}.pdf`);
+}
 </script>
 
 </body>
