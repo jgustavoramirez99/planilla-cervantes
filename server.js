@@ -28,13 +28,14 @@ db.connect((err) => {
     }
     console.log('Conectado exitosamente a la base de datos');
 
-    // --- PASO 1: BORRAMOS LA TABLA ANTIGUA ---
+    // --- PASO 1: BORRAMOS LA TABLA PARA ACTUALIZAR COLUMNAS ---
     db.query("DROP TABLE IF EXISTS docentes", (err) => {
         if (err) {
             console.error("Error al borrar tabla antigua:", err);
         } else {
-            console.log("Tabla antigua eliminada. Creando versión actualizada...");
+            console.log("Tabla antigua eliminada. Creando versión con Pensión y Tardanza...");
 
+            // Agregamos las columnas: pension y tardanza
             const createTableQuery = `
             CREATE TABLE docentes (
                 id_docente INT PRIMARY KEY,
@@ -43,7 +44,9 @@ db.connect((err) => {
                 sueldo_base DECIMAL(10, 2),
                 tipo_pension VARCHAR(50),
                 adelantos DECIMAL(10, 2) DEFAULT 0.00,
-                faltas DECIMAL(10, 2) DEFAULT 0.00
+                faltas DECIMAL(10, 2) DEFAULT 0.00,
+                pension DECIMAL(10, 2) DEFAULT 0.00,
+                tardanza DECIMAL(10, 2) DEFAULT 0.00
             );`;
 
             db.query(createTableQuery, (err) => {
@@ -52,52 +55,53 @@ db.connect((err) => {
                 } else {
                     console.log("Tabla 'docentes' creada con éxito");
 
+                    // Insertamos los 40 registros (con 0 en los nuevos campos por defecto)
                     const insertDataQuery = `
-                    INSERT INTO docentes (id_docente, nombre, dni, sueldo_base, tipo_pension, adelantos, faltas) VALUES
-                    (1, 'Juan Perez', '12345678', 2500.00, 'AFP', 0, 0),
-                    (2, 'ARIZOLA TINTAYA, Reyna Del Pilar', '1', 1800.00, 'AFP', 0, 0),
-                    (3, 'ARONE ROMERO, Liseth', '2', 1500.00, 'ONP', 0, 0),
-                    (4, 'BURGA ALCALA, Romulo Moroni', '3', 1800.00, 'AFP', 0, 0),
-                    (5, 'CARAZA HUAMANI, Flor De Maria', '4', 1500.00, 'AFP', 0, 0),
-                    (6, 'CASTILLEJO CHILINGANA, Samira Nicol', '5', 1500.00, 'AFP', 0, 0),
-                    (7, 'CERVANTES REYES, Agripina', '6', 1800.00, 'ONP', 0, 0),
-                    (8, 'CERVANTES REYES, Edgar', '7', 2500.00, 'AFP', 0, 0),
-                    (9, 'CEVALLOS CARRILLO, Bony', '8', 1800.00, 'AFP', 0, 0),
-                    (10, 'CHAVEZ CHIRINOS, Laura Soledad', '9', 1800.00, 'AFP', 0, 0),
-                    (11, 'CORONADO VARGAS, Melissa Lizehtt', '10', 1800.00, 'AFP', 0, 0),
-                    (12, 'CRUZ BELENDEZ, Humberto Maria', '11', 2000.00, 'AFP', 0, 0),
-                    (13, 'DOMINGUEZ GOMEZ, Ana Elena', '12', 1800.00, 'AFP', 0, 0),
-                    (14, 'FLORES RIVERA, Edgar', '13', 1800.00, NULL, 0, 0),
-                    (15, 'GARCIA CARRION, Eloy', '14', 1800.00, NULL, 0, 0),
-                    (16, 'GARCIA FERNANDEZ, Russell', '15', 1800.00, NULL, 0, 0),
-                    (17, 'GUERRERO LEYVA, Maria', '16', 1800.00, NULL, 0, 0),
-                    (18, 'MEDINA BELLON, Julinho Americo Jesus', '17', 1800.00, NULL, 0, 0),
-                    (19, 'MENDOZA JUEZ DE TENORIO, Belen Milagros', '18', 1800.00, NULL, 0, 0),
-                    (20, 'MEZA SALAZAR, Jarlen Jaqueline', '19', 2000.00, NULL, 0, 0),
-                    (21, 'MUÑOZ CERVANTES, Erika', '20', 2500.00, NULL, 0, 0),
-                    (22, 'ORDINOLA CORREA, Roberto Alexander', '21', 1800.00, NULL, 0, 0),
-                    (23, 'PAOLA ESTUPIÑAN, Ibeth', '22', 1800.00, NULL, 0, 0),
-                    (24, 'PALACIOS BALDEON, Edison', '23', 2000.00, NULL, 0, 0),
-                    (25, 'PERFECTO ALEJO, Russell', '24', 2000.00, NULL, 0, 0),
-                    (26, 'PONCE HERRERA, Maria Elena', '25', 1500.00, NULL, 0, 0),
-                    (27, 'PUMAPUILLO CJUIRO, Fatima Rosario', '26', 2000.00, NULL, 0, 0),
-                    (28, 'QUISPE BUSTAMANTE, Lucia', '27', 1800.00, NULL, 0, 0),
-                    (29, 'RAMIREZ RAMIREZ, Jaime Gustavo', '76758994', 1500.00, NULL, 0, 0),
-                    (30, 'RAMOS FLORES, Nicole Jamile', '29', 1800.00, NULL, 0, 0),
-                    (31, 'RIVAS ANGOMA, Eduardo Elias', '30', 1800.00, NULL, 0, 0),
-                    (32, 'RODRIGUEZ RIVAS, Carmen', '31', 1500.00, NULL, 0, 0),
-                    (33, 'ROSALES ESPINOZA, Luz Nelly', '32', 1800.00, NULL, 0, 0),
-                    (34, 'SALVATIERRA MEZA, Angel', '33', 2000.00, NULL, 0, 0),
-                    (35, 'SOLIS GUTIERREZ, Naydelyn', '34', 1500.00, NULL, 0, 0),
-                    (36, 'TAFUR YACTAYO, Yulisa Del Carmen', '35', 2000.00, NULL, 0, 0),
-                    (37, 'TELLO HUAYN, Dylan', '36', 1500.00, NULL, 0, 0),
-                    (38, 'VELARDE MENDOZA, Noemi Victoria', '37', 1800.00, NULL, 0, 0),
-                    (39, 'VERANO VILLAR, Hector', '38', 1800.00, NULL, 0, 0),
-                    (40, 'VILCHEZ ROSALES, Elena Carolina', '39', 1500.00, NULL, 0, 0);`;
+                    INSERT INTO docentes (id_docente, nombre, dni, sueldo_base, tipo_pension, adelantos, faltas, pension, tardanza) VALUES
+                    (1, 'Juan Perez', '12345678', 2500.00, 'AFP', 0, 0, 0, 0),
+                    (2, 'ARIZOLA TINTAYA, Reyna Del Pilar', '1', 1800.00, 'AFP', 0, 0, 0, 0),
+                    (3, 'ARONE ROMERO, Liseth', '2', 1500.00, 'ONP', 0, 0, 0, 0),
+                    (4, 'BURGA ALCALA, Romulo Moroni', '3', 1800.00, 'AFP', 0, 0, 0, 0),
+                    (5, 'CARAZA HUAMANI, Flor De Maria', '4', 1500.00, 'AFP', 0, 0, 0, 0),
+                    (6, 'CASTILLEJO CHILINGANA, Samira Nicol', '5', 1500.00, 'AFP', 0, 0, 0, 0),
+                    (7, 'CERVANTES REYES, Agripina', '6', 1800.00, 'ONP', 0, 0, 0, 0),
+                    (8, 'CERVANTES REYES, Edgar', '7', 2500.00, 'AFP', 0, 0, 0, 0),
+                    (9, 'CEVALLOS CARRILLO, Bony', '8', 1800.00, 'AFP', 0, 0, 0, 0),
+                    (10, 'CHAVEZ CHIRINOS, Laura Soledad', '9', 1800.00, 'AFP', 0, 0, 0, 0),
+                    (11, 'CORONADO VARGAS, Melissa Lizehtt', '10', 1800.00, 'AFP', 0, 0, 0, 0),
+                    (12, 'CRUZ BELENDEZ, Humberto Maria', '11', 2000.00, 'AFP', 0, 0, 0, 0),
+                    (13, 'DOMINGUEZ GOMEZ, Ana Elena', '12', 1800.00, 'AFP', 0, 0, 0, 0),
+                    (14, 'FLORES RIVERA, Edgar', '13', 1800.00, NULL, 0, 0, 0, 0),
+                    (15, 'GARCIA CARRION, Eloy', '14', 1800.00, NULL, 0, 0, 0, 0),
+                    (16, 'GARCIA FERNANDEZ, Russell', '15', 1800.00, NULL, 0, 0, 0, 0),
+                    (17, 'GUERRERO LEYVA, Maria', '16', 1800.00, NULL, 0, 0, 0, 0),
+                    (18, 'MEDINA BELLON, Julinho Americo Jesus', '17', 1800.00, NULL, 0, 0, 0, 0),
+                    (19, 'MENDOZA JUEZ DE TENORIO, Belen Milagros', '18', 1800.00, NULL, 0, 0, 0, 0),
+                    (20, 'MEZA SALAZAR, Jarlen Jaqueline', '19', 2000.00, NULL, 0, 0, 0, 0),
+                    (21, 'MUÑOZ CERVANTES, Erika', '20', 2500.00, NULL, 0, 0, 0, 0),
+                    (22, 'ORDINOLA CORREA, Roberto Alexander', '21', 1800.00, NULL, 0, 0, 0, 0),
+                    (23, 'PAOLA ESTUPIÑAN, Ibeth', '22', 1800.00, NULL, 0, 0, 0, 0),
+                    (24, 'PALACIOS BALDEON, Edison', '23', 2000.00, NULL, 0, 0, 0, 0),
+                    (25, 'PERFECTO ALEJO, Russell', '24', 2000.00, NULL, 0, 0, 0, 0),
+                    (26, 'PONCE HERRERA, Maria Elena', '25', 1500.00, NULL, 0, 0, 0, 0),
+                    (27, 'PUMAPUILLO CJUIRO, Fatima Rosario', '26', 2000.00, NULL, 0, 0, 0, 0),
+                    (28, 'QUISPE BUSTAMANTE, Lucia', '27', 1800.00, NULL, 0, 0, 0, 0),
+                    (29, 'RAMIREZ RAMIREZ, Jaime Gustavo', '76758994', 1500.00, NULL, 0, 0, 0, 0),
+                    (30, 'RAMOS FLORES, Nicole Jamile', '29', 1800.00, NULL, 0, 0, 0, 0),
+                    (31, 'RIVAS ANGOMA, Eduardo Elias', '30', 1800.00, NULL, 0, 0, 0, 0),
+                    (32, 'RODRIGUEZ RIVAS, Carmen', '31', 1500.00, NULL, 0, 0, 0, 0),
+                    (33, 'ROSALES ESPINOZA, Luz Nelly', '32', 1800.00, NULL, 0, 0, 0, 0),
+                    (34, 'SALVATIERRA MEZA, Angel', '33', 2000.00, NULL, 0, 0, 0, 0),
+                    (35, 'SOLIS GUTIERREZ, Naydelyn', '34', 1500.00, NULL, 0, 0, 0, 0),
+                    (36, 'TAFUR YACTAYO, Yulisa Del Carmen', '35', 2000.00, NULL, 0, 0, 0, 0),
+                    (37, 'TELLO HUAYN, Dylan', '36', 1500.00, NULL, 0, 0, 0, 0),
+                    (38, 'VELARDE MENDOZA, Noemi Victoria', '37', 1800.00, NULL, 0, 0, 0, 0),
+                    (39, 'VERANO VILLAR, Hector', '38', 1800.00, NULL, 0, 0, 0, 0),
+                    (40, 'VILCHEZ ROSALES, Elena Carolina', '39', 1500.00, NULL, 0, 0, 0, 0);`;
 
                     db.query(insertDataQuery, (err) => {
                         if (err) console.error("Error al insertar los 40 registros:", err);
-                        else console.log("¡Éxito! 40 docentes insertados.");
+                        else console.log("¡Éxito! 40 docentes insertados con nuevos campos.");
                     });
                 }
             });
@@ -117,16 +121,16 @@ app.get('/api/docentes', (req, res) => {
     });
 });
 
-// --- NUEVA RUTA: ACTUALIZAR DATOS DESDE LA WEB (EDICIÓN INLINE) ---
+// --- ACTUALIZAR DATOS (EDICIÓN INLINE + PENSIÓN Y TARDANZA) ---
 app.put('/api/docentes/:id', (req, res) => {
     const { id } = req.params;
-    const { nombre, dni, sueldo_base, adelantos, faltas } = req.body;
+    const { nombre, dni, sueldo_base, adelantos, faltas, pension, tardanza } = req.body;
 
     const sql = `UPDATE docentes 
-                 SET nombre = ?, dni = ?, sueldo_base = ?, adelantos = ?, faltas = ? 
+                 SET nombre = ?, dni = ?, sueldo_base = ?, adelantos = ?, faltas = ?, pension = ?, tardanza = ? 
                  WHERE id_docente = ?`;
 
-    db.query(sql, [nombre, dni, sueldo_base, adelantos, faltas, id], (err, result) => {
+    db.query(sql, [nombre, dni, sueldo_base, adelantos, faltas, pension, tardanza, id], (err, result) => {
         if (err) {
             console.error("Error al actualizar:", err);
             return res.status(500).json({ error: "No se pudo actualizar el docente" });
