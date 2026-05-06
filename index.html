@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para los gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Scripts Necesarios -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -17,19 +19,21 @@
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
         .header-colegio { background: #2c3e50; color: white; padding: 20px; border-bottom: 5px solid #e74c3c; }
         .card { border: none; border-radius: 15px; }
-        .stats-card { background: #ffffff; border-left: 5px solid #3498db; }
+        .stats-card { background: #ffffff; border-left: 5px solid #3498db; transition: transform 0.3s; }
+        .stats-card:hover { transform: translateY(-5px); }
         
-        /* Insignia: Filtro blanco removido para ver colores reales */
         .logo-img { max-height: 80px; object-fit: contain; } 
         
         #seccion-login { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); }
         .login-card { width: 100%; max-width: 400px; padding: 2.5rem; border-radius: 20px; background: rgba(255, 255, 255, 0.95); }
         .welcome-banner { background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745; margin-bottom: 20px; display: none; }
         
-        /* Estilo para filas de la tabla */
         .fila-docente { cursor: pointer; transition: 0.2s; }
         .fila-docente:hover { background-color: #f8f9fa !important; }
         .badge-neto { font-size: 1rem; padding: 8px 12px; border-radius: 8px; }
+        
+        /* Contenedor de gráficos */
+        .chart-container { position: relative; height: 250px; width: 100%; }
     </style>
 </head>
 <body>
@@ -59,7 +63,6 @@
     <div class="header-colegio shadow">
         <div class="container d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
-                <!-- Imagen sin filtro para que salga a color -->
                 <img src="logo.png" alt="Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/60?text=LOGO'">
                 <h2 class="m-0 fw-light">Control de <span class="fw-bold">Planillas</span></h2>
             </div>
@@ -72,40 +75,68 @@
 
     <div class="container mt-4 mb-5">
         <div id="banner-bienvenida" class="welcome-banner shadow-sm">
-            <i class="fa-solid fa-user-tie me-2"></i> <strong>Bienvenido Promotor Edgar Cervantes</strong> - Panel Administrativo.
+            <i class="fa-solid fa-user-tie me-2"></i> <strong>Bienvenido Gustavo</strong> - Panel de Ingeniería Administrativa.
         </div>
 
+        <!-- FILTROS Y ESTADÍSTICAS -->
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card stats-card shadow-sm p-3">
                     <div class="text-muted small fw-bold">DOCENTES ACTIVOS</div>
                     <div class="h3 mb-0" id="stat-total-personal">0</div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card stats-card shadow-sm p-3" style="border-left-color: #2ecc71;">
-                    <div class="text-muted small fw-bold">TOTAL PLANILLA (NETO)</div>
+                    <div class="text-muted small fw-bold">PLANILLA NETA TOTAL</div>
                     <div class="h3 mb-0" id="stat-planilla-total">S/ 0.00</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="input-group h-100">
+            <div class="col-md-3">
+                <label class="small fw-bold text-muted">PERIODO LABORAL</label>
+                <select id="filtro-mes" class="form-select shadow-sm" onchange="cargarDatosServidor()">
+                    <option value="5">Mayo 2026</option>
+                    <option value="6">Junio 2026</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-end d-flex align-items-end">
+                <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                    <input type="text" id="buscador" class="form-control border-start-0" placeholder="Buscar por nombre o DNI...">
+                    <input type="text" id="buscador" class="form-control border-start-0 shadow-sm" placeholder="Buscar docente...">
                 </div>
             </div>
         </div>
 
+        <!-- SECCIÓN DE GRÁFICOS -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card shadow-sm p-3 h-100">
+                    <h6 class="fw-bold"><i class="fa-solid fa-chart-line me-2"></i>Distribución de Pagos Netos</h6>
+                    <div class="chart-container">
+                        <canvas id="chartPlanilla"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 h-100">
+                    <h6 class="fw-bold text-center">Gasto vs Retenciones</h6>
+                    <div class="chart-container">
+                        <canvas id="chartDona"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA -->
         <div class="card shadow-lg">
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead class="table-dark">
+                        <thead class="table-dark text-center">
                             <tr>
-                                <th>Nombre / DNI</th>
+                                <th class="text-start">Docente / DNI</th>
                                 <th>Sueldo Base</th>
-                                <th>AFP(13%)</th>
-                                <th>Descuentos/Adelantos</th>
+                                <th>Deducciones</th>
                                 <th>Neto a Pagar</th>
                                 <th>Acciones</th>
                             </tr>
@@ -118,49 +149,49 @@
     </div>
 </div>
 
-<!-- MODAL DE EDICIÓN (VENTANA FLOTANTE) -->
-<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+<!-- MODAL DE EDICIÓN -->
+<div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="modalEditarLabel"><i class="fa-solid fa-user-pen me-2"></i>Editar Datos de Planilla</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Actualizar Planilla</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="edit-id">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Nombre del Docente</label>
-                    <input type="text" id="edit-nombre" class="form-control" readonly>
+                    <label class="form-label small fw-bold">Nombre</label>
+                    <input type="text" id="edit-nombre" class="form-control bg-light" readonly>
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">
-                        <label class="form-label fw-bold">Sueldo Base</label>
-                        <input type="number" id="edit-sb" class="form-control">
+                        <label class="form-label small fw-bold">Sueldo Base (S/)</label>
+                        <input type="number" id="edit-sb" class="form-control border-primary">
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="form-label fw-bold">Adelantos</label>
+                        <label class="form-label small fw-bold">Adelantos</label>
                         <input type="number" id="edit-al" class="form-control">
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-6 mb-3">
-                        <label class="form-label fw-bold text-danger">Faltas</label>
+                    <div class="col-4 mb-3">
+                        <label class="form-label small fw-bold text-danger">Faltas</label>
                         <input type="number" id="edit-fl" class="form-control">
                     </div>
-                    <div class="col-6 mb-3">
-                        <label class="form-label fw-bold text-danger">Pensión</label>
+                    <div class="col-4 mb-3">
+                        <label class="form-label small fw-bold text-danger">Pensión</label>
                         <input type="number" id="edit-pen" class="form-control">
                     </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-danger">Tardanza</label>
-                    <input type="number" id="edit-tar" class="form-control">
+                    <div class="col-4 mb-3">
+                        <label class="form-label small fw-bold text-danger">Tardanza</label>
+                        <input type="number" id="edit-tar" class="form-control">
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" onclick="guardarCambiosModal()">
-                    <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cambios
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-success px-4" onclick="guardarCambiosModal()">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Sincronizar Datos
                 </button>
             </div>
         </div>
@@ -170,6 +201,7 @@
 <script>
     let docentesData = [];
     let userRole = '';
+    let chartPrincipal, chartDona;
     const API_URL = 'https://planilla-cervantes.onrender.com/api/docentes';
     const miModal = new bootstrap.Modal(document.getElementById('modalEditar'));
 
@@ -180,9 +212,7 @@
         if(u === 'admin_cervantes' && p === 'cervantes2026') {
             document.getElementById('banner-bienvenida').style.display = 'block';
             iniciarSistema('MASTER');
-        } else {
-            document.getElementById('error-login').style.display = 'block';
-        }
+        } else { alert("Credenciales incorrectas"); }
     });
 
     function iniciarSistema(rol) {
@@ -197,6 +227,7 @@
         fetch(API_URL).then(res => res.json()).then(data => {
             docentesData = data;
             renderizarTabla();
+            actualizarGraficos();
         });
     }
 
@@ -212,29 +243,76 @@
                 <tr class="fila-docente">
                     <td onclick="abrirModal(${d.id_docente})">
                         <div class="fw-bold text-dark">${d.nombre}</div>
-                        <small class="text-muted">${d.dni}</small>
+                        <small class="text-muted text-uppercase">DNI: ${d.dni}</small>
                     </td>
-                    <td>S/ ${sb.toFixed(2)}</td>
-                    <td class="text-danger small fw-bold">- S/ ${afp.toFixed(2)}</td>
-                    <td>
-                        <div class="small">Adel: S/ ${d.adelantos} | Faltas: S/ ${d.faltas}</div>
-                        <div class="small">Pens: S/ ${d.pension} | Tard: S/ ${d.tardanza}</div>
+                    <td class="text-center">S/ ${sb.toFixed(2)}</td>
+                    <td class="text-center text-danger small">
+                        - S/ ${(afp + (d.adelantos||0) + (d.faltas||0) + (d.pension||0) + (d.tardanza||0)).toFixed(2)}
                     </td>
-                    <td><span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-danger" onclick="generarBoletaPDF(${d.id_docente})" title="PDF"><i class="fa-solid fa-file-pdf"></i></button>
-                        <button class="btn btn-sm btn-success" onclick="abrirModal(${d.id_docente})" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <td class="text-center"><span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span></td>
+                    <td class="text-center">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-danger" onclick="generarBoletaPDF(${d.id_docente})" title="Boleta"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button class="btn btn-sm btn-success" onclick="enviarWhatsApp(${d.id_docente})" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+                            <button class="btn btn-sm btn-primary" onclick="abrirModal(${d.id_docente})" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        </div>
                     </td>
                 </tr>`;
         });
-        actualizarTotales();
+        actualizarTotales(docentesData);
+    }
+
+    function actualizarGraficos() {
+        const nombres = docentesData.map(d => d.nombre.split(',')[0]); // Solo apellido
+        const netos = docentesData.map(d => {
+            const sb = parseFloat(d.sueldo_base) || 0;
+            return sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
+        });
+
+        // Gráfico de Barras
+        if(chartPrincipal) chartPrincipal.destroy();
+        chartPrincipal = new Chart(document.getElementById('chartPlanilla'), {
+            type: 'bar',
+            data: {
+                labels: nombres,
+                datasets: [{
+                    label: 'Sueldo Neto S/',
+                    data: netos,
+                    backgroundColor: '#3498db',
+                    borderRadius: 5
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Gráfico de Dona (Total Planilla vs Retenciones)
+        const totalSb = docentesData.reduce((acc, d) => acc + (parseFloat(d.sueldo_base)||0), 0);
+        const totalNeto = netos.reduce((acc, n) => acc + n, 0);
+        if(chartDona) chartDona.destroy();
+        chartDona = new Chart(document.getElementById('chartDona'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Neto Pagado', 'Retenciones/Descuentos'],
+                datasets: [{
+                    data: [totalNeto, totalSb - totalNeto],
+                    backgroundColor: ['#2ecc71', '#e74c3c']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    function enviarWhatsApp(id) {
+        const d = docentesData.find(doc => doc.id_docente == id);
+        const neto = (parseFloat(d.sueldo_base) * 0.87) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
+        const msj = `Hola ${d.nombre}, te informamos que tu resumen de planilla para el mes de Mayo es: *Neto a recibir: S/ ${neto.toFixed(2)}*. Saludos de Cervantes School.`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msj)}`, '_blank');
     }
 
     function abrirModal(id) {
-        if(userRole !== 'MASTER') return; // Solo el Master edita
+        if(userRole !== 'MASTER') return;
         const d = docentesData.find(doc => doc.id_docente == id);
         if(!d) return;
-
         document.getElementById('edit-id').value = d.id_docente;
         document.getElementById('edit-nombre').value = d.nombre;
         document.getElementById('edit-sb').value = d.sueldo_base;
@@ -242,7 +320,6 @@
         document.getElementById('edit-fl').value = d.faltas;
         document.getElementById('edit-pen').value = d.pension;
         document.getElementById('edit-tar').value = d.tardanza;
-        
         miModal.show();
     }
 
@@ -255,45 +332,31 @@
             pension: document.getElementById('edit-pen').value,
             tardanza: document.getElementById('edit-tar').value
         };
-        
         try {
             const res = await fetch(`${API_URL}/${id}`, {
-                method: 'PUT', 
-                headers: {'Content-Type':'application/json'},
+                method: 'PUT', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(payload)
             });
-            if(res.ok) {
-                miModal.hide();
-                cargarDatosServidor(); // Recarga la tabla con los nuevos datos
-            }
-        } catch (err) { alert("Error al conectar con el servidor"); }
+            if(res.ok) { miModal.hide(); cargarDatosServidor(); }
+        } catch (err) { alert("Error de conexión"); }
     }
 
-    function actualizarTotales() {
+    function actualizarTotales(data) {
         let totalNeto = 0;
-        docentesData.forEach(d => {
+        data.forEach(d => {
             const sb = parseFloat(d.sueldo_base) || 0;
-            const neto = sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
-            totalNeto += neto;
+            totalNeto += sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
         });
-        document.getElementById('stat-total-personal').innerText = docentesData.length;
+        document.getElementById('stat-total-personal').innerText = data.length;
         document.getElementById('stat-planilla-total').innerText = `S/ ${totalNeto.toLocaleString('en-PE', {minimumFractionDigits:2})}`;
     }
 
-    // BUSCADOR MEJORADO
     document.getElementById('buscador').addEventListener('keyup', function() {
         const query = this.value.toLowerCase().trim();
         const filas = document.querySelectorAll('.fila-docente');
-        filas.forEach(row => {
-            row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
-        });
+        filas.forEach(row => row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none');
     });
 </script>
-
-<!-- BOLETA PDF (DISEÑO OCULTO - SE MANTIENE IGUAL) -->
-<div id="plantilla-boleta" style="display: none; width: 750px; padding: 40px; background: white; color: black; position: absolute; left: -9999px;">
-    <!-- Contenido del PDF... -->
-</div>
 
 </body>
 </html>
