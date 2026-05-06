@@ -2,7 +2,6 @@ const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -11,7 +10,6 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, './')));
 
-// Configuración de BD (Asegúrate de tener tus variables en el .env)
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
@@ -20,41 +18,11 @@ const db = mysql.createConnection({
     port: process.env.DB_PORT || 3306
 });
 
-// USUARIOS OFICIALES
-const usuarios = [
-    { user: 'admin_cervantes', pass: 'cervantes2026', role: 'admin', nombre: 'Promotor Edgar Cervantes' },
-    { user: 'jaime_ramirez', pass: 'boleta2026', role: 'user', nombre: 'Gustavo Ramirez', dni: '76758994' }
-];
-
-// --- LOGIN API ---
-app.post('/api/login', (req, res) => {
-    const { user, pass } = req.body;
-    const cuenta = usuarios.find(u => u.user === user && u.pass === pass);
-    
-    if (cuenta) {
-        res.json({ success: true, role: cuenta.role, nombre: cuenta.nombre, dni: cuenta.dni || null });
-    } else {
-        res.status(401).json({ success: false, message: 'Usuario o clave incorrectos' });
-    }
-});
-
-// --- RUTA WHATSAPP ---
-app.get('/api/whatsapp-link', (req, res) => {
-    const { nombre, sueldo, filename } = req.query;
-    const numero = "51943706872"; // Tu número de Claro
-    const urlBoleta = `${req.protocol}://${req.get('host')}/boletas/${filename}`;
-    
-    const texto = `Hola *${nombre}*, te adjunto tu boleta del mes.%0A%0A*Total Neto:* S/ ${sueldo}%0A*Link:* ${urlBoleta}`;
-    const link = `https://api.whatsapp.com/send?phone=${numero}&text=${texto}`;
-    
-    res.json({ link });
-});
-
-// --- LISTAR DOCENTES ---
+// --- LISTAR DOCENTES (Ajustado para el nuevo index) ---
 app.get('/api/docentes', (req, res) => {
     const mes = parseInt(req.query.mes) || 5;
-    const role = req.headers['x-user-role'];
-    const dni = req.headers['x-user-dni'];
+    // Capturamos el filtro de nombre si viene del frontend
+    const nombreFiltro = req.query.nombre; 
 
     let sql = `
         SELECT d.*, 
@@ -66,9 +34,11 @@ app.get('/api/docentes', (req, res) => {
         LEFT JOIN planillas p ON d.id_docente = p.id_docente AND p.mes = ? AND p.anio = 2026`;
 
     let params = [mes];
-    if (role === 'user') {
-        sql += ` WHERE d.dni = ?`;
-        params.push(dni);
+
+    // Si no es admin, filtramos por el nombre que viene del login
+    if (nombreFiltro) {
+        sql += ` WHERE d.nombre LIKE ?`;
+        params.push(`%${nombreFiltro}%`);
     }
 
     db.query(sql, params, (err, result) => {
@@ -77,5 +47,43 @@ app.get('/api/docentes', (req, res) => {
     });
 });
 
+// --- NUEVA RUTA: ACTUALIZAR PLANILLA (Súper importante) ---
+// Esta es la que permite que el botón "Actualizar Datos" del modal funcione
+app.put('/api/docentes/:id', (req, res) => {
+    const { id } = req.params;
+    const { sueldo_base, adelantos, faltas, pension, tardanza, mes } = req.body;
+
+    // 1. Actualizamos el sueldo base en la tabla 'docentes'
+    const sqlDocente = `UPDATE docentes SET sueldo_base = ? WHERE id_docente = ?`;
+    
+    // 2. Actualizamos o Insertamos los descuentos en la tabla 'planillas'
+    const sqlPlanilla = `
+        INSERT INTO planillas (id_docente, mes, anio, adelantos, faltas, pension, tardanza)
+        VALUES (?, ?, 2026, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            adelantos = VALUES(adelantos), 
+            faltas = VALUES(faltas), 
+            pension = VALUES(pension), 
+            tardanza = VALUES(tardanza)`;
+
+    db.query(sqlDocente, [sueldo_base, id], (err) => {
+        if (err) return res.status(500).json({ error: "Error al actualizar sueldo" });
+
+        db.query(sqlPlanilla, [id, mes, adelantos, faltas, pension, tardanza], (err2) => {
+            if (err2) return res.status(500).json({ error: "Error al actualizar descuentos" });
+            res.json({ success: true, message: "Datos sincronizados correctamente" });
+        });
+    });
+});
+
+// --- RUTA WHATSAPP (Se mantiene igual) ---
+app.get('/api/whatsapp-link', (req, res) => {
+    const { nombre, sueldo } = req.query;
+    const numero = "51943706872";
+    const texto = `Hola *${nombre}*, se ha actualizado tu planilla.%0A%0A*Monto Neto:* S/ ${sueldo}%0A%0AConsulta los detalles en el sistema.`;
+    const link = `https://api.whatsapp.com/send?phone=${numero}&text=${texto}`;
+    res.json({ link });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor de Cervantes School corriendo en puerto ${PORT}`));
