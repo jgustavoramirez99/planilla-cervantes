@@ -193,18 +193,18 @@
     }
 
     function cargarDatosServidor() {
-        fetch('http://localhost:3000/api/docentes')
-            .then(response => response.json())
-            .then(data => {
-                docentesData = data;
-                renderizarTabla();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('tabla-cuerpo').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al conectar con el servidor</td></tr>';
-            });
+    // CAMBIA ESTA LÍNEA:
+    fetch('https://planilla-cervantes.onrender.com/api/docentes') 
+        .then(response => response.json())
+        .then(data => {
+            docentesData = data;
+            renderizarTabla();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('tabla-cuerpo').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error al conectar con el servidor</td></tr>';
+        });
     }
-
     function renderizarTabla() {
         const cuerpoTabla = document.getElementById('tabla-cuerpo');
         cuerpoTabla.innerHTML = '';
