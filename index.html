@@ -75,7 +75,7 @@
 
     <div class="container mt-4 mb-5">
         <div id="banner-bienvenida" class="welcome-banner shadow-sm">
-            <i class="fa-solid fa-user-tie me-2"></i> <strong>Bienvenido Gustavo</strong> - Panel de Ingeniería Administrativa.
+            <i class="fa-solid fa-user-tie me-2"></i> <strong>Bienvenido Promotor Edgar Cervantes</strong> - Panel Administrativo.
         </div>
 
         <!-- FILTROS Y ESTADÍSTICAS -->
@@ -202,6 +202,8 @@
     let docentesData = [];
     let userRole = '';
     let chartPrincipal, chartDona;
+    
+    // Asegúrate de que esta URL sea exactamente la de tu backend en Render
     const API_URL = 'https://planilla-cervantes.onrender.com/api/docentes';
     const miModal = new bootstrap.Modal(document.getElementById('modalEditar'));
 
@@ -209,35 +211,62 @@
         e.preventDefault();
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
+        // Validación simple para tu demo
         if(u === 'admin_cervantes' && p === 'cervantes2026') {
-            document.getElementById('banner-bienvenida').style.display = 'block';
             iniciarSistema('MASTER');
-        } else { alert("Credenciales incorrectas"); }
+        } else { 
+            alert("Credenciales incorrectas. Intenta con admin_cervantes"); 
+        }
     });
 
     function iniciarSistema(rol) {
         userRole = rol;
         document.getElementById('seccion-login').style.display = 'none';
         document.getElementById('seccion-principal').style.display = 'block';
+        document.getElementById('banner-bienvenida').style.display = 'block';
         document.getElementById('badge-rol').innerText = `MODO: ${rol}`;
+        
+        // Limpiamos el buscador por si acaso quedó algo escrito
+        document.getElementById('buscador').value = '';
         cargarDatosServidor();
     }
 
-    function cargarDatosServidor() {
-        fetch(API_URL).then(res => res.json()).then(data => {
-            docentesData = data;
-            renderizarTabla();
+    async function cargarDatosServidor() {
+        try {
+            // Añadimos el mes actual como parámetro para que el server sepa qué traer
+            const mesActual = document.getElementById('filtro-mes').value;
+            const response = await fetch(`${API_URL}?mes=${mesActual}`);
+            
+            if (!response.ok) throw new Error('Error al conectar con el servidor');
+            
+            docentesData = await response.json();
+            
+            if (docentesData.length === 0) {
+                console.warn("La base de datos respondió pero no hay registros.");
+            }
+
+            renderizarTabla(docentesData); // Pasamos los datos directamente
             actualizarGraficos();
-        });
+            actualizarTotales(docentesData);
+        } catch (error) {
+            console.error("Error crítico:", error);
+            alert("No se pudieron cargar los datos. Verifica que el servidor en Render esté activo.");
+        }
     }
 
-    function renderizarTabla() {
+    function renderizarTabla(lista) {
         const cuerpo = document.getElementById('tabla-cuerpo');
         cuerpo.innerHTML = '';
-        docentesData.forEach(d => {
+
+        if (lista.length === 0) {
+            cuerpo.innerHTML = '<tr><td colspan="5" class="text-center p-4">No se encontraron resultados</td></tr>';
+            return;
+        }
+
+        lista.forEach(d => {
             const sb = parseFloat(d.sueldo_base) || 0;
-            const afp = sb * 0.13;
-            const neto = sb - afp - (parseFloat(d.adelantos)||0) - (parseFloat(d.faltas)||0) - (parseFloat(d.pension)||0) - (parseFloat(d.tardanza)||0);
+            const descPilar = sb * 0.13; // Ejemplo AFP
+            const neto = sb - descPilar - (parseFloat(d.adelantos)||0) - (parseFloat(d.faltas)||0) - (parseFloat(d.pension)||0) - (parseFloat(d.tardanza)||0);
 
             cuerpo.innerHTML += `
                 <tr class="fila-docente">
@@ -247,70 +276,60 @@
                     </td>
                     <td class="text-center">S/ ${sb.toFixed(2)}</td>
                     <td class="text-center text-danger small">
-                        - S/ ${(afp + (d.adelantos||0) + (d.faltas||0) + (d.pension||0) + (d.tardanza||0)).toFixed(2)}
+                        - S/ ${(descPilar + (d.adelantos||0) + (d.faltas||0) + (d.pension||0) + (d.tardanza||0)).toFixed(2)}
                     </td>
                     <td class="text-center"><span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span></td>
                     <td class="text-center">
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-danger" onclick="generarBoletaPDF(${d.id_docente})" title="Boleta"><i class="fa-solid fa-file-pdf"></i></button>
-                            <button class="btn btn-sm btn-success" onclick="enviarWhatsApp(${d.id_docente})" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
-                            <button class="btn btn-sm btn-primary" onclick="abrirModal(${d.id_docente})" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button class="btn btn-sm btn-outline-success" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>
                         </div>
                     </td>
                 </tr>`;
         });
-        actualizarTotales(docentesData);
     }
 
-    function actualizarGraficos() {
-        const nombres = docentesData.map(d => d.nombre.split(',')[0]); // Solo apellido
-        const netos = docentesData.map(d => {
-            const sb = parseFloat(d.sueldo_base) || 0;
-            return sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
-        });
+    // Lógica del buscador corregida
+    document.getElementById('buscador').addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        const filtrados = docentesData.filter(d => 
+            d.nombre.toLowerCase().includes(query) || 
+            d.dni.includes(query)
+        );
+        renderizarTabla(filtrados);
+    });
 
-        // Gráfico de Barras
+    // Gráficos y otros... (Mantener funciones de Chart.js anteriores)
+    function actualizarGraficos() {
+        if (docentesData.length === 0) return;
+        const nombres = docentesData.slice(0, 5).map(d => d.nombre.split(',')[0]); 
+        const netos = docentesData.slice(0, 5).map(d => (parseFloat(d.sueldo_base)*0.87));
+
         if(chartPrincipal) chartPrincipal.destroy();
-        chartPrincipal = new Chart(document.getElementById('chartPlanilla'), {
+        const ctx = document.getElementById('chartPlanilla').getContext('2d');
+        chartPrincipal = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: nombres,
-                datasets: [{
-                    label: 'Sueldo Neto S/',
-                    data: netos,
-                    backgroundColor: '#3498db',
-                    borderRadius: 5
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        // Gráfico de Dona (Total Planilla vs Retenciones)
-        const totalSb = docentesData.reduce((acc, d) => acc + (parseFloat(d.sueldo_base)||0), 0);
-        const totalNeto = netos.reduce((acc, n) => acc + n, 0);
-        if(chartDona) chartDona.destroy();
-        chartDona = new Chart(document.getElementById('chartDona'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Neto Pagado', 'Retenciones/Descuentos'],
-                datasets: [{
-                    data: [totalNeto, totalSb - totalNeto],
-                    backgroundColor: ['#2ecc71', '#e74c3c']
-                }]
+                datasets: [{ label: 'Sueldo Neto (Top 5)', data: netos, backgroundColor: '#3498db' }]
             },
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
-    function enviarWhatsApp(id) {
-        const d = docentesData.find(doc => doc.id_docente == id);
-        const neto = (parseFloat(d.sueldo_base) * 0.87) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
-        const msj = `Hola ${d.nombre}, te informamos que tu resumen de planilla para el mes de Mayo es: *Neto a recibir: S/ ${neto.toFixed(2)}*. Saludos de Cervantes School.`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msj)}`, '_blank');
+    function actualizarTotales(data) {
+        let totalNeto = 0;
+        data.forEach(d => {
+            const sb = parseFloat(d.sueldo_base) || 0;
+            totalNeto += sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
+        });
+        document.getElementById('stat-total-personal').innerText = data.length;
+        document.getElementById('stat-planilla-total').innerText = `S/ ${totalNeto.toLocaleString('es-PE', {minimumFractionDigits:2})}`;
     }
 
+    // Modal
     function abrirModal(id) {
-        if(userRole !== 'MASTER') return;
         const d = docentesData.find(doc => doc.id_docente == id);
         if(!d) return;
         document.getElementById('edit-id').value = d.id_docente;
@@ -325,37 +344,27 @@
 
     async function guardarCambiosModal() {
         const id = document.getElementById('edit-id').value;
+        const mes = document.getElementById('filtro-mes').value;
         const payload = {
-            sueldo_base: document.getElementById('edit-sb').value,
             adelantos: document.getElementById('edit-al').value,
             faltas: document.getElementById('edit-fl').value,
             pension: document.getElementById('edit-pen').value,
-            tardanza: document.getElementById('edit-tar').value
+            tardanza: document.getElementById('edit-tar').value,
+            mes: mes
         };
+        
         try {
             const res = await fetch(`${API_URL}/${id}`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(payload)
             });
-            if(res.ok) { miModal.hide(); cargarDatosServidor(); }
-        } catch (err) { alert("Error de conexión"); }
+            if(res.ok) { 
+                miModal.hide(); 
+                cargarDatosServidor(); 
+            }
+        } catch (e) { alert("Error al guardar"); }
     }
-
-    function actualizarTotales(data) {
-        let totalNeto = 0;
-        data.forEach(d => {
-            const sb = parseFloat(d.sueldo_base) || 0;
-            totalNeto += sb - (sb*0.13) - (d.adelantos||0) - (d.faltas||0) - (d.pension||0) - (d.tardanza||0);
-        });
-        document.getElementById('stat-total-personal').innerText = data.length;
-        document.getElementById('stat-planilla-total').innerText = `S/ ${totalNeto.toLocaleString('en-PE', {minimumFractionDigits:2})}`;
-    }
-
-    document.getElementById('buscador').addEventListener('keyup', function() {
-        const query = this.value.toLowerCase().trim();
-        const filas = document.querySelectorAll('.fila-docente');
-        filas.forEach(row => row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none');
-    });
 </script>
 
 </body>

@@ -24,9 +24,9 @@ db.connect((err) => {
         console.error('Error conectando a la base de datos:', err);
         return;
     }
-    console.log('Conectado exitosamente a la base de datos');
+    console.log('Conectado a la BD de Cervantes School');
 
-    // 1. Crear Tabla de Docentes (Datos Maestros)
+    // Creación de tablas si no existen (Sin borrar datos previos)
     const tableDocentes = `
     CREATE TABLE IF NOT EXISTS docentes (
         id_docente INT PRIMARY KEY AUTO_INCREMENT,
@@ -36,7 +36,6 @@ db.connect((err) => {
         tipo_pension VARCHAR(50)
     );`;
 
-    // 2. Crear Tabla de Planillas (Datos Mensuales)
     const tablePlanillas = `
     CREATE TABLE IF NOT EXISTS planillas (
         id_planilla INT PRIMARY KEY AUTO_INCREMENT,
@@ -50,34 +49,14 @@ db.connect((err) => {
         FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
     );`;
 
-    db.query(tableDocentes, (err) => {
-        if (err) return console.error("Error docentes:", err);
-        
-        db.query(tablePlanillas, (err) => {
-            if (err) return console.error("Error planillas:", err);
-            
-            // Insertar datos iniciales solo si la tabla está vacía
-            db.query("SELECT COUNT(*) as total FROM docentes", (err, res) => {
-                if (res[0].total === 0) {
-                    const insertDocentes = `
-                    INSERT INTO docentes (nombre, dni, sueldo_base, tipo_pension) VALUES
-                    ('ARIZOLA TINTAYA, Reyna Del Pilar', '1', 1800.00, 'AFP'),
-                    ('ARONE ROMERO, Liseth', '2', 1500.00, 'ONP'),
-                    ('BURGA ALCALA, Romulo Moroni', '3', 1800.00, 'AFP'),
-                    ('RAMIREZ RAMIREZ, Jaime Gustavo', '76758994', 1500.00, 'AFP'),
-                    ('MUÑOZ CERVANTES, Erika', '20', 2500.00, 'AFP');`; 
-                    // Nota: He resumido la lista para el ejemplo, puedes pegar todos aquí.
-                    
-                    db.query(insertDocentes, () => console.log("Carga inicial de docentes lista."));
-                }
-            });
-        });
-    });
+    db.query(tableDocentes);
+    db.query(tablePlanillas);
 });
 
-// Obtener docentes con su planilla del mes actual (Mayo 2026)
+// GET: Obtener docentes + datos de planilla del mes seleccionado
 app.get('/api/docentes', (req, res) => {
-    const mes = req.query.mes || 5;
+    // Capturamos el mes desde la URL (ej: ?mes=5) o usamos 5 (Mayo) por defecto
+    const mes = parseInt(req.query.mes) || 5; 
     const anio = 2026;
 
     const sql = `
@@ -91,39 +70,42 @@ app.get('/api/docentes', (req, res) => {
         ORDER BY d.nombre ASC`;
 
     db.query(sql, [mes, anio], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("Error en SELECT:", err);
+            return res.status(500).json({ error: "Error al obtener datos" });
+        }
         res.json(result);
     });
 });
 
-// Actualizar o Insertar datos de planilla
+// PUT: Actualizar o Crear registro de planilla para un docente
 app.put('/api/docentes/:id', (req, res) => {
     const { id } = req.params;
-    const { adelantos, faltas, pension, tardanza, mes = 5, anio = 2026 } = req.body;
-    
-    // Usamos ON DUPLICATE KEY o primero verificamos si existe
+    const { adelantos, faltas, pension, tardanza, mes } = req.body;
+    const anio = 2026;
+    const m = parseInt(mes) || 5;
+
+    // Lógica "Upsert": Si existe actualiza, si no, inserta
     const checkSql = "SELECT id_planilla FROM planillas WHERE id_docente = ? AND mes = ? AND anio = ?";
     
-    db.query(checkSql, [id, mes, anio], (err, results) => {
-        if (err) return res.status(500).json({ error: "Error de búsqueda" });
+    db.query(checkSql, [id, m, anio], (err, results) => {
+        if (err) return res.status(500).json({ error: "Error de servidor" });
 
         if (results.length > 0) {
-            // Actualizar
             const updateSql = `UPDATE planillas SET adelantos=?, faltas=?, pension=?, tardanza=? WHERE id_docente=? AND mes=? AND anio=?`;
-            db.query(updateSql, [adelantos, faltas, pension, tardanza, id, mes, anio], (err) => {
+            db.query(updateSql, [adelantos, faltas, pension, tardanza, id, m, anio], (err) => {
                 if (err) return res.status(500).json({ error: "Error al actualizar" });
-                res.json({ message: "Planilla actualizada" });
+                res.json({ message: "Planilla actualizada con éxito" });
             });
         } else {
-            // Insertar nuevo registro mensual
             const insertSql = `INSERT INTO planillas (id_docente, mes, anio, adelantos, faltas, pension, tardanza) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-            db.query(insertSql, [id, mes, anio, adelantos, faltas, pension, tardanza], (err) => {
-                if (err) return res.status(500).json({ error: "Error al insertar" });
-                res.json({ message: "Registro de mes creado" });
+            db.query(insertSql, [id, m, anio, adelantos, faltas, pension, tardanza], (err) => {
+                if (err) return res.status(500).json({ error: "Error al crear registro" });
+                res.json({ message: "Registro mensual creado" });
             });
         }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor de Planilla corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
