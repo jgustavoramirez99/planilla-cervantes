@@ -26,7 +26,7 @@ db.connect((err) => {
     }
     console.log('Conectado a la BD de Cervantes School');
 
-    // Creación de tablas si no existen (Sin borrar datos previos)
+    // 1. Crear tabla de docentes si no existe
     const tableDocentes = `
     CREATE TABLE IF NOT EXISTS docentes (
         id_docente INT PRIMARY KEY AUTO_INCREMENT,
@@ -36,6 +36,7 @@ db.connect((err) => {
         tipo_pension VARCHAR(50)
     );`;
 
+    // 2. Crear tabla de planillas si no existe
     const tablePlanillas = `
     CREATE TABLE IF NOT EXISTS planillas (
         id_planilla INT PRIMARY KEY AUTO_INCREMENT,
@@ -49,13 +50,65 @@ db.connect((err) => {
         FOREIGN KEY (id_docente) REFERENCES docentes(id_docente)
     );`;
 
-    db.query(tableDocentes);
-    db.query(tablePlanillas);
+    db.query(tableDocentes, () => {
+        db.query(tablePlanillas, () => {
+            // CARGA INICIAL: Si no hay docentes, los insertamos todos de una vez
+            db.query("SELECT COUNT(*) as total FROM docentes", (err, res) => {
+                if (res && res[0].total === 0) {
+                    const insertData = `
+                    INSERT INTO docentes (nombre, dni, sueldo_base, tipo_pension) VALUES
+                    ('ARIZOLA TINTAYA, Reyna Del Pilar', '1', 1800.00, 'AFP'),
+                    ('ARONE ROMERO, Liseth', '2', 1500.00, 'ONP'),
+                    ('BURGA ALCALA, Romulo Moroni', '3', 1800.00, 'AFP'),
+                    ('CARAZA HUAMANI, Flor De Maria', '4', 1500.00, 'AFP'),
+                    ('CASTILLEJO CHILINGANA, Samira Nicol', '5', 1500.00, 'AFP'),
+                    ('CERVANTES REYES, Agripina', '6', 1800.00, 'ONP'),
+                    ('CERVANTES REYES, Edgar', '7', 2500.00, 'AFP'),
+                    ('CEVALLOS CARRILLO, Bony', '8', 1800.00, 'AFP'),
+                    ('CHAVEZ CHIRINOS, Laura Soledad', '9', 1800.00, 'AFP'),
+                    ('CORONADO VARGAS, Melissa Lizehtt', '10', 1800.00, 'AFP'),
+                    ('CRUZ BELENDEZ, Humberto Maria', '11', 2000.00, 'AFP'),
+                    ('DOMINGUEZ GOMEZ, Ana Elena', '12', 1800.00, 'AFP'),
+                    ('FLORES RIVERA, Edgar', '13', 1800.00, NULL),
+                    ('GARCIA CARRION, Eloy', '14', 1800.00, NULL),
+                    ('GARCIA FERNANDEZ, Russell', '15', 1800.00, NULL),
+                    ('GUERRERO LEYVA, Maria', '16', 1800.00, NULL),
+                    ('MEDINA BELLON, Julinho Americo Jesus', '17', 1800.00, NULL),
+                    ('MENDOZA JUEZ DE TENORIO, Belen Milagros', '18', 1800.00, NULL),
+                    ('MEZA SALAZAR, Jarlen Jaqueline', '19', 2000.00, NULL),
+                    ('MUÑOZ CERVANTES, Erika', '20', 2500.00, NULL),
+                    ('ORDINOLA CORREA, Roberto Alexander', '21', 1800.00, NULL),
+                    ('PAOLA ESTUPIÑAN, Ibeth', '22', 1800.00, NULL),
+                    ('PALACIOS BALDEON, Edison', '23', 2000.00, NULL),
+                    ('PERFECTO ALEJO, Russell', '24', 2000.00, NULL),
+                    ('PONCE HERRERA, Maria Elena', '25', 1500.00, NULL),
+                    ('PUMAPUILLO CJUIRO, Fatima Rosario', '26', 2000.00, NULL),
+                    ('QUISPE BUSTAMANTE, Lucia', '27', 1800.00, NULL),
+                    ('RAMIREZ RAMIREZ, Jaime Gustavo', '76758994', 1500.00, NULL),
+                    ('RAMOS FLORES, Nicole Jamile', '29', 1800.00, NULL),
+                    ('RIVAS ANGOMA, Eduardo Elias', '30', 1800.00, NULL),
+                    ('RODRIGUEZ RIVAS, Carmen', '31', 1500.00, NULL),
+                    ('ROSALES ESPINOZA, Luz Nelly', '32', 1800.00, NULL),
+                    ('SALVATIERRA MEZA, Angel', '33', 2000.00, NULL),
+                    ('SOLIS GUTIERREZ, Naydelyn', '34', 1500.00, NULL),
+                    ('TAFUR YACTAYO, Yulisa Del Carmen', '35', 2000.00, NULL),
+                    ('TELLO HUAYN, Dylan', '36', 1500.00, NULL),
+                    ('VELARDE MENDOZA, Noemi Victoria', '37', 1800.00, NULL),
+                    ('VERANO VILLAR, Hector', '38', 1800.00, NULL),
+                    ('VILCHEZ ROSALES, Elena Carolina', '39', 1500.00, NULL);`;
+
+                    db.query(insertData, (err) => {
+                        if (err) console.error("Error al cargar profesores:", err);
+                        else console.log("¡40 Profesores cargados exitosamente!");
+                    });
+                }
+            });
+        });
+    });
 });
 
-// GET: Obtener docentes + datos de planilla del mes seleccionado
+// GET: Obtener todos los docentes con planilla mensual
 app.get('/api/docentes', (req, res) => {
-    // Capturamos el mes desde la URL (ej: ?mes=5) o usamos 5 (Mayo) por defecto
     const mes = parseInt(req.query.mes) || 5; 
     const anio = 2026;
 
@@ -70,22 +123,18 @@ app.get('/api/docentes', (req, res) => {
         ORDER BY d.nombre ASC`;
 
     db.query(sql, [mes, anio], (err, result) => {
-        if (err) {
-            console.error("Error en SELECT:", err);
-            return res.status(500).json({ error: "Error al obtener datos" });
-        }
+        if (err) return res.status(500).json({ error: "Error en la base de datos" });
         res.json(result);
     });
 });
 
-// PUT: Actualizar o Crear registro de planilla para un docente
+// PUT: Actualizar planilla
 app.put('/api/docentes/:id', (req, res) => {
     const { id } = req.params;
     const { adelantos, faltas, pension, tardanza, mes } = req.body;
     const anio = 2026;
     const m = parseInt(mes) || 5;
 
-    // Lógica "Upsert": Si existe actualiza, si no, inserta
     const checkSql = "SELECT id_planilla FROM planillas WHERE id_docente = ? AND mes = ? AND anio = ?";
     
     db.query(checkSql, [id, m, anio], (err, results) => {
@@ -95,17 +144,17 @@ app.put('/api/docentes/:id', (req, res) => {
             const updateSql = `UPDATE planillas SET adelantos=?, faltas=?, pension=?, tardanza=? WHERE id_docente=? AND mes=? AND anio=?`;
             db.query(updateSql, [adelantos, faltas, pension, tardanza, id, m, anio], (err) => {
                 if (err) return res.status(500).json({ error: "Error al actualizar" });
-                res.json({ message: "Planilla actualizada con éxito" });
+                res.json({ message: "OK" });
             });
         } else {
             const insertSql = `INSERT INTO planillas (id_docente, mes, anio, adelantos, faltas, pension, tardanza) VALUES (?, ?, ?, ?, ?, ?, ?)`;
             db.query(insertSql, [id, m, anio, adelantos, faltas, pension, tardanza], (err) => {
-                if (err) return res.status(500).json({ error: "Error al crear registro" });
-                res.json({ message: "Registro mensual creado" });
+                if (err) return res.status(500).json({ error: "Error al crear" });
+                res.json({ message: "OK" });
             });
         }
     });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
