@@ -18,11 +18,10 @@
         .card { border: none; border-radius: 15px; }
         .stats-card { background: #ffffff; border-left: 5px solid #3498db; }
         .table thead { border-radius: 10px; }
-        .input-descuento { max-width: 110px; border-radius: 5px; border: 1px solid #ddd; }
+        .input-editable { border: 1px dashed #ccc; background: transparent; width: 100%; padding: 2px 5px; }
+        .input-editable:focus { border: 1px solid #3498db; outline: none; background: #fff; }
         .btn-pdf { background-color: #e74c3c; color: white; border: none; }
-        .btn-pdf:hover { background-color: #c0392b; color: white; }
-        
-        /* Estilos para el Login */
+        .btn-save { background-color: #2ecc71; color: white; border: none; }
         #seccion-login { height: 100vh; display: flex; align-items: center; justify-content: center; }
         .login-card { width: 100%; max-width: 400px; padding: 2rem; border-radius: 20px; }
     </style>
@@ -33,7 +32,6 @@
 <div id="seccion-login">
     <div class="card login-card shadow-lg">
         <div class="text-center mb-4">
-            <img src="logo.png" alt="Logo Colegio" style="max-height: 80px; margin-bottom: 10px;">
             <h3 class="fw-bold text-dark">Cervantes School</h3>
             <p class="text-muted">Acceso al Sistema Administrativo</p>
         </div>
@@ -48,27 +46,25 @@
             </div>
             <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm">Ingresar</button>
             <div id="error-login" class="text-danger small mt-3 text-center" style="display:none;">
-                <i class="fa-solid fa-circle-exclamation"></i> Usuario o contraseña incorrectos
+                <i class="fa-solid fa-circle-exclamation"></i> Credenciales incorrectas
             </div>
         </form>
     </div>
 </div>
 
-<!-- CONTENIDO PRINCIPAL (OCULTO) -->
+<!-- CONTENIDO PRINCIPAL -->
 <div id="seccion-principal" style="display: none;">
     <div class="header-colegio text-center shadow">
         <div class="container d-flex justify-content-between align-items-center">
-            <img src="logo.png" alt="Logo" style="max-height: 60px;">
+            <h2 class="m-0">Panel de Control de Planilla</h2>
             <div class="text-end">
                 <span id="badge-rol" class="badge bg-light text-dark mb-1 d-block"></span>
                 <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
         </div>
-        <h1 class="mt-2">Panel de Control de Planilla</h1>
     </div>
 
     <div class="container mb-5">
-        <!-- Resumen de Planilla -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card stats-card shadow-sm p-3">
@@ -83,29 +79,24 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card shadow-sm p-2">
-                    <div class="input-group mt-1">
-                        <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                        <input type="text" id="buscador" class="form-control border-start-0" placeholder="Buscar docente...">
-                    </div>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="buscador" class="form-control" placeholder="Buscar por nombre o DNI...">
                 </div>
             </div>
         </div>
 
-        <!-- Tabla Principal -->
         <div class="card shadow-lg">
             <div class="card-body p-4">
-                <h5 class="card-title mb-4 text-primary"><i class="fa-solid fa-calculator me-2"></i>Cálculo Detallado de Haberes</h5>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Docente / DNI</th>
                                 <th>Sueldo Base</th>
-                                <th>Desc. Ley AFP (13%)</th>
+                                <th>Desc. Ley (13%)</th>
                                 <th>Adelantos</th>
                                 <th>Faltas</th>
-                                <th>Desc. Pensión x Hijos / Tardanzas</th>
                                 <th>Sueldo Neto</th>
                                 <th>Acciones</th>
                             </tr>
@@ -118,66 +109,39 @@
     </div>
 </div>
 
-<!-- PLANTILLA DE BOLETA (OCULTA) -->
-<div id="plantilla-boleta" style="display: none; width: 800px; padding: 40px; background: white; color: black; font-family: Arial, sans-serif; position: absolute; left: -9999px;">
-    <div style="text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px;">
-        <img src="logo.png" alt="Logo Colegio" style="max-height: 80px; margin-bottom: 10px;">
-        <h2 style="margin: 0; color: #2c3e50;">CERVANTES SCHOOL</h2>
-        <p style="margin: 5px 0; font-weight: bold;">BOLETA DE PAGO DE REMUNERACIONES</p>
+<!-- PLANTILLA PDF OCULTA -->
+<div id="plantilla-boleta" style="display: none; width: 800px; padding: 40px; background: white; color: black; position: absolute; left: -9999px;">
+    <div style="text-align: center; border-bottom: 2px solid #2c3e50;">
+        <h2>CERVANTES SCHOOL - BOLETA DE PAGO</h2>
     </div>
-    
-    <div style="margin-top: 20px; display: flex; justify-content: space-between;">
-        <div>
-            <p><strong>DOCENTE:</strong> <span id="pdf-nombre"></span></p>
-            <p><strong>DNI:</strong> <span id="pdf-dni"></span></p>
-        </div>
-        <div style="text-align: right;">
-            <p><strong>MES:</strong> MAYO 2026</p>
-        </div>
+    <div style="margin: 20px 0;">
+        <p><strong>DOCENTE:</strong> <span id="pdf-nombre"></span></p>
+        <p><strong>DNI:</strong> <span id="pdf-dni"></span></p>
     </div>
-
-    <table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+    <table style="width: 100%; border-collapse: collapse;">
         <thead>
-            <tr style="background: #f2f2f2;">
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Concepto</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: right;">Ingresos</th>
-                <th style="border: 1px solid #ddd; padding: 10px; text-align: right;">Descuentos</th>
-            </tr>
+            <tr style="background: #f2f2f2;"><th>Concepto</th><th>Monto</th></tr>
         </thead>
-        <tbody id="pdf-tabla-cuerpo">
-            <!-- Se llena dinámicamente -->
-        </tbody>
+        <tbody id="pdf-tabla-cuerpo"></tbody>
         <tfoot>
-            <tr style="background: #2c3e50; color: white; font-weight: bold;">
-                <td style="padding: 10px;">NETO A PAGAR</td>
-                <td colspan="2" style="padding: 10px; text-align: right;" id="pdf-neto"></td>
-            </tr>
+            <tr style="background: #2c3e50; color: white;"><td>NETO A PAGAR</td><td id="pdf-neto"></td></tr>
         </tfoot>
     </table>
-
-    <div style="margin-top: 60px; display: flex; justify-content: space-around; text-align: center;">
-        <div style="border-top: 1px solid black; width: 200px; padding-top: 5px;">Firma del Empleador</div>
-        <div style="border-top: 1px solid black; width: 200px; padding-top: 5px;">Firma del Docente</div>
-    </div>
 </div>
 
 <script>
     let docentesData = [];
     let userRole = '';
+    const API_URL = 'https://planilla-cervantes.onrender.com/api/docentes';
 
-    // Manejo del Login
     document.getElementById('form-login').addEventListener('submit', function(e) {
         e.preventDefault();
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
 
-        if(u === 'admin_cervantes' && p === 'cervantes2026') {
-            iniciarSistema('MASTER');
-        } else if(u === 'usuario_gustavo' && p === 'gustavo123') {
-            iniciarSistema('AUXILIAR');
-        } else {
-            document.getElementById('error-login').style.display = 'block';
-        }
+        if(u === 'admin_cervantes' && p === 'cervantes2026') iniciarSistema('MASTER');
+        else if(u === 'usuario_gustavo' && p === 'gustavo123') iniciarSistema('AUXILIAR');
+        else document.getElementById('error-login').style.display = 'block';
     });
 
     function iniciarSistema(rol) {
@@ -188,151 +152,125 @@
         cargarDatosServidor();
     }
 
-    function cerrarSesion() {
-        location.reload();
-    }
+    function cerrarSesion() { location.reload(); }
 
     function cargarDatosServidor() {
-        fetch('https://planilla-cervantes.onrender.com/api/docentes') 
-            .then(response => response.json())
+        fetch(API_URL)
+            .then(res => res.json())
             .then(data => {
                 docentesData = data;
                 renderizarTabla();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('tabla-cuerpo').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error al conectar con el servidor</td></tr>';
             });
     }
 
     function renderizarTabla() {
-        const cuerpoTabla = document.getElementById('tabla-cuerpo');
-        cuerpoTabla.innerHTML = '';
-        const esAuxiliar = (userRole === 'AUXILIAR');
+        const cuerpo = document.getElementById('tabla-cuerpo');
+        cuerpo.innerHTML = '';
+        const esMaster = (userRole === 'MASTER');
 
-        docentesData.forEach(docente => {
-            // --- LÓGICA DE CÁLCULO ACTUALIZADA ---
-            const sueldoBase = parseFloat(docente.sueldo_base) || 0;
-            const descLey = sueldoBase * 0.13;
-            
-            // Capturamos los nuevos datos que vienen del servidor (Aiven)
-            const adelantos = parseFloat(docente.adelantos) || 0;
-            const faltas = parseFloat(docente.faltas) || 0;
+        docentesData.forEach(d => {
+            const sb = parseFloat(d.sueldo_base) || 0;
+            const al = parseFloat(d.adelantos) || 0;
+            const fl = parseFloat(d.faltas) || 0;
+            const ley = sb * 0.13;
+            const neto = sb - ley - al - fl;
 
-            // Calculamos el Neto restando TODO
-            const sueldoNetoFinal = sueldoBase - descLey - adelantos - faltas;
-
-            cuerpoTabla.innerHTML += `
-                <tr class="fila-docente">
+            cuerpo.innerHTML += `
+                <tr class="fila-docente" data-id="${d.id_docente}">
                     <td>
-                        <div class="fw-bold">${docente.nombre}</div>
-                        <small class="text-muted"><i class="fa-solid fa-id-card"></i> ${docente.dni}</small>
+                        <input type="text" class="input-editable fw-bold" value="${d.nombre}" ${!esMaster?'disabled':''} id="edit-nombre-${d.id_docente}">
+                        <br><small><input type="text" class="input-editable text-muted" value="${d.dni}" ${!esMaster?'disabled':''} id="edit-dni-${d.id_docente}"></small>
                     </td>
-                    <td class="fw-bold text-dark">S/ ${sueldoBase.toFixed(2)}</td>
-                    <td class="text-danger">- S/ ${descLey.toFixed(2)}</td>
-                    
-                    <!-- NUEVAS COLUMNAS VISIBLES -->
-                    <td class="text-warning fw-bold">- S/ ${adelantos.toFixed(2)}</td>
-                    <td class="text-danger fw-bold">- S/ ${faltas.toFixed(2)}</td>
-
+                    <td><input type="number" class="input-editable edit-trigger" value="${sb}" ${!esMaster?'disabled':''} id="edit-sb-${d.id_docente}"></td>
+                    <td class="text-danger">- S/ ${ley.toFixed(2)}</td>
+                    <td><input type="number" class="input-editable edit-trigger text-warning fw-bold" value="${al}" ${!esMaster?'disabled':''} id="edit-al-${d.id_docente}"></td>
+                    <td><input type="number" class="input-editable edit-trigger text-danger fw-bold" value="${fl}" ${!esMaster?'disabled':''} id="edit-fl-${d.id_docente}"></td>
+                    <td class="fw-bold text-success">S/ <span id="neto-${d.id_docente}">${neto.toFixed(2)}</span></td>
                     <td>
-                        <div class="d-flex flex-column gap-1">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-info text-white" style="width: 75px; font-size: 0.7rem;">PENSIÓN</span>
-                                <input type="number" class="form-control input-descuento input-calculo" 
-                                       data-dni="${docente.dni}" id="pension-${docente.dni}" value="0" step="0.01" 
-                                       ${esAuxiliar ? 'disabled' : ''}>
-                            </div>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-warning text-dark" style="width: 75px; font-size: 0.7rem;">TARDANZA</span>
-                                <input type="number" class="form-control input-descuento input-calculo" 
-                                       data-dni="${docente.dni}" id="tardanza-${docente.dni}" value="0" step="0.01"
-                                       ${esAuxiliar ? 'disabled' : ''}>
-                            </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-pdf" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>
+                            ${esMaster ? `<button class="btn btn-sm btn-save" id="btn-save-${d.id_docente}" onclick="guardarCambios(${d.id_docente})"><i class="fa-solid fa-floppy-disk"></i></button>` : ''}
                         </div>
                     </td>
-                    <td class="fw-bold text-success h5">
-                        S/ <span class="neto-individual" id="neto-${docente.dni}" 
-                                 data-base="${sueldoNetoFinal}">
-                            ${sueldoNetoFinal.toFixed(2)}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-pdf shadow-sm" onclick="generarBoletaPDF('${docente.dni}', '${docente.nombre}', ${sueldoBase}, ${adelantos}, ${faltas})">
-                            <i class="fa-solid fa-file-pdf"></i> Boleta
-                        </button>
-                    </td>
-                </tr>
-            `;
+                </tr>`;
         });
-        actualizarEstadisticas();
+        actualizarGlobal();
     }
 
-    // Recálculo en Vivo (Considerando adelantos y faltas base)
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('input-calculo')) {
-            const dni = e.target.dataset.dni;
-            const spanNeto = document.getElementById(`neto-${dni}`);
-            const baseConDescuentosFijos = parseFloat(spanNeto.dataset.base);
-            
-            const descPension = parseFloat(document.getElementById(`pension-${dni}`).value) || 0;
-            const descTardanza = parseFloat(document.getElementById(`tardanza-${dni}`).value) || 0;
-            
-            const nuevoNeto = baseConDescuentosFijos - descPension - descTardanza;
-            spanNeto.innerText = nuevoNeto.toFixed(2);
-            
-            actualizarEstadisticas();
+    // Recálculo visual al escribir
+    document.addEventListener('input', e => {
+        if(e.target.classList.contains('edit-trigger')){
+            const id = e.target.closest('tr').dataset.id;
+            const sb = parseFloat(document.getElementById(`edit-sb-${id}`).value) || 0;
+            const al = parseFloat(document.getElementById(`edit-al-${id}`).value) || 0;
+            const fl = parseFloat(document.getElementById(`edit-fl-${id}`).value) || 0;
+            const neto = sb - (sb*0.13) - al - fl;
+            document.getElementById(`neto-${id}`).innerText = neto.toFixed(2);
+            actualizarGlobal();
         }
     });
 
-    function actualizarEstadisticas() {
-        const netos = document.querySelectorAll('.neto-individual');
-        let sumaTotal = 0;
-        netos.forEach(n => sumaTotal += parseFloat(n.innerText));
+    function actualizarGlobal() {
+        let total = 0;
+        document.querySelectorAll('[id^="neto-"]').forEach(n => total += parseFloat(n.innerText));
         document.getElementById('stat-total-personal').innerText = docentesData.length;
-        document.getElementById('stat-planilla-total').innerText = `S/ ${sumaTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        document.getElementById('stat-planilla-total').innerText = `S/ ${total.toFixed(2)}`;
     }
 
-    // PDF con Boleta Completa
-    async function generarBoletaPDF(dni, nombre, sueldoBase, adelantos, faltas) {
-        const { jsPDF } = window.jspdf;
-        const descPension = parseFloat(document.getElementById(`pension-${dni}`).value) || 0;
-        const descTardanza = parseFloat(document.getElementById(`tardanza-${dni}`).value) || 0;
-        const descLey = sueldoBase * 0.13;
+    async function guardarCambios(id) {
+        const btn = document.getElementById(`btn-save-${id}`);
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         
-        const neto = sueldoBase - descLey - adelantos - faltas - descPension - descTardanza;
+        const payload = {
+            nombre: document.getElementById(`edit-nombre-${id}`).value,
+            dni: document.getElementById(`edit-dni-${id}`).value,
+            sueldo_base: document.getElementById(`edit-sb-${id}`).value,
+            adelantos: document.getElementById(`edit-al-${id}`).value,
+            faltas: document.getElementById(`edit-fl-${id}`).value
+        };
 
-        document.getElementById('pdf-nombre').innerText = nombre;
-        document.getElementById('pdf-dni').innerText = dni;
-        document.getElementById('pdf-neto').innerText = `S/ ${neto.toFixed(2)}`;
-
-        document.getElementById('pdf-tabla-cuerpo').innerHTML = `
-            <tr><td style="border:1px solid #ddd;padding:10px;">Sueldo Básico</td><td style="text-align:right;padding:10px;">S/ ${sueldoBase.toFixed(2)}</td><td>-</td></tr>
-            <tr><td style="border:1px solid #ddd;padding:10px;">Aporte Ley (13%)</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${descLey.toFixed(2)}</td></tr>
-            <tr><td style="border:1px solid #ddd;padding:10px;">Adelantos</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${adelantos.toFixed(2)}</td></tr>
-            <tr><td style="border:1px solid #ddd;padding:10px;">Faltas</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${faltas.toFixed(2)}</td></tr>
-            <tr><td style="border:1px solid #ddd;padding:10px;">Pensión / Otros</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${descPension.toFixed(2)}</td></tr>
-            <tr><td style="border:1px solid #ddd;padding:10px;">Tardanzas</td><td>-</td><td style="text-align:right;padding:10px;">S/ ${descTardanza.toFixed(2)}</td></tr>
-        `;
-
-        const elemento = document.getElementById('plantilla-boleta');
-        elemento.style.display = 'block';
-        const canvas = await html2canvas(elemento, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.addImage(imgData, 'PNG', 10, 10, 190, 0);
-        pdf.save(`Boleta_${nombre.replace(/ /g, "_")}.pdf`);
-        elemento.style.display = 'none';
+        try {
+            const res = await fetch(`${API_URL}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) alert('Datos guardados en la nube con éxito');
+        } catch (err) {
+            alert('Error al guardar');
+        } finally {
+            btn.innerHTML = originalContent;
+        }
     }
 
-    // Buscador
+    async function generarBoletaPDF(id) {
+        const { jsPDF } = window.jspdf;
+        const n = document.getElementById(`edit-nombre-${id}`).value;
+        const d = document.getElementById(`edit-dni-${id}`).value;
+        const sb = parseFloat(document.getElementById(`edit-sb-${id}`).value);
+        const neto = document.getElementById(`neto-${id}`).innerText;
+
+        document.getElementById('pdf-nombre').innerText = n;
+        document.getElementById('pdf-dni').innerText = d;
+        document.getElementById('pdf-neto').innerText = `S/ ${neto}`;
+        document.getElementById('pdf-tabla-cuerpo').innerHTML = `<tr><td>Sueldo Base</td><td>S/ ${sb}</td></tr>`;
+
+        const el = document.getElementById('plantilla-boleta');
+        el.style.display = 'block';
+        const canvas = await html2canvas(el);
+        const pdf = new jsPDF();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, 190, 0);
+        pdf.save(`Boleta_${n}.pdf`);
+        el.style.display = 'none';
+    }
+
     document.getElementById('buscador').addEventListener('keyup', function() {
-        const filtro = this.value.toLowerCase();
-        document.querySelectorAll('.fila-docente').forEach(fila => {
-            fila.style.display = fila.textContent.toLowerCase().includes(filtro) ? "" : "none";
+        const f = this.value.toLowerCase();
+        document.querySelectorAll('.fila-docente').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(f) ? '' : 'none';
         });
     });
 </script>
-
 </body>
 </html>

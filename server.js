@@ -35,8 +35,6 @@ db.connect((err) => {
         } else {
             console.log("Tabla antigua eliminada. Creando versión actualizada...");
 
-            // --- PASO 2: CREACIÓN DE TABLA CORREGIDA ---
-            // Corregido: Agregada coma después de tipo_pension y quitada la coma final antes del paréntesis
             const createTableQuery = `
             CREATE TABLE docentes (
                 id_docente INT PRIMARY KEY,
@@ -54,8 +52,6 @@ db.connect((err) => {
                 } else {
                     console.log("Tabla 'docentes' creada con éxito");
 
-                    // --- PASO 3: INSERCIÓN CORREGIDA (7 columnas ahora) ---
-                    // IMPORTANTE: Agregamos 0, 0 al final de cada fila para adelantos y faltas iniciales
                     const insertDataQuery = `
                     INSERT INTO docentes (id_docente, nombre, dni, sueldo_base, tipo_pension, adelantos, faltas) VALUES
                     (1, 'Juan Perez', '12345678', 2500.00, 'AFP', 0, 0),
@@ -109,14 +105,33 @@ db.connect((err) => {
     });
 });
 
+// --- RUTA PARA OBTENER TODOS LOS DOCENTES ---
 app.get('/api/docentes', (req, res) => {
-    const sql = "SELECT * FROM docentes";
+    const sql = "SELECT * FROM docentes ORDER BY nombre ASC";
     db.query(sql, (err, result) => {
         if (err) {
             console.error(err);
             return res.status(500).json({ error: "Error en el servidor" });
         }
         return res.json(result);
+    });
+});
+
+// --- NUEVA RUTA: ACTUALIZAR DATOS DESDE LA WEB (EDICIÓN INLINE) ---
+app.put('/api/docentes/:id', (req, res) => {
+    const { id } = req.params;
+    const { nombre, dni, sueldo_base, adelantos, faltas } = req.body;
+
+    const sql = `UPDATE docentes 
+                 SET nombre = ?, dni = ?, sueldo_base = ?, adelantos = ?, faltas = ? 
+                 WHERE id_docente = ?`;
+
+    db.query(sql, [nombre, dni, sueldo_base, adelantos, faltas, id], (err, result) => {
+        if (err) {
+            console.error("Error al actualizar:", err);
+            return res.status(500).json({ error: "No se pudo actualizar el docente" });
+        }
+        res.json({ message: "Docente actualizado con éxito" });
     });
 });
 
