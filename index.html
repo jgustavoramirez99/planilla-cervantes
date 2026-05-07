@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
@@ -179,6 +180,15 @@
         <!-- TABLA -->
         <div class="card shadow-lg">
             <div class="card-body p-0">
+                <!-- Cabecera de tabla con botón Excel (solo admin) -->
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" id="tabla-header" style="display:none!important;">
+                    <span class="small text-muted fw-bold">
+                        <i class="fa-solid fa-list me-1"></i> Listado de Docentes
+                    </span>
+                    <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="descargarExcel()">
+                        <i class="fa-solid fa-file-excel me-1"></i> Descargar Excel
+                    </button>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-dark text-center">
@@ -372,6 +382,10 @@
         }
 
         document.getElementById('buscador').value = '';
+        // Mostrar botón Excel solo para admin
+        if (rol === 'admin') {
+            document.getElementById('tabla-header').style.display = 'flex';
+        }
         cargarDatosServidor();
     }
 
@@ -707,7 +721,7 @@
     }
 
     // ============================================================
-    // TOTALESs
+    // TOTALES
     // ============================================================
     function actualizarTotales(data) {
         if (userRole === 'user') {
@@ -769,6 +783,95 @@
             console.error(e);
             alert('Error de red al guardar.');
         }
+    }
+
+    // ============================================================
+    // DESCARGAR EXCEL — genera el archivo con todos los datos
+    // ============================================================
+    function descargarExcel() {
+        if (userRole !== 'admin') return;
+        if (!docentesData.length) { alert('No hay datos para exportar.'); return; }
+
+        const mes     = document.getElementById('filtro-mes').value;
+        const mesNombre = mes == '6' ? 'Junio 2026' : 'Mayo 2026';
+
+        // Construir filas con todos los campos
+        const filas = docentesData.map(d => {
+            const sb          = Number(d.sueldo_base)       || 0;
+            const adelantos   = Number(d.adelantos)         || 0;
+            const faltas      = Number(d.faltas)            || 0;
+            const pension     = Number(d.pension)           || 0;
+            const tardanza    = Number(d.tardanza)          || 0;
+            const bono        = Number(d.bono)              || 0;
+            const otrosDesc   = Number(d.otros_descuentos)  || 0;
+            const detalle     = d.otros_desc_detalle        || '';
+            const afp         = sb * 0.13;
+            const totalDed    = afp + adelantos + faltas + pension + tardanza + otrosDesc;
+            const neto        = sb + bono - totalDed;
+
+            return {
+                'Nombre':                  d.nombre,
+                'DNI':                     d.dni,
+                'Periodo':                 mesNombre,
+                'Sueldo Base (S/)':        sb,
+                'Bono Especial (S/)':      bono,
+                'AFP 13% (S/)':            parseFloat(afp.toFixed(2)),
+                'Adelantos (S/)':          adelantos,
+                'Faltas (S/)':             faltas,
+                'Pensión (S/)':            pension,
+                'Tardanza (S/)':           tardanza,
+                'Otros Descuentos (S/)':   otrosDesc,
+                'Detalle Otros Desc.':     detalle,
+                'Total Deducciones (S/)':  parseFloat(totalDed.toFixed(2)),
+                'NETO A PAGAR (S/)':       parseFloat(neto.toFixed(2))
+            };
+        });
+
+        // Fila de totales al final
+        const totalNeto = docentesData.reduce((s, d) => s + calcularNeto(d), 0);
+        filas.push({
+            'Nombre':               'TOTAL PLANILLA',
+            'DNI':                  '',
+            'Periodo':              mesNombre,
+            'Sueldo Base (S/)':     '',
+            'Bono Especial (S/)':   '',
+            'AFP 13% (S/)':         '',
+            'Adelantos (S/)':       '',
+            'Faltas (S/)':          '',
+            'Pensión (S/)':         '',
+            'Tardanza (S/)':        '',
+            'Otros Descuentos (S/)':'',
+            'Detalle Otros Desc.':  '',
+            'Total Deducciones (S/)':'',
+            'NETO A PAGAR (S/)':    parseFloat(totalNeto.toFixed(2))
+        });
+
+        // Crear el workbook con SheetJS
+        const ws = XLSX.utils.json_to_sheet(filas);
+
+        // Ancho de columnas automático
+        ws['!cols'] = [
+            { wch: 35 }, // Nombre
+            { wch: 12 }, // DNI
+            { wch: 12 }, // Periodo
+            { wch: 16 }, // Sueldo Base
+            { wch: 16 }, // Bono
+            { wch: 14 }, // AFP
+            { wch: 14 }, // Adelantos
+            { wch: 12 }, // Faltas
+            { wch: 12 }, // Pensión
+            { wch: 12 }, // Tardanza
+            { wch: 20 }, // Otros Desc
+            { wch: 25 }, // Detalle
+            { wch: 20 }, // Total Ded
+            { wch: 18 }, // Neto
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, `Planilla ${mesNombre}`);
+
+        // Descargar
+        XLSX.writeFile(wb, `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`);
     }
 </script>
 
