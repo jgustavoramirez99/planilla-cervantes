@@ -420,6 +420,17 @@
             const totalDed  = descAfp + adelantos + faltas + pension + tardanza;
             const neto      = sb - totalDed;
 
+            // Color del badge según estado:
+            // 🔴 Rojo   → neto negativo (deducciones exceden el sueldo)
+            // 🟢 Verde  → planilla editada este mes (tiene alguna deducción extra registrada)
+            // 🔵 Azul   → sin modificaciones aún (solo AFP automática)
+            let badgeColor = 'bg-primary';   // azul por defecto
+            if (neto < 0) {
+                badgeColor = 'bg-danger';    // rojo
+            } else if (adelantos > 0 || faltas > 0 || pension > 0 || tardanza > 0) {
+                badgeColor = 'bg-success';   // verde
+            }
+
             const btnPDF = `<button class="btn btn-sm btn-outline-danger" title="Descargar boleta PDF"
                                 onclick="generarBoletaPDF(${d.id_docente})">
                                 <i class="fa-solid fa-file-pdf"></i>
@@ -450,7 +461,7 @@
                     <td class="text-center">S/ ${sb.toFixed(2)}</td>
                     <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
                     <td class="text-center">
-                        <span class="badge bg-primary badge-neto">S/ ${neto.toFixed(2)}</span>
+                        <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
                     </td>
                     <td class="text-center">
                         <div class="btn-group gap-1">
