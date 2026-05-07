@@ -18,23 +18,56 @@ if (!fs.existsSync(BOLETAS_DIR)) {
 }
 
 // ============================================================
-// CONEXIÓN A BASE DE DATOS
+// CONEXIÓN A BASE DE DATOS — Aiven requiere SSL obligatorio
 // ============================================================
+
+// Intentamos cargar el certificado CA de Aiven (ca.pem en la raíz del proyecto)
+// Si no existe el archivo, usamos rejectUnauthorized:false como fallback
+let sslConfig;
+const caCertPath = path.join(__dirname, 'ca.pem');
+if (fs.existsSync(caCertPath)) {
+    sslConfig = { ca: fs.readFileSync(caCertPath) };
+    console.log('🔒 SSL: usando ca.pem local.');
+} else {
+    // Fallback: acepta cualquier certificado (útil si configuras el CA
+    // como variable de entorno en Render en vez de archivo)
+    sslConfig = { rejectUnauthorized: false };
+    console.warn('⚠️  SSL: ca.pem no encontrado, usando rejectUnauthorized:false.');
+}
+
 const db = mysql.createConnection({
     host:     process.env.DB_HOST     || 'localhost',
     user:     process.env.DB_USER     || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME     || 'db_planilla_cervantes',
-    port:     process.env.DB_PORT     || 3306
+    port:     parseInt(process.env.DB_PORT) || 3306,
+    ssl:      sslConfig,
+    // Reconexión automática si se cae la conexión idle de Aiven
+    connectTimeout: 10000
 });
 
-db.connect(err => {
-    if (err) {
-        console.error('❌ Error al conectar con la base de datos:', err.message);
-    } else {
-        console.log('✅ Conectado a MySQL correctamente.');
-    }
-});
+function conectarDB() {
+    db.connect(err => {
+        if (err) {
+            console.error('❌ Error al conectar con la base de datos:', err.message);
+            console.error('   Verifica DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME en tu .env / Render.');
+            // Reintenta en 5 segundos si falla
+            setTimeout(conectarDB, 5000);
+        } else {
+            console.log('✅ Conectado a MySQL (Aiven) correctamente.');
+        }
+    });
+
+    db.on('error', err => {
+        console.error('❌ Error de BD en tiempo de ejecución:', err.message);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+            console.log('🔄 Reconectando a la base de datos...');
+            conectarDB();
+        }
+    });
+}
+
+conectarDB();
 
 // ============================================================
 // USUARIOS DEL SISTEMA
@@ -82,10 +115,13 @@ app.get('/api/docentes', (req, res) => {
 
     let sql = `
         SELECT d.*,
-               IFNULL(p.adelantos, 0) AS adelantos,
-               IFNULL(p.faltas,    0) AS faltas,
-               IFNULL(p.pension,   0) AS pension,
-               IFNULL(p.tardanza,  0) AS tardanza
+               IFNULL(p.adelantos,          0)  AS adelantos,
+               IFNULL(p.faltas,             0)  AS faltas,
+               IFNULL(p.pension,            0)  AS pension,
+               IFNULL(p.tardanza,           0)  AS tardanza,
+               IFNULL(p.bono,               0)  AS bono,
+               IFNULL(p.otros_descuentos,   0)  AS otros_descuentos,
+               IFNULL(p.otros_desc_detalle, '') AS otros_desc_detalle
         FROM docentes d
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
@@ -116,7 +152,7 @@ app.put('/api/docentes/:id', (req, res) => {
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
-    const { sueldo_base, adelantos, faltas, pension, tardanza } = req.body;
+    const { sueldo_base, adelantos, faltas, pension, tardanza, bono, otros_descuentos, otros_desc_detalle } = req.body;
 
     // 1. Actualizar sueldo_base en la tabla docentes (si viene)
     if (sueldo_base !== undefined) {
@@ -127,19 +163,23 @@ app.put('/api/docentes/:id', (req, res) => {
         );
     }
 
-    // 2. Upsert en planillas (INSERT o UPDATE si ya existe el registro del mes)
+    // 2. Upsert en planillas — incluye bono, otros_descuentos y detalle
     const sqlUpsert = `
-        INSERT INTO planillas (id_docente, mes, anio, adelantos, faltas, pension, tardanza)
-        VALUES (?, ?, 2026, ?, ?, ?, ?)
+        INSERT INTO planillas
+            (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono, otros_descuentos, otros_desc_detalle)
+        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-            adelantos = VALUES(adelantos),
-            faltas    = VALUES(faltas),
-            pension   = VALUES(pension),
-            tardanza  = VALUES(tardanza)`;
+            adelantos          = VALUES(adelantos),
+            faltas             = VALUES(faltas),
+            pension            = VALUES(pension),
+            tardanza           = VALUES(tardanza),
+            bono               = VALUES(bono),
+            otros_descuentos   = VALUES(otros_descuentos),
+            otros_desc_detalle = VALUES(otros_desc_detalle)`;
 
     db.query(
         sqlUpsert,
-        [id, mes, adelantos || 0, faltas || 0, pension || 0, tardanza || 0],
+        [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0, otros_descuentos||0, otros_desc_detalle||''],
         (err) => {
             if (err) {
                 console.error('Error en PUT /api/docentes:', err);

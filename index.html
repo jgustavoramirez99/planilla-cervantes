@@ -236,6 +236,33 @@
                         <input type="number" id="edit-tar" class="form-control" min="0">
                     </div>
                 </div>
+
+                <!-- SEPARADOR -->
+                <hr class="my-2">
+
+                <!-- BONO ESPECIAL -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-success">
+                        <i class="fa-solid fa-gift me-1"></i>Bono Especial (S/)
+                        <span class="text-muted fw-normal ms-1" style="font-size:0.78rem;">Fiestas Patrias, Navidad, etc.</span>
+                    </label>
+                    <input type="number" id="edit-bono" class="form-control border-success" min="0" placeholder="0.00">
+                </div>
+
+                <!-- OTROS DESCUENTOS -->
+                <div class="row">
+                    <div class="col-5 mb-2">
+                        <label class="form-label small fw-bold text-danger">
+                            <i class="fa-solid fa-circle-minus me-1"></i>Otros Descuentos (S/)
+                        </label>
+                        <input type="number" id="edit-otros-desc" class="form-control" min="0" placeholder="0.00">
+                    </div>
+                    <div class="col-7 mb-2">
+                        <label class="form-label small fw-bold text-muted">Detalle del descuento</label>
+                        <input type="text" id="edit-otros-desc-detalle" class="form-control"
+                               placeholder="Ej: Préstamo, vestimenta, etc." maxlength="100">
+                    </div>
+                </div>
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -422,12 +449,13 @@
 
             // Color del badge según estado:
             // 🔴 Rojo   → neto negativo (deducciones exceden el sueldo)
-            // 🟢 Verde  → planilla editada este mes (tiene alguna deducción extra registrada)
+            // 🟢 Verde  → planilla editada este mes (tiene alguna deducción extra o bono registrado)
             // 🔵 Azul   → sin modificaciones aún (solo AFP automática)
             let badgeColor = 'bg-primary';   // azul por defecto
             if (neto < 0) {
                 badgeColor = 'bg-danger';    // rojo
-            } else if (adelantos > 0 || faltas > 0 || pension > 0 || tardanza > 0) {
+            } else if (adelantos > 0 || faltas > 0 || pension > 0 || tardanza > 0
+                       || (Number(d.bono)||0) > 0 || (Number(d.otros_descuentos)||0) > 0) {
                 badgeColor = 'bg-success';   // verde
             }
 
@@ -539,7 +567,9 @@
     // ============================================================
     function calcularNeto(d) {
         const sb = Number(d.sueldo_base) || 0;
-        return sb - (sb * 0.13) - (Number(d.adelantos)||0) - (Number(d.faltas)||0) - (Number(d.pension)||0) - (Number(d.tardanza)||0);
+        const bono = Number(d.bono) || 0;
+        const otrosDesc = Number(d.otros_descuentos) || 0;
+        return sb + bono - (sb * 0.13) - (Number(d.adelantos)||0) - (Number(d.faltas)||0) - (Number(d.pension)||0) - (Number(d.tardanza)||0) - otrosDesc;
     }
 
     async function crearBoletaPdfBlob(d) {
@@ -677,7 +707,7 @@
     }
 
     // ============================================================
-    // TOTALES
+    // TOTALESs
     // ============================================================
     function actualizarTotales(data) {
         if (userRole === 'user') {
@@ -699,13 +729,16 @@
         if (userRole !== 'admin') return;
         const d = docentesData.find(doc => doc.id_docente == id);
         if (!d) return;
-        document.getElementById('edit-id').value     = d.id_docente;
-        document.getElementById('edit-nombre').value = d.nombre;
-        document.getElementById('edit-sb').value     = d.sueldo_base;
-        document.getElementById('edit-al').value     = d.adelantos;
-        document.getElementById('edit-fl').value     = d.faltas;
-        document.getElementById('edit-pen').value    = d.pension;
-        document.getElementById('edit-tar').value    = d.tardanza;
+        document.getElementById('edit-id').value                  = d.id_docente;
+        document.getElementById('edit-nombre').value               = d.nombre;
+        document.getElementById('edit-sb').value                   = d.sueldo_base;
+        document.getElementById('edit-al').value                   = d.adelantos;
+        document.getElementById('edit-fl').value                   = d.faltas;
+        document.getElementById('edit-pen').value                  = d.pension;
+        document.getElementById('edit-tar').value                  = d.tardanza;
+        document.getElementById('edit-bono').value                 = d.bono              || 0;
+        document.getElementById('edit-otros-desc').value           = d.otros_descuentos  || 0;
+        document.getElementById('edit-otros-desc-detalle').value   = d.otros_desc_detalle || '';
         miModal.show();
     }
 
@@ -714,11 +747,14 @@
         const id  = document.getElementById('edit-id').value;
         const mes = document.getElementById('filtro-mes').value;
         const payload = {
-            sueldo_base: document.getElementById('edit-sb').value,
-            adelantos:   document.getElementById('edit-al').value,
-            faltas:      document.getElementById('edit-fl').value,
-            pension:     document.getElementById('edit-pen').value,
-            tardanza:    document.getElementById('edit-tar').value,
+            sueldo_base:         document.getElementById('edit-sb').value,
+            adelantos:           document.getElementById('edit-al').value,
+            faltas:              document.getElementById('edit-fl').value,
+            pension:             document.getElementById('edit-pen').value,
+            tardanza:            document.getElementById('edit-tar').value,
+            bono:                document.getElementById('edit-bono').value,
+            otros_descuentos:    document.getElementById('edit-otros-desc').value,
+            otros_desc_detalle:  document.getElementById('edit-otros-desc-detalle').value,
             mes
         };
         try {
