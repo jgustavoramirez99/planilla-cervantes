@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Planilla - Cervantes School</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -12,6 +13,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('App lista para instalar'))
+            .catch(err => console.log('Error al registrar sw', err));
+        });
+      }
+    </script>
     <style>
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
         .header-colegio { background: #2c3e50; color: white; padding: 20px; border-bottom: 5px solid #e74c3c; }
@@ -58,11 +70,10 @@
         .chart-container { position: relative; height: 250px; width: 100%; }
 
         /* Spinner para WhatsApp */
-        .btn-loading { pointer-events: none; opacity: 0.7; }
+        .btn-loading { pointer-events: none; opacity: 0.7; } 
     </style>
 </head>
-<body>
-
+<body> <div id="seccion-login"></div>
 <!-- ===================== LOGIN ===================== -->
 <div id="seccion-login">
     <div class="card login-card shadow-lg text-center">
