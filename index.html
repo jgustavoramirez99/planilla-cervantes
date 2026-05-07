@@ -76,18 +76,18 @@
         <div class="card shadow border-0">
             <div class="table-responsive" id="contenedor-tabla">
                 <table class="table align-middle mb-0">
-                    <thead class="table-dark small text-center">
-                        <tr>
-                            <th class="text-start">Apellidos y Nombres</th>
-                            <th>Sueldo Bruto</th>
-                            <th>AFP/ONP</th>
-                            <th>Adelantos</th>
-                            <th>Faltas/Tard.</th>
-                            <th>Neto a Pagar</th>
-                            <th>Boleta</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-cuerpo"></tbody>
+                 <thead class="table-dark small text-center">
+                    <tr>
+                        <th class="text-start">Apellidos y Nombres</th>
+                        <th>Sueldo Bruto</th>
+                        <th>AFP/ONP (%)</th>
+                        <th>Adelantos</th>
+                        <th>Faltas/Tard.</th>
+                        <th>Neto a Pagar</th>
+                        <th>Boleta</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-cuerpo"></tbody>
                 </table>
             </div>
         </div>
@@ -193,116 +193,160 @@
     }
 
     function renderizarTabla() {
-        const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = '';
-        let totalPlanilla = 0;
+    const cuerpo = document.getElementById('tabla-cuerpo');
+    cuerpo.innerHTML = ''; // Limpiamos la tabla antes de llenarla
+    let totalPlanilla = 0;
 
-        // FILTRADO: Si es user, solo ve su fila. Si es admin, ve todo.
-        let listaAMostrar = (userRole === 'admin') ? 
-            docentesData : 
-            docentesData.filter(d => d.nombre.toLowerCase().includes(loggedUserNombre.split(' ')[0].toLowerCase()));
+    // 1. Filtrado de seguridad: 
+    // Si eres admin ves a todos, si eres docente solo ves tu nombre.
+    let listaAMostrar = (userRole === 'admin') ? 
+        docentesData : 
+        docentesData.filter(d => d.nombre.toLowerCase().includes(loggedUserNombre.split(' ')[0].toLowerCase()));
 
-        listaAMostrar.forEach(d => {
-            const sb = Number(d.sueldo_base) || 0;
-            const adelanto = Number(d.adelantos) || 0;
-            const faltas = Number(d.faltas) || 0;
-            const tardanza = Number(d.tardanza) || 0;
-            const porcPension = Number(d.pension) || 11.84;
-            const descLey = sb * (porcPension / 100);
-            const neto = sb - descLey - adelanto - faltas - tardanza;
-            totalPlanilla += neto;
+    // 2. Llenado de la tabla fila por fila
+    listaAMostrar.forEach(d => {
+        const sb = Number(d.sueldo_base) || 0;
+        const adelanto = Number(d.adelantos) || 0;
+        const faltas = Number(d.faltas) || 0;
+        const tardanza = Number(d.tardanza) || 0;
+        const porcPension = Number(d.pension) || 11.84; // Porcentaje de tu Excel
+        
+        const descLey = sb * (porcPension / 100);
+        const neto = sb - descLey - adelanto - (faltas + tardanza);
+        totalPlanilla += neto;
 
-            const tr = document.createElement('tr');
-            tr.className = 'fila-docente';
-            
-            // Solo activar clic de edición si es ADMIN
-            if(userRole === 'admin') {
-                tr.onclick = () => abrirModal(d.id_docente);
-            }
+        const tr = document.createElement('tr');
+        tr.className = 'fila-docente';
+        
+        // Solo el ADMIN puede hacer clic para abrir el modal de edición
+        if(userRole === 'admin') {
+            tr.onclick = () => abrirModal(d.id_docente);
+            tr.style.cursor = "pointer";
+        }
 
-            tr.innerHTML = `
-                <td>
-                    <div class="fw-bold small text-uppercase">${d.nombre}</div>
-                    <div class="text-muted" style="font-size: 10px;">DNI: ${d.dni}</div>
-                </td>
-                <td class="text-center">S/ ${sb.toFixed(2)}</td>
-                <td class="text-center text-muted small">${porcPension}%</td>
-                <td class="text-center text-danger">S/ ${adelanto.toFixed(2)}</td>
-                <td class="text-center text-danger">S/ ${(faltas + tardanza).toFixed(2)}</td>
-                <td class="text-center"><span class="badge bg-primary">S/ ${neto.toFixed(2)}</span></td>
-                <td class="text-center" onclick="event.stopPropagation()">
-                    <button class="btn btn-sm btn-danger" onclick="generarBoletaPDF(${d.id_docente})">
-                        <i class="fa-solid fa-download"></i>
-                    </button>
-                </td>
-            `;
-            cuerpo.appendChild(tr);
-        });
-        document.getElementById('stat-planilla-total').innerText = `S/ ${totalPlanilla.toFixed(2)}`;
+        tr.innerHTML = `
+            <td>
+                <div class="fw-bold small text-uppercase">${d.nombre}</div>
+                <div class="text-muted" style="font-size: 10px;">DNI: ${d.dni}</div>
+            </td>
+            <td class="text-center">S/ ${sb.toFixed(2)}</td>
+            <td class="text-center text-muted small">${porcPension}%</td>
+            <td class="text-center text-danger">S/ ${adelanto.toFixed(2)}</td>
+            <td class="text-center text-danger">S/ ${(faltas + tardanza).toFixed(2)}</td>
+            <td class="text-center"><span class="badge bg-primary">S/ ${neto.toFixed(2)}</span></td>
+            <td class="text-center" onclick="event.stopPropagation()">
+                <button class="btn btn-sm btn-danger" onclick="generarBoletaPDF(${d.id_docente})">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </button>
+            </td>
+        `;
+        cuerpo.appendChild(tr);
+    });
+    
+    // 3. Actualizar el cuadro de "Total Neto" en el panel principal
+    const elementoTotal = document.getElementById('stat-planilla-total');
+    if(elementoTotal) {
+        elementoTotal.innerText = `S/ ${totalPlanilla.toFixed(2)}`;
     }
+   }
 
-    // --- GENERACIÓN DE PDF BLINDADA (No se mueve nada) ---
+    // --- FUNCIÓN DE PDF RESTAURADA (DISEÑO PROFESIONAL) ---
     function generarBoletaPDF(id) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         const d = docentesData.find(x => x.id_docente == id);
         
+        if (!d) return;
+
         const sb = Number(d.sueldo_base) || 0;
         const porcP = Number(d.pension) || 11.84;
-        const descP = sb * (porcP / 100);
-        const adel = Number(d.adelantos) || 0;
+        const descLey = sb * (porcP / 100);
+        const adelanto = Number(d.adelantos) || 0;
         const faltasTar = (Number(d.faltas) || 0) + (Number(d.tardanza) || 0);
-        const neto = sb - descP - adel - faltasTar;
+        const neto = sb - descLey - adelanto - faltasTar;
 
-        // Encabezado Fijo
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.text("I.E.P. CERVANTES SCHOOL", 105, 20, { align: "center" });
-        doc.setFontSize(10);
-        doc.text("BOLETA DE PAGO PERSONAL - MAYO 2026", 105, 28, { align: "center" });
+        // 1. ENCABEZADO CON LOGO
+        // Intenta cargar el logo local, si falla usa el diseño de texto
+        doc.addImage("logo.png", "PNG", 20, 10, 25, 25, undefined, 'FAST');
         
-        doc.setLineWidth(0.5);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(44, 62, 80);
+        doc.text("I.E.P. CERVANTES SCHOOL", 105, 18, { align: "center" });
+        
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text("Puente Piedra, Lima - Perú", 105, 23, { align: "center" });
+        doc.setFont("helvetica", "bold");
+        doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 28, { align: "center" });
+        
+        doc.setDrawColor(200, 200, 200);
         doc.line(20, 35, 190, 35);
 
-        // Datos del Docente
-        doc.setFontSize(11);
-        doc.text("DATOS DEL TRABAJADOR", 20, 45);
+        // 2. DATOS DEL DOCENTE
+        doc.setFontSize(10);
+        doc.text("DATOS DEL DOCENTE", 20, 45);
         doc.setFont("helvetica", "normal");
-        doc.text(`Apellidos y Nombres: ${d.nombre.toUpperCase()}`, 20, 55);
-        doc.text(`DNI: ${d.dni}`, 20, 62);
+        doc.text(`Nombre: ${d.nombre.toUpperCase()}`, 20, 52);
+        doc.text(`DNI: ${d.dni || '---'}`, 20, 58);
+        doc.text(`Periodo: Mayo 2026`, 150, 52); // Ajustado según tu imagen
+
+        // 3. TABLA DE CONCEPTOS
+        doc.setFillColor(245, 245, 245);
+        doc.rect(20, 65, 170, 8, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.text("CONCEPTO", 25, 70);
+        doc.text("INGRESOS", 110, 70);
+        doc.text("DESCUENTOS", 155, 70);
+
+        let y = 80;
+        doc.setFont("helvetica", "normal");
         
-        // Tabla de Conceptos
+        // Ingresos
+        doc.text("Sueldo Básico Mensual", 25, y);
+        doc.text(`S/ ${sb.toFixed(2)}`, 110, y);
+        y += 10;
+
+        // Descuentos
+        doc.text(`Aportes de Ley (${porcP}%)`, 25, y);
+        doc.text(`S/ ${descLey.toFixed(2)}`, 155, y);
+        y += 10;
+
+        doc.text("Adelantos Recibidos", 25, y);
+        doc.text(`S/ ${adelanto.toFixed(2)}`, 155, y);
+        y += 10;
+
+        doc.text("Faltas / Tardanzas", 25, y);
+        doc.text(`S/ ${faltasTar.toFixed(2)}`, 155, y);
+        
+        doc.line(20, y + 5, 190, y + 5);
+
+        // 4. TOTAL NETO (Destacado como en tu imagen)
+        y += 15;
         doc.setFont("helvetica", "bold");
-        doc.text("CONCEPTO", 20, 80);
-        doc.text("INGRESOS", 120, 80);
-        doc.text("DESCUENTOS", 160, 80);
-        doc.line(20, 82, 190, 82);
+        doc.setFontSize(11);
+        doc.text("TOTAL NETO A PAGAR:", 100, y);
+        doc.text(`S/ ${neto.toFixed(2)}`, 155, y);
 
-        doc.setFont("helvetica", "normal");
-        doc.text("Sueldo Bruto", 20, 90);
-        doc.text(`S/ ${sb.toFixed(2)}`, 120, 90);
-
-        doc.text(`Pensión (${porcP}%)`, 20, 100);
-        doc.text(`S/ ${descP.toFixed(2)}`, 160, 100);
-
-        doc.text("Adelantos", 20, 110);
-        doc.text(`S/ ${adel.toFixed(2)}`, 160, 110);
-
-        doc.text("Faltas y Tardanzas", 20, 120);
-        doc.text(`S/ ${faltasTar.toFixed(2)}`, 160, 120);
-
-        doc.line(20, 130, 190, 130);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.text("NETO A RECIBIR:", 20, 140);
-        doc.text(`S/ ${neto.toFixed(2)}`, 120, 140);
-
-        // Pie de página
+        // 5. SECCIÓN DE FIRMAS (Igual a cap.png)
+        y = 230;
+        doc.setDrawColor(0);
+        doc.line(40, y, 90, y); // Línea Promotoría
+        doc.line(120, y, 170, y); // Línea Trabajador
+        
         doc.setFontSize(9);
-        doc.setFont("helvetica", "italic");
-        doc.text("Documento generado por el Sistema de Planillas de Cervantes School.", 105, 160, { align: "center" });
+        doc.text("Lic. Edgar Cervantes", 65, y + 5, { align: "center" });
+        doc.text("Promotoría", 65, y + 10, { align: "center" });
+        
+        doc.text(`${d.nombre.toUpperCase()}`, 145, y + 5, { align: "center" });
+        doc.text("Firma del Trabajador", 145, y + 10, { align: "center" });
 
-        doc.save(`Boleta_${d.nombre.replace(' ', '_')}.pdf`);
+        // Pie de página pequeño
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text("Este documento es una constancia de pago generada por el Sistema de Planilla Digital.", 105, 275, { align: "center" });
+
+        doc.save(`Boleta_${d.nombre.replace(/\s+/g, '_')}.pdf`);
     }
 
     // Funciones de guardado se mantienen del código anterior...
