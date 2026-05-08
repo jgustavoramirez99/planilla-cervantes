@@ -331,9 +331,8 @@
             </div>`;
     }
 
-    // ============================================================
-    // LOGIN — ahora llama al backend /api/login
-    // FIX: antes se validaba solo en el frontend; ahora usa el server
+      // ============================================================
+    // LOGIN — AHORA GUARDA TOKEN Y USUARIO
     // ============================================================
     document.getElementById('form-login').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -349,38 +348,44 @@
         btnLogin.classList.add('btn-loading');
 
         try {
+
             const res = await fetch(`${SERVER_BASE}/api/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user: u, pass: p })
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user: u,
+                    pass: p
+                })
             });
 
             const data = await res.json();
 
             if (res.ok && data.success) {
+
+                // ====================================================
+                // NUEVO: guardar token y usuario
+                // ====================================================
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('usuario', data.user || u);
+
                 userNombre = data.nombre;
-                userDni    = data.dni || '';
+                userDni    = data.codigo_trabajador || '';
+
                 iniciarSistema(data.role);
+
             } else {
                 alerta.classList.remove('d-none');
             }
+
         } catch (err) {
-            // Si el servidor no responde, fallback local para no bloquear el demo
-            console.warn('Backend no disponible, usando validación local:', err);
-            let rolLocal = '';
-            if (u === 'admin_cervantes' && p === 'cervantes2026') {
-                rolLocal   = 'admin';
-                userNombre = 'Promotor Edgar Cervantes';
-                userDni    = '';
-            } else if (u === 'jaime_ramirez' && p === 'boleta2026') {
-                rolLocal   = 'user';
-                userNombre = 'Jaime Gustavo Ramirez';
-                userDni    = '76758994';
-            } else {
-                alerta.classList.remove('d-none');
-            }
-            if (rolLocal) iniciarSistema(rolLocal);
+
+            console.error(err);
+            alerta.classList.remove('d-none');
+
         } finally {
+
             spinner.classList.add('d-none');
             btnLogin.classList.remove('btn-loading');
         }
@@ -414,15 +419,29 @@
     // ============================================================
     // CERRAR SESIÓN limpio
     // ============================================================
-    function cerrarSesion() {
-        docentesData = [];
-        userRole = userNombre = userDni = '';
-        document.getElementById('seccion-principal').style.display = 'none';
-        document.getElementById('seccion-login').style.display     = 'flex';
-        document.getElementById('form-login').reset();
-        document.getElementById('alerta-login').classList.add('d-none');
-    }
+   function cerrarSesion() {
 
+    docentesData = [];
+
+    userRole   = '';
+    userNombre = '';
+    userDni    = '';
+
+    // limpiar token
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+
+    document.getElementById('seccion-principal').style.display =
+        'none';
+
+    document.getElementById('seccion-login').style.display =
+        'flex';
+
+    document.getElementById('form-login').reset();
+
+    document.getElementById('alerta-login')
+        .classList.add('d-none');
+}
     // ============================================================
     // CARGAR DATOS DEL SERVIDOR
     // ============================================================
@@ -465,68 +484,136 @@
     // RENDERIZAR TABLA
     // ============================================================
     function renderizarTabla(lista) {
+
         const cuerpo = document.getElementById('tabla-cuerpo');
+
         cuerpo.innerHTML = '';
 
         if (!lista || lista.length === 0) {
-            cuerpo.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No se encontraron resultados</td></tr>';
+
+            cuerpo.innerHTML = `
+                <tr>
+                    <td colspan="5"
+                        class="text-center p-4 text-muted">
+                        No se encontraron resultados
+                    </td>
+                </tr>`;
+
             return;
         }
 
         lista.forEach(d => {
+
             const sb        = Number(d.sueldo_base) || 0;
             const adelantos = Number(d.adelantos)   || 0;
-            const faltas    = Number(d.faltas)       || 0;
-            const pension   = Number(d.pension)      || 0;
-            const tardanza  = Number(d.tardanza)     || 0;
-            const descAfp   = sb * 0.13;
-            const totalDed  = descAfp + adelantos + faltas + pension + tardanza;
-            const neto      = sb - totalDed;
+            const faltas    = Number(d.faltas)      || 0;
+            const pension   = Number(d.pension)     || 0;
+            const tardanza  = Number(d.tardanza)    || 0;
 
-            // Color del badge según estado:
-            // 🔴 Rojo   → neto negativo (deducciones exceden el sueldo)
-            // 🟢 Verde  → planilla editada este mes (tiene alguna deducción extra o bono registrado)
-            // 🔵 Azul   → sin modificaciones aún (solo AFP automática)
-            let badgeColor = 'bg-primary';   // azul por defecto
+            const descAfp = sb * 0.13;
+
+            const totalDed =
+                descAfp +
+                adelantos +
+                faltas +
+                pension +
+                tardanza;
+
+            const neto = sb - totalDed;
+
+            let badgeColor = 'bg-primary';
+
             if (neto < 0) {
-                badgeColor = 'bg-danger';    // rojo
-            } else if (adelantos > 0 || faltas > 0 || pension > 0 || tardanza > 0
-                       || (Number(d.bono)||0) > 0 || (Number(d.otros_descuentos)||0) > 0) {
-                badgeColor = 'bg-success';   // verde
+
+                badgeColor = 'bg-danger';
+
+            } else if (
+                adelantos > 0 ||
+                faltas > 0 ||
+                pension > 0 ||
+                tardanza > 0 ||
+                (Number(d.bono) || 0) > 0 ||
+                (Number(d.otros_descuentos) || 0) > 0
+            ) {
+
+                badgeColor = 'bg-success';
             }
 
-            const btnPDF = `<button class="btn btn-sm btn-outline-danger" title="Descargar boleta PDF"
-                                onclick="generarBoletaPDF(${d.id_docente})">
-                                <i class="fa-solid fa-file-pdf"></i>
-                            </button>`;
+            const btnPDF = `
+                <button
+                    class="btn btn-sm btn-outline-danger"
+                    title="Descargar boleta PDF"
+                    onclick="generarBoletaPDF(${d.id_docente})">
 
-            // Botón WhatsApp: solo admin, solo para el docente con ese DNI
-            const btnWA = (userRole === 'admin' && d.dni === '76758994')
-                ? `<button class="btn btn-sm btn-outline-success" title="Enviar por WhatsApp"
-                        id="btn-wa-${d.id_docente}"
-                        onclick="enviarWhatsApp(${d.id_docente})">
-                        <i class="fa-brands fa-whatsapp"></i>
-                   </button>` : '';
+                    <i class="fa-solid fa-file-pdf"></i>
+                </button>`;
 
-            const btnEdit = (userRole === 'admin')
-                ? `<button class="btn btn-sm btn-outline-primary" title="Editar planilla"
-                        onclick="abrirModal(${d.id_docente})">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                   </button>` : '';
+            const btnWA = (
+                userRole === 'admin'
+            )
+            ? `
+                <button
+                    class="btn btn-sm btn-outline-success"
+                    title="Enviar por WhatsApp"
+                    id="btn-wa-${d.id_docente}"
+                    onclick="enviarWhatsApp(${d.id_docente})">
 
-            const onclickFila = userRole === 'admin' ? `abrirModal(${d.id_docente})` : '';
+                    <i class="fa-brands fa-whatsapp"></i>
+                </button>`
+            : '';
+
+            const btnEdit = (
+                userRole === 'admin'
+            )
+            ? `
+                <button
+                    class="btn btn-sm btn-outline-primary"
+                    title="Editar planilla"
+                    onclick="abrirModal(${d.id_docente})">
+
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>`
+            : '';
+
+            const onclickFila =
+                userRole === 'admin'
+                ? `abrirModal(${d.id_docente})`
+                : '';
 
             cuerpo.innerHTML += `
                 <tr class="fila-docente">
+
                     <td onclick="${onclickFila}" class="ps-3">
-                        <div class="fw-bold text-dark">${d.nombre}</div>
-                        <small class="text-muted">DNI: ${d.dni}</small>
+
+                        <div class="fw-bold text-dark">
+                            ${d.nombre}
+                        </div>
+
+                        <!-- ===================================================
+                             NUEVO:
+                             codigo_trabajador
+                        ==================================================== -->
+                        <small class="text-muted">
+                            Código:
+                            ${d.codigo_trabajador || 'Sin código'}
+                        </small>
+
                     </td>
-                    <td class="text-center">S/ ${sb.toFixed(2)}</td>
-                    <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
+
                     <td class="text-center">
-                        <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
+                        S/ ${sb.toFixed(2)}
                     </td>
+
+                    <td class="text-center text-danger small">
+                        - S/ ${totalDed.toFixed(2)}
+                    </td>
+
+                    <td class="text-center">
+                        <span class="badge ${badgeColor} badge-neto">
+                            S/ ${neto.toFixed(2)}
+                        </span>
+                    </td>
+
                     <td class="text-center">
                         <div class="btn-group gap-1">
                             ${btnPDF}
@@ -534,10 +621,10 @@
                             ${btnEdit}
                         </div>
                     </td>
+
                 </tr>`;
         });
     }
-
     // ============================================================
     // BUSCADOR
     // ============================================================
@@ -551,52 +638,114 @@
     });
 
     // ============================================================
-    // WHATSAPP — FIX: ahora usa /api/guardar-boleta que existe en server.js
-    // ============================================================
-    async function enviarWhatsApp(id) {
-        if (userRole !== 'admin') return;
+// WHATSAPP — AHORA USA TELEFONO
+// ============================================================
+async function enviarWhatsApp(id) {
 
-        const d = docentesData.find(doc => doc.id_docente == id);
-        if (!d) return;
+    if (userRole !== 'admin') return;
 
-        const btnWA = document.getElementById(`btn-wa-${id}`);
-        if (btnWA) {
-            btnWA.disabled = true;
-            btnWA.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    const d = docentesData.find(
+        doc => doc.id_docente == id
+    );
+
+    if (!d) return;
+
+    const telefono = d.telefono || '';
+
+    if (!telefono) {
+
+        alert('El docente no tiene teléfono registrado.');
+
+        return;
+    }
+
+    const btnWA = document.getElementById(
+        `btn-wa-${id}`
+    );
+
+    if (btnWA) {
+
+        btnWA.disabled = true;
+
+        btnWA.innerHTML = `
+            <span class="spinner-border spinner-border-sm"></span>`;
+    }
+
+    try {
+
+        const blob   = await crearBoletaPdfBlob(d);
+
+        const base64 = await blobToBase64(blob);
+
+        const filename =
+            `Boleta_${d.nombre.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+
+        const uploadRes = await fetch(
+            `${SERVER_BASE}/api/guardar-boleta`,
+            {
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization':
+                        `Bearer ${localStorage.getItem('token')}`
+                },
+
+                body: JSON.stringify({
+                    filename,
+                    base64
+                })
+            }
+        );
+
+        if (!uploadRes.ok) {
+
+            const errData =
+                await uploadRes.json().catch(() => ({}));
+
+            throw new Error(
+                errData.error ||
+                `Error del servidor: ${uploadRes.status}`
+            );
         }
 
-        try {
-            const blob     = await crearBoletaPdfBlob(d);
-            const base64   = await blobToBase64(blob);
-            const filename = `Boleta_${d.nombre.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+        const result = await uploadRes.json();
 
-            const uploadRes = await fetch(`${SERVER_BASE}/api/guardar-boleta`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename, base64 })
-            });
+        const neto = calcularNeto(d);
 
-            if (!uploadRes.ok) {
-                const errData = await uploadRes.json().catch(() => ({}));
-                throw new Error(errData.error || `Error del servidor: ${uploadRes.status}`);
-            }
+        const texto = `
+Hola *${d.nombre}*,
+adjunto tu boleta de pago.
 
-            const result = await uploadRes.json();
+*Total Neto:* S/ ${neto.toFixed(2)}
 
-            const neto = calcularNeto(d);
-            const texto = `Hola *${d.nombre}*, adjunto tu boleta de pago de Mayo 2026.\n*Total Neto:* S/ ${neto.toFixed(2)}\n*Link:* ${result.url}`;
-            window.open(`https://wa.me/51943706872?text=${encodeURIComponent(texto)}`, '_blank');
+*Link:* ${result.url}`;
 
-        } catch (err) {
-            console.error('Error WhatsApp:', err);
-            alert(`No se pudo enviar por WhatsApp.\n${err.message}`);
-        } finally {
-            if (btnWA) {
-                btnWA.disabled = false;
-                btnWA.innerHTML = '<i class="fa-brands fa-whatsapp"></i>';
-            }
+        window.open(
+            `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`,
+            '_blank'
+        );
+
+    } catch (err) {
+
+        console.error('Error WhatsApp:', err);
+
+        alert(`
+No se pudo enviar por WhatsApp.
+
+${err.message}`);
+
+    } finally {
+
+        if (btnWA) {
+
+            btnWA.disabled = false;
+
+            btnWA.innerHTML =
+                '<i class="fa-brands fa-whatsapp"></i>';
         }
     }
+}
 
     // ============================================================
     // UTILIDADES

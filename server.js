@@ -3,9 +3,11 @@ const mysql   = require('mysql2');
 const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
+
 require('dotenv').config();
 
 const app = express();
+const JWT_SECRET = process.env.JWT_SECRET || 'cervantes_secret_2026';
 
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
@@ -18,22 +20,53 @@ if (!fs.existsSync(BOLETAS_DIR)) {
 }
 
 // ============================================================
+// MIDDLEWARE JWT
+// ============================================================
+function verificarToken(req, res, next) {
+
+    const authHeader = req.headers['authorization'];
+
+    if (!authHeader) {
+
+        return res.status(401).json({
+            error: 'Token requerido.'
+        });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+
+        return res.status(401).json({
+            error: 'Token inválido.'
+        });
+    }
+
+    try {
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        req.usuario = decoded;
+
+        next();
+
+    } catch (err) {
+
+        return res.status(401).json({
+            error: 'Token expirado o inválido.'
+        });
+    }
+}
+
+// ============================================================
 // CONEXIÓN A BASE DE DATOS — Aiven requiere SSL obligatorio
 // ============================================================
 
-// Intentamos cargar el certificado CA de Aiven (ca.pem en la raíz del proyecto)
-// Si no existe el archivo, usamos rejectUnauthorized:false como fallback
-let sslConfig;
-const caCertPath = path.join(__dirname, 'ca.pem');
-if (fs.existsSync(caCertPath)) {
-    sslConfig = { ca: fs.readFileSync(caCertPath) };
-    console.log('🔒 SSL: usando ca.pem local.');
-} else {
-    // Fallback: acepta cualquier certificado (útil si configuras el CA
-    // como variable de entorno en Render en vez de archivo)
-    sslConfig = { rejectUnauthorized: false };
-    console.warn('⚠️  SSL: ca.pem no encontrado, usando rejectUnauthorized:false.');
-}
+// ============================================================
+// CONEXIÓN LOCAL MYSQL XAMPP
+// ============================================================
+
+const sslConfig = false;
 
 const db = mysql.createConnection({
     host:     process.env.DB_HOST     || 'localhost',
@@ -41,7 +74,6 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME     || 'db_planilla_cervantes',
     port:     parseInt(process.env.DB_PORT) || 3306,
-    ssl:      sslConfig,
     // Reconexión automática si se cae la conexión idle de Aiven
     connectTimeout: 10000
 });
@@ -73,8 +105,23 @@ conectarDB();
 // USUARIOS DEL SISTEMA
 // ============================================================
 const usuarios = [
-    { user: 'admin_cervantes', pass: 'cervantes2026', role: 'admin', nombre: 'Promotor Edgar Cervantes', dni: null },
-    { user: 'jaime_ramirez',   pass: 'boleta2026',    role: 'user',  nombre: 'Jaime Gustavo Ramirez',   dni: '76758994' }
+    {
+        user: 'admin_cervantes',
+        pass: 'cervantes2026',
+        role: 'admin',
+        nombre: 'Promotor Edgar Cervantes',
+        codigo_trabajador: null,
+        telefono: null
+    },
+
+    {
+        user: 'jaime_ramirez',
+        pass: 'boleta2026',
+        role: 'user',
+        nombre: 'Jaime Gustavo Ramirez',
+        codigo_trabajador: 'DOC001',
+        telefono: '51999999999'
+    }
 ];
 
 // ============================================================
@@ -83,35 +130,64 @@ const usuarios = [
 //      las credenciales directamente en el cliente.
 // ============================================================
 app.post('/api/login', (req, res) => {
+
     const { user, pass } = req.body;
 
     if (!user || !pass) {
-        return res.status(400).json({ success: false, message: 'Faltan credenciales.' });
-    }
 
-    const cuenta = usuarios.find(u => u.user === user && u.pass === pass);
-
-    if (cuenta) {
-        res.json({
-            success: true,
-            role:    cuenta.role,
-            nombre:  cuenta.nombre,
-            dni:     cuenta.dni
+        return res.status(400).json({
+            success: false,
+            message: 'Faltan credenciales.'
         });
-    } else {
-        // 401 para que el frontend muestre el mensaje de error correcto
-        res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
     }
+
+    const cuenta = usuarios.find(
+        u => u.user === user && u.pass === pass
+    );
+
+    if (!cuenta) {
+
+        return res.status(401).json({
+            success: false,
+            message: 'Usuario o contraseña incorrectos.'
+        });
+    }
+
+    // ========================================================
+    // TOKEN JWT
+    // ========================================================
+    const token = jwt.sign(
+        {
+            user: cuenta.user,
+            role: cuenta.role,
+            codigo_trabajador: cuenta.codigo_trabajador
+        },
+        JWT_SECRET,
+        {
+            expiresIn: '8h'
+        }
+    );
+
+    res.json({
+        success: true,
+        token,
+        user: cuenta.user,
+        role: cuenta.role,
+        nombre: cuenta.nombre,
+        codigo_trabajador: cuenta.codigo_trabajador,
+        telefono: cuenta.telefono
+    });
 });
 
 // ============================================================
 // GET /api/docentes?mes=5
 // Filtra por rol usando cabeceras enviadas por el frontend
 // ============================================================
-app.get('/api/docentes', (req, res) => {
+app.get('/api/docentes', verificarToken, (req, res) => {
     const mes  = parseInt(req.query.mes) || 5;
-    const role = req.headers['x-user-role'] || '';
-    const dni  = req.headers['x-user-dni']  || '';
+    const role = req.usuario.role || '';
+    const codigoTrabajador =
+    req.usuario.codigo_trabajador || '';
 
     let sql = `
         SELECT d.*,
@@ -130,11 +206,12 @@ app.get('/api/docentes', (req, res) => {
 
     const params = [mes];
 
-    if (role === 'user' && dni) {
-        sql += ' WHERE d.dni = ?';
-        params.push(dni);
-    }
+    if (role === 'user' && codigoTrabajador) {
 
+    sql += ' WHERE d.codigo_trabajador = ?';
+
+    params.push(codigoTrabajador);
+}
     db.query(sql, params, (err, result) => {
         if (err) {
             console.error('Error en /api/docentes:', err);
@@ -148,7 +225,7 @@ app.get('/api/docentes', (req, res) => {
 // PUT /api/docentes/:id  — actualizar planilla de un docente
 // FIX: ahora también permite actualizar sueldo_base
 // ============================================================
-app.put('/api/docentes/:id', (req, res) => {
+app.put('/api/docentes/:id', verificarToken, (req, res) => {
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
@@ -233,7 +310,7 @@ app.use('/boletas', express.static(BOLETAS_DIR));
 // ============================================================
 app.get('/api/whatsapp-link', (req, res) => {
     const { nombre, sueldo, filename } = req.query;
-    const numero     = '51943706872';
+    const numero = req.query.telefono || '';
     const protocolo  = req.headers['x-forwarded-proto'] || req.protocol;
     const urlBoleta  = `${protocolo}://${req.get('host')}/boletas/${filename}`;
     const texto      = `Hola *${nombre}*, adjunto tu boleta de pago.\n*Total Neto:* S/ ${sueldo}\n*Link:* ${urlBoleta}`;
