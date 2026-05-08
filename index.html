@@ -447,15 +447,16 @@
     // ============================================================
     async function cargarDatosServidor() {
         const mesActual = document.getElementById('filtro-mes').value;
+        const token = localStorage.getItem('token'); // Obtener el token guardado
 
-        // Para role=user enviamos cabeceras con DNI para que el server filtre
         const headers = {
-            'x-user-role': userRole,
-            'x-user-dni':  userDni
+             'Content-Type': 'application/json',
+             'Authorization': `Bearer ${token}` // <--- ESTO ES LO QUE EL SERVIDOR PIDE
         };
 
         try {
             const response = await fetch(`${API_URL}?mes=${mesActual}`, { headers });
+            // ... resto del código
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             docentesData = await response.json();
