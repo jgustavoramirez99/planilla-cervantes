@@ -130,7 +130,7 @@ const usuarios = [
 //      las credenciales directamente en el cliente.
 // ============================================================
 app.post('/api/login', (req, res) => {
-
+    console.log(req.body);
     const { user, pass } = req.body;
 
     if (!user || !pass) {
