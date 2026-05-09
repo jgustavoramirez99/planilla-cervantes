@@ -114,15 +114,41 @@ const usuarios = [
         codigo_trabajador: null,
         telefono: null
     },
-
-    {
-        user: 'jaime_ramirez',
-        pass: 'boleta2026',
-        role: 'user',
-        nombre: 'Jaime Gustavo Ramirez',
-        codigo_trabajador: 'DOC001',
-        telefono: '51999999999'
-    }
+    // ── Docentes ──────────────────────────────────────────────
+    { user: 'user_E000058', pass: 'pass123', role: 'user', nombre: 'ARIZO...', codigo_trabajador: 'E000058', telefono: '923885144' },
+    { user: 'user_E000071', pass: 'pass123', role: 'user', nombre: 'ARONE...', codigo_trabajador: 'E000071', telefono: '987685524' },
+    { user: 'user_E000051', pass: 'pass123', role: 'user', nombre: 'BURGA...', codigo_trabajador: 'E000051', telefono: '934116384' },
+    { user: 'user_E000065', pass: 'pass123', role: 'user', nombre: 'CARAZA...', codigo_trabajador: 'E000065', telefono: '902631171' },
+    { user: 'user_E000066', pass: 'pass123', role: 'user', nombre: 'CASTIL...', codigo_trabajador: 'E000066', telefono: '931916714' },
+    { user: 'user_E000002', pass: 'pass123', role: 'user', nombre: 'CERVAN...', codigo_trabajador: 'E000002', telefono: null },
+    { user: 'user_E000001', pass: 'pass123', role: 'user', nombre: 'CERVAN...', codigo_trabajador: 'E000001', telefono: null },
+    { user: 'user_E000031', pass: 'pass123', role: 'user', nombre: 'CEVALL...', codigo_trabajador: 'E000031', telefono: null },
+    { user: 'user_E000072', pass: 'pass123', role: 'user', nombre: 'CHAVEZ...', codigo_trabajador: 'E000072', telefono: null },
+    { user: 'user_E000052', pass: 'pass123', role: 'user', nombre: 'CORONA...', codigo_trabajador: 'E000052', telefono: '947325101' },
+    { user: 'user_E000033', pass: 'pass123', role: 'user', nombre: 'CRUZ B...', codigo_trabajador: 'E000033', telefono: null },
+    { user: 'user_E000011', pass: 'pass123', role: 'user', nombre: 'DOMING...', codigo_trabajador: 'E000011', telefono: null },
+    { user: 'user_E000018', pass: 'pass123', role: 'user', nombre: 'FLORES...', codigo_trabajador: 'E000018', telefono: null },
+    { user: 'user_E000030', pass: 'pass123', role: 'user', nombre: 'GARCIA...', codigo_trabajador: 'E000030', telefono: null },
+    { user: 'user_E000035', pass: 'pass123', role: 'user', nombre: 'GARCIA...', codigo_trabajador: 'E000035', telefono: null },
+    { user: 'user_E000036', pass: 'pass123', role: 'user', nombre: 'GUERRE...', codigo_trabajador: 'E000036', telefono: null },
+    { user: 'user_E000047', pass: 'pass123', role: 'user', nombre: 'MEDINA...', codigo_trabajador: 'E000047', telefono: null },
+    { user: 'user_E000038', pass: 'pass123', role: 'user', nombre: 'MENDOZ...', codigo_trabajador: 'E000038', telefono: null },
+    { user: 'user_E000067', pass: 'pass123', role: 'user', nombre: 'MEZA S...', codigo_trabajador: 'E000067', telefono: null },
+    { user: 'user_E000055', pass: 'pass123', role: 'user', nombre: 'MUÑOZ...', codigo_trabajador: 'E000055', telefono: null },
+    { user: 'user_E000074', pass: 'pass123', role: 'user', nombre: 'ORDINO...', codigo_trabajador: 'E000074', telefono: null },
+    { user: 'user_E000003', pass: 'pass123', role: 'user', nombre: 'PAOLA...', codigo_trabajador: 'E000003', telefono: null },
+    { user: 'user_E000063', pass: 'pass123', role: 'user', nombre: 'PALACI...', codigo_trabajador: 'E000063', telefono: null },
+    { user: 'user_E000020', pass: 'pass123', role: 'user', nombre: 'PERFEC...', codigo_trabajador: 'E000020', telefono: null },
+    { user: 'user_E000070', pass: 'pass123', role: 'user', nombre: 'PONCE...', codigo_trabajador: 'E000070', telefono: null },
+    { user: 'user_E000062', pass: 'pass123', role: 'user', nombre: 'PUMAPU...', codigo_trabajador: 'E000062', telefono: '988310783' },
+    { user: 'user_E000006', pass: 'pass123', role: 'user', nombre: 'QUISPE...', codigo_trabajador: 'E000006', telefono: null },
+    { user: 'user_E000076', pass: 'pass123', role: 'user', nombre: 'RAMIRE...', codigo_trabajador: 'E000076', telefono: '943706872' },
+    { user: 'user_E000060', pass: 'pass123', role: 'user', nombre: 'RAMOS...', codigo_trabajador: 'E000060', telefono: '963961696' },
+    { user: 'user_E000021', pass: 'pass123', role: 'user', nombre: 'RIVAS...', codigo_trabajador: 'E000021', telefono: null },
+    { user: 'user_E000056', pass: 'pass123', role: 'user', nombre: 'RODRIG...', codigo_trabajador: 'E000056', telefono: null },
+    { user: 'user_E000073', pass: 'pass123', role: 'user', nombre: 'ROSALE...', codigo_trabajador: 'E000073', telefono: '971630057' },
+    { user: 'user_E000022', pass: 'pass123', role: 'user', nombre: 'SALVAT...', codigo_trabajador: 'E000022', telefono: null }
+   // { user: 'user_E000057', pass: 'pass123', role: 'user', nombre: 'SOLIS...', codigo_trabajador: 'E000057', telefono: null}
 ];
 
 // ============================================================
@@ -218,7 +244,12 @@ app.get('/api/docentes', verificarToken, (req, res) => {
             console.error('Error en /api/docentes:', err);
             return res.status(500).json({ error: err.message });
         }
-        res.json(result);
+        // Agregar gasto fijo S/30 "Gastos para Eventos Especiales" a cada docente
+        const resultadoConGasto = result.map(doc => ({
+            ...doc,
+            gastos_eventos_especiales: 30
+        }));
+        res.json(resultadoConGasto);
     });
 });
 
@@ -254,7 +285,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
             bono               = VALUES(bono),
             otros_descuentos   = VALUES(otros_descuentos),
             otros_desc_detalle = VALUES(otros_desc_detalle)`;
-
+            
     db.query(
         sqlUpsert,
         [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0, otros_descuentos||0, otros_desc_detalle||''],
@@ -268,12 +299,12 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     );
 });
 
-// ============================================================
+// =================================================================
 // POST /api/guardar-boleta
 // FIX: este endpoint faltaba en el server original.
 //      Recibe el PDF en base64, lo guarda en /boletas/ y devuelve
 //      la URL pública para enviarla por WhatsApp.
-// ============================================================
+// =================================================================
 app.post('/api/guardar-boleta', (req, res) => {
     const { filename, base64 } = req.body;
 

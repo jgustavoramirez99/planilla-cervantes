@@ -199,6 +199,32 @@
             </div>
         </div>
 
+        <!-- GRÁFICO PERSONAL DEL DOCENTE (solo rol user) -->
+        <div id="grafico-usuario-container" style="display:none;" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card shadow-sm p-3 h-100">
+                        <h6 class="fw-bold text-center mb-3">
+                            <i class="fa-solid fa-chart-pie me-2 text-primary"></i>
+                            Mis Descuentos del Mes
+                        </h6>
+                        <div style="position:relative; height:260px;">
+                            <canvas id="chartUsuarioDescuentos"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-sm p-3 h-100">
+                        <h6 class="fw-bold text-center mb-3">
+                            <i class="fa-solid fa-circle-info me-2 text-info"></i>
+                            Detalle de mi Planilla
+                        </h6>
+                        <div id="detalle-usuario-planilla" class="small"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- TABLA -->
         <div class="card shadow-lg">
             <div class="card-body p-0">
@@ -406,6 +432,8 @@
             document.getElementById('filtro-mes-container').style.display = 'none';
             document.getElementById('buscador-container').style.display   = 'none';
             document.getElementById('graficos-container').style.display   = 'none';
+            // Mostrar sección de gráfico personal del docente
+            document.getElementById('grafico-usuario-container').style.display = 'block';
         }
 
         document.getElementById('buscador').value = '';
@@ -427,7 +455,7 @@
     userNombre = '';
     userDni    = '';
 
-    // limpiar token
+    // limpiar token para evitar que el ususario vuelva sin loguearse
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
 
@@ -443,7 +471,7 @@
         .classList.add('d-none');
 }
     // ============================================================
-    // CARGAR DATOS DEL SERVIDOR
+    // CARGAR DATOS DEL SERVIDOR PARA ADMIN Y USUARIOS
     // ============================================================
     async function cargarDatosServidor() {
         const mesActual = document.getElementById('filtro-mes').value;
@@ -463,12 +491,13 @@
 
             // Filtro extra en cliente como segunda capa de seguridad
             if (userRole === 'user' && userDni) {
-                docentesData = docentesData.filter(d => d.dni === userDni);
+                docentesData = docentesData.filter(d => d.codigo_trabajador === userDni);
             }
 
             renderizarTabla(docentesData);
             actualizarGraficos();
             actualizarTotales(docentesData);
+            actualizarGraficoUsuario(docentesData);
 
         } catch (error) {
             console.error('Error al cargar datos:', error);
@@ -481,9 +510,9 @@
         }
     }
 
-    // ============================================================
-    // RENDERIZAR TABLA
-    // ============================================================
+    // ==========================================================================
+    // RENDERIZAR TABLA PARA ADMIN Y USUARIOS (con logica de calculos  y estilos)
+    // ==========================================================================
     function renderizarTabla(lista) {
 
         const cuerpo = document.getElementById('tabla-cuerpo');
@@ -510,6 +539,8 @@
             const faltas    = Number(d.faltas)      || 0;
             const pension   = Number(d.pension)     || 0;
             const tardanza  = Number(d.tardanza)    || 0;
+            const bono      = Number(d.bono)        || 0;
+            const otrosDesc = Number(d.otros_descuentos) || 0;
 
             const descAfp = sb * 0.13;
 
@@ -518,25 +549,18 @@
                 adelantos +
                 faltas +
                 pension +
-                tardanza;
+                tardanza +
+                otrosDesc +
+                GASTO_EVENTOS;
 
-            const neto = sb - totalDed;
+            const neto = sb + bono - totalDed;
 
+            // Verde si ya fue editada/emitida por el admin, rojo si negativo, azul por defecto
             let badgeColor = 'bg-primary';
 
             if (neto < 0) {
-
                 badgeColor = 'bg-danger';
-
-            } else if (
-                adelantos > 0 ||
-                faltas > 0 ||
-                pension > 0 ||
-                tardanza > 0 ||
-                (Number(d.bono) || 0) > 0 ||
-                (Number(d.otros_descuentos) || 0) > 0
-            ) {
-
+            } else if (d._boletaEmitida) {
                 badgeColor = 'bg-success';
             }
 
@@ -627,7 +651,7 @@
         });
     }
     // ============================================================
-    // BUSCADOR
+    // BUSCADOR DE DOCENTES (filtra por trabajador y codigo)
     // ============================================================
     document.getElementById('buscador').addEventListener('input', function() {
         if (userRole === 'user') return;
@@ -639,7 +663,7 @@
     });
 
     // ============================================================
-// WHATSAPP — AHORA USA TELEFONO
+// WHATSAPP — AHORA USA TELEFONO CON CONTACTO 
 // ============================================================
 async function enviarWhatsApp(id) {
 
@@ -751,11 +775,13 @@ ${err.message}`);
     // ============================================================
     // UTILIDADES
     // ============================================================
+    const GASTO_EVENTOS = 30; // Gastos para Eventos Especiales — fijo mensual
+
     function calcularNeto(d) {
         const sb = Number(d.sueldo_base) || 0;
         const bono = Number(d.bono) || 0;
         const otrosDesc = Number(d.otros_descuentos) || 0;
-        return sb + bono - (sb * 0.13) - (Number(d.adelantos)||0) - (Number(d.faltas)||0) - (Number(d.pension)||0) - (Number(d.tardanza)||0) - otrosDesc;
+        return sb + bono - (sb * 0.13) - (Number(d.adelantos)||0) - (Number(d.faltas)||0) - (Number(d.pension)||0) - (Number(d.tardanza)||0) - otrosDesc - GASTO_EVENTOS;
     }
 
     async function crearBoletaPdfBlob(d) {
@@ -767,9 +793,12 @@ ${err.message}`);
         const faltas    = Number(d.faltas)       || 0;
         const pension   = Number(d.pension)      || 0;
         const tardanza  = Number(d.tardanza)     || 0;
+        const bono      = Number(d.bono)         || 0;
+        const otrosDesc = Number(d.otros_descuentos) || 0;
         const descAfp   = sb * 0.13;
-        const totalDed  = descAfp + adelantos + faltas + pension + tardanza;
-        const neto      = sb - totalDed;
+        const gastosEventos = 30; // Gastos para Eventos Especiales — fijo
+        const totalDed  = descAfp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEventos;
+        const neto      = sb + bono - totalDed;
         const mes       = document.getElementById('filtro-mes').value;
         const mesNombre = mes == '6' ? 'Junio 2026' : 'Mayo 2026';
 
@@ -801,27 +830,30 @@ ${err.message}`);
         doc.text("INGRESOS",   110, 70);
         doc.text("DESCUENTOS", 155, 70);
         doc.setFont("","normal");
-        doc.text("Sueldo Básico Mensual",  20,  80); doc.text(`S/ ${sb.toFixed(2)}`,              110, 80);
-        doc.text("Aportes de Ley (13%)",   20,  88); doc.text(`S/ ${descAfp.toFixed(2)}`,         155, 88);
-        doc.text("Adelantos Recibidos",    20,  96); doc.text(`S/ ${adelantos.toFixed(2)}`,        155, 96);
-        doc.text("Faltas / Tardanzas",     20, 104); doc.text(`S/ ${(faltas+tardanza).toFixed(2)}`,155,104);
-        doc.text("Pensión",               20, 112); doc.text(`S/ ${pension.toFixed(2)}`,          155,112);
+        doc.text("Sueldo Básico Mensual",           20,  80); doc.text(`S/ ${sb.toFixed(2)}`,              110, 80);
+        if (bono > 0) { doc.text("Bono Especial",            20,  86); doc.text(`S/ ${bono.toFixed(2)}`,             110, 86); }
+        doc.text("Aportes de Ley (13%)",              20,  94); doc.text(`S/ ${descAfp.toFixed(2)}`,         155, 94);
+        doc.text("Adelantos Recibidos",               20, 102); doc.text(`S/ ${adelantos.toFixed(2)}`,        155,102);
+        doc.text("Faltas / Tardanzas",                20, 110); doc.text(`S/ ${(faltas+tardanza).toFixed(2)}`,155,110);
+        doc.text("Pensión",                           20, 118); doc.text(`S/ ${pension.toFixed(2)}`,          155,118);
+        doc.text("Gastos para Eventos Especiales",    20, 126); doc.text(`S/ ${gastosEventos.toFixed(2)}`,    155,126);
+        if (otrosDesc > 0) { doc.text(d.otros_desc_detalle || "Otros Descuentos", 20, 134); doc.text(`S/ ${otrosDesc.toFixed(2)}`, 155, 134); }
 
-        doc.line(15,118,195,118);
+        doc.line(15,140,195,140);
         doc.setFont("","bold");
-        doc.text("TOTAL NETO A PAGAR:", 90, 126);
+        doc.text("TOTAL NETO A PAGAR:", 90, 148);
         doc.setFontSize(12);
-        doc.text(`S/ ${neto.toFixed(2)}`, 155, 126);
+        doc.text(`S/ ${neto.toFixed(2)}`, 155, 148);
 
         doc.setFontSize(9); doc.setFont("","normal");
-        doc.line(35,160,85,160);
-        doc.text("Lic. Edgar Cervantes", 60, 165, { align:"center" });
-        doc.text("Promotoría",           60, 170, { align:"center" });
-        doc.line(125,160,175,160);
-        doc.text(d.nombre,              150, 165, { align:"center" });
-        doc.text("Firma del Trabajador", 150, 170, { align:"center" });
+        doc.line(35,175,85,175);
+        doc.text("Lic. Edgar Cervantes", 60, 180, { align:"center" });
+        doc.text("Promotoría",           60, 185, { align:"center" });
+        doc.line(125,175,175,175);
+        doc.text(d.nombre,              150, 180, { align:"center" });
+        doc.text("Firma del Trabajador", 150, 185, { align:"center" });
         doc.setFontSize(8); doc.setTextColor(150);
-        doc.text("Documento generado por el Sistema de Planilla Digital - I.E.P. Cervantes School", 105, 190, { align:"center" });
+        doc.text("Documento generado por el Sistema de Planilla Digital - I.E.P. Cervantes School", 105, 200, { align:"center" });
 
         return doc.output('blob');
     }
@@ -893,6 +925,83 @@ ${err.message}`);
     }
 
     // ============================================================
+    // GRÁFICO PERSONAL DEL DOCENTE (rol user)
+    // ============================================================
+    let chartUsuarioDesc;
+    function actualizarGraficoUsuario(data) {
+        if (userRole !== 'user' || !data.length) return;
+        const d         = data[0];
+        const sb        = Number(d.sueldo_base) || 0;
+        const bono      = Number(d.bono)        || 0;
+        const adelantos = Number(d.adelantos)   || 0;
+        const faltas    = Number(d.faltas)      || 0;
+        const pension   = Number(d.pension)     || 0;
+        const tardanza  = Number(d.tardanza)    || 0;
+        const otrosDesc = Number(d.otros_descuentos) || 0;
+        const afp       = sb * 0.13;
+        const gastosEvt = 30;
+        const neto      = calcularNeto(d);
+
+        const labels = [];
+        const valores = [];
+        const colores = [];
+
+        if (afp > 0)       { labels.push('AFP 13%');                      valores.push(parseFloat(afp.toFixed(2)));       colores.push('#e74c3c'); }
+        if (adelantos > 0) { labels.push('Adelantos');                    valores.push(adelantos);                        colores.push('#e67e22'); }
+        if (faltas > 0)    { labels.push('Faltas');                       valores.push(faltas);                           colores.push('#c0392b'); }
+        if (pension > 0)   { labels.push('Pensión');                      valores.push(pension);                          colores.push('#8e44ad'); }
+        if (tardanza > 0)  { labels.push('Tardanza');                     valores.push(tardanza);                         colores.push('#d35400'); }
+                             labels.push('Gastos Eventos Especiales');     valores.push(gastosEvt);                        colores.push('#2980b9');
+        if (otrosDesc > 0) { labels.push(d.otros_desc_detalle || 'Otros Descuentos'); valores.push(otrosDesc); colores.push('#7f8c8d'); }
+
+        const canvas = document.getElementById('chartUsuarioDescuentos');
+        if (chartUsuarioDesc) chartUsuarioDesc.destroy();
+        chartUsuarioDesc = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: colores,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` S/ ${ctx.parsed.toFixed(2)}`
+                        }
+                    }
+                }
+            }
+        });
+
+        // Detalle textual
+        const totalDed = afp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
+        const pct = sb > 0 ? ((totalDed / sb) * 100).toFixed(1) : 0;
+        document.getElementById('detalle-usuario-planilla').innerHTML = `
+            <table class="table table-sm table-borderless mb-0">
+                <tbody>
+                    <tr><td class="text-muted">Sueldo Base</td><td class="fw-bold text-end">S/ ${sb.toFixed(2)}</td></tr>
+                    ${bono > 0 ? `<tr><td class="text-success">Bono Especial</td><td class="fw-bold text-success text-end">+ S/ ${bono.toFixed(2)}</td></tr>` : ''}
+                    <tr><td class="text-danger">AFP (13%)</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
+                    ${adelantos > 0 ? `<tr><td class="text-warning">Adelantos</td><td class="text-warning text-end">- S/ ${adelantos.toFixed(2)}</td></tr>` : ''}
+                    ${faltas > 0    ? `<tr><td class="text-danger">Faltas</td><td class="text-danger text-end">- S/ ${faltas.toFixed(2)}</td></tr>` : ''}
+                    ${pension > 0   ? `<tr><td class="text-muted">Pensión</td><td class="text-muted text-end">- S/ ${pension.toFixed(2)}</td></tr>` : ''}
+                    ${tardanza > 0  ? `<tr><td class="text-warning">Tardanza</td><td class="text-warning text-end">- S/ ${tardanza.toFixed(2)}</td></tr>` : ''}
+                    <tr><td class="text-info">Gastos Eventos Especiales</td><td class="text-info text-end">- S/ 30.00</td></tr>
+                    ${otrosDesc > 0 ? `<tr><td class="text-muted">${d.otros_desc_detalle || 'Otros Desc.'}</td><td class="text-muted text-end">- S/ ${otrosDesc.toFixed(2)}</td></tr>` : ''}
+                    <tr class="border-top"><td class="text-muted small">Total Descuentos</td><td class="text-danger text-end small">- S/ ${totalDed.toFixed(2)} (${pct}%)</td></tr>
+                    <tr class="table-success fw-bold"><td>NETO A COBRAR</td><td class="text-end fs-5">S/ ${neto.toFixed(2)}</td></tr>
+                </tbody>
+            </table>`;
+    }
+
+    // ============================================================
     // TOTALES
     // ============================================================
     function actualizarTotales(data) {
@@ -946,10 +1055,31 @@ ${err.message}`);
         try {
             const res = await fetch(`${API_URL}/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
                 body: JSON.stringify(payload)
             });
-            if (res.ok) { miModal.hide(); cargarDatosServidor(); }
+            if (res.ok) {
+                miModal.hide();
+                // Marcar localmente al docente como "boleta emitida" → badge verde
+                const idx = docentesData.findIndex(doc => doc.id_docente == id);
+                if (idx !== -1) {
+                    docentesData[idx]._boletaEmitida = true;
+                    // Actualizar los valores en memoria para que el badge refleje lo guardado
+                    docentesData[idx].sueldo_base       = payload.sueldo_base;
+                    docentesData[idx].adelantos          = payload.adelantos;
+                    docentesData[idx].faltas             = payload.faltas;
+                    docentesData[idx].pension            = payload.pension;
+                    docentesData[idx].tardanza           = payload.tardanza;
+                    docentesData[idx].bono               = payload.bono;
+                    docentesData[idx].otros_descuentos   = payload.otros_descuentos;
+                    docentesData[idx].otros_desc_detalle = payload.otros_desc_detalle;
+                }
+                renderizarTabla(docentesData);
+                actualizarTotales(docentesData);
+            }
             else { alert('Error al guardar. Revisa la consola.'); }
         } catch(e) {
             console.error(e);
@@ -978,24 +1108,26 @@ ${err.message}`);
             const otrosDesc   = Number(d.otros_descuentos)  || 0;
             const detalle     = d.otros_desc_detalle        || '';
             const afp         = sb * 0.13;
-            const totalDed    = afp + adelantos + faltas + pension + tardanza + otrosDesc;
+            const gastosEvt   = 30; // Gastos para Eventos Especiales
+            const totalDed    = afp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
             const neto        = sb + bono - totalDed;
 
             return {
-                'Nombre':                  d.nombre,
-                'DNI':                     d.dni,
-                'Periodo':                 mesNombre,
-                'Sueldo Base (S/)':        sb,
-                'Bono Especial (S/)':      bono,
-                'AFP 13% (S/)':            parseFloat(afp.toFixed(2)),
-                'Adelantos (S/)':          adelantos,
-                'Faltas (S/)':             faltas,
-                'Pensión (S/)':            pension,
-                'Tardanza (S/)':           tardanza,
-                'Otros Descuentos (S/)':   otrosDesc,
-                'Detalle Otros Desc.':     detalle,
-                'Total Deducciones (S/)':  parseFloat(totalDed.toFixed(2)),
-                'NETO A PAGAR (S/)':       parseFloat(neto.toFixed(2))
+                'Nombre':                        d.nombre,
+                'DNI':                           d.dni,
+                'Periodo':                       mesNombre,
+                'Sueldo Base (S/)':              sb,
+                'Bono Especial (S/)':            bono,
+                'AFP 13% (S/)':                  parseFloat(afp.toFixed(2)),
+                'Adelantos (S/)':                adelantos,
+                'Faltas (S/)':                   faltas,
+                'Pensión (S/)':                  pension,
+                'Tardanza (S/)':                 tardanza,
+                'Gastos Eventos Especiales (S/)':gastosEvt,
+                'Otros Descuentos (S/)':         otrosDesc,
+                'Detalle Otros Desc.':           detalle,
+                'Total Deducciones (S/)':        parseFloat(totalDed.toFixed(2)),
+                'NETO A PAGAR (S/)':             parseFloat(neto.toFixed(2))
             };
         });
 
@@ -1033,6 +1165,7 @@ ${err.message}`);
             { wch: 12 }, // Faltas
             { wch: 12 }, // Pensión
             { wch: 12 }, // Tardanza
+            { wch: 28 }, // Gastos Eventos Especiales
             { wch: 20 }, // Otros Desc
             { wch: 25 }, // Detalle
             { wch: 20 }, // Total Ded
