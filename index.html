@@ -934,72 +934,132 @@ ${err.message}`);
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        const sb        = Number(d.sueldo_base) || 0;
-        const adelantos = Number(d.adelantos)   || 0;
-        const faltas    = Number(d.faltas)       || 0;
-        const pension   = Number(d.pension)      || 0;
-        const tardanza  = Number(d.tardanza)     || 0;
-        const bono      = Number(d.bono)         || 0;
-        const otrosDesc = Number(d.otros_descuentos) || 0;
-        const descAfp   = sb * 0.13;
-        const gastosEventos = 30; // Gastos para Eventos Especiales — fijo
-        const totalDed  = descAfp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEventos;
-        const neto      = sb + bono - totalDed;
-        const mes       = document.getElementById('filtro-mes').value;
-        const mesNombre = mes == '6' ? 'Junio 2026' : 'Mayo 2026';
+        // ── Variables ────────────────────────────────────────────────────────
+        const sb            = Number(d.sueldo_base)     || 0;
+        const adelantos     = Number(d.adelantos)       || 0;
+        const faltas        = Number(d.faltas)          || 0;
+        const pension       = Number(d.pension)         || 0;
+        const tardanza      = Number(d.tardanza)        || 0;
+        const bono          = Number(d.bono)            || 0;
+        const creditos      = Number(d.creditos)        || 0;
+        const prestamos     = Number(d.prestamos)       || 0;
+        const desmrito      = Number(d.desmrito_monto)  || 0;
+        const numFaltas     = Number(d.num_faltas)      || 0;
+        const numTardanzas  = Number(d.num_tardanzas)   || 0;
+        const tipoAfp       = d.tipo_afp    || 'AFP';
+        const tipoSalud     = d.tipo_salud  || 'ESSALUD';
+        const desmritoNivel = d.desmrito_nivel || '';
+        const gastosEventos = 30;
+        const descAfp       = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+        const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
+        const neto          = sb + bono - totalDed;
+        const mes           = document.getElementById('filtro-mes').value;
+        const meses         = {'5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+        const mesNombre     = (meses[mes] || 'Mayo') + ' 2026';
 
-        // Logo en PDF
+        // ── Logo ─────────────────────────────────────────────────────────────
         try {
             const img = new Image();
             img.src = 'logo.png';
             await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
             if (img.naturalWidth > 0) doc.addImage(img, 'PNG', 15, 10, 25, 25);
-        } catch(e) { /* sin logo */ }
+        } catch(e) {}
 
+        // ── Encabezado ───────────────────────────────────────────────────────
         doc.setFontSize(14); doc.setTextColor(40,74,117);
-        doc.text("I.E.P. CERVANTES SCHOOL", 105, 20, { align: "center" });
-        doc.setFontSize(10); doc.setTextColor(100);
-        doc.text("Puente Piedra, Lima - Perú", 105, 26, { align: "center" });
-        doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 32, { align: "center" });
-        doc.setDrawColor(200); doc.line(15, 38, 195, 38);
+        doc.text("I.E.P. CERVANTES SCHOOL", 105, 18, { align:"center" });
+        doc.setFontSize(9); doc.setTextColor(100);
+        doc.text("Puente Piedra, Lima - Perú", 105, 24, { align:"center" });
+        doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 30, { align:"center" });
+        doc.setDrawColor(44,62,80); doc.setLineWidth(0.5);
+        doc.line(15, 34, 195, 34);
 
-        doc.setFontSize(10); doc.setTextColor(0); doc.setFont("","bold");
-        doc.text("DATOS DEL DOCENTE", 15, 45);
+        // ── Datos del trabajador ─────────────────────────────────────────────
+        doc.setFontSize(9); doc.setTextColor(0); doc.setFont("","bold");
+        doc.text("DATOS DEL TRABAJADOR", 15, 41);
         doc.setFont("","normal");
-        doc.text(`Nombre: ${d.nombre}`, 15, 52);
-        doc.text(`DNI: ${d.dni}`,        15, 58);
-        doc.text(`Periodo: ${mesNombre}`, 140, 52);
+        doc.text(`Nombre  : ${d.nombre}`,                  15, 48);
+        doc.text(`Código  : ${d.codigo_trabajador || '—'}`, 15, 54);
+        doc.text(`Periodo : ${mesNombre}`,                 130, 48);
+        doc.text(`${tipoAfp} | ${tipoSalud}`,              130, 54);
+        doc.line(15, 58, 195, 58);
 
-        doc.setFillColor(245,245,245); doc.rect(15,65,180,8,'F');
-        doc.setFont("","bold");
-        doc.text("CONCEPTO",    20, 70);
-        doc.text("INGRESOS",   110, 70);
-        doc.text("DESCUENTOS", 155, 70);
-        doc.setFont("","normal");
-        doc.text("Sueldo Básico Mensual",           20,  80); doc.text(`S/ ${sb.toFixed(2)}`,              110, 80);
-        if (bono > 0) { doc.text("Bono Especial",            20,  86); doc.text(`S/ ${bono.toFixed(2)}`,             110, 86); }
-        doc.text("Aportes de Ley (13%)",              20,  94); doc.text(`S/ ${descAfp.toFixed(2)}`,         155, 94);
-        doc.text("Adelantos Recibidos",               20, 102); doc.text(`S/ ${adelantos.toFixed(2)}`,        155,102);
-        doc.text("Faltas / Tardanzas",                20, 110); doc.text(`S/ ${(faltas+tardanza).toFixed(2)}`,155,110);
-        doc.text("Pensión",                           20, 118); doc.text(`S/ ${pension.toFixed(2)}`,          155,118);
-        doc.text("Gastos para Eventos Especiales",    20, 126); doc.text(`S/ ${gastosEventos.toFixed(2)}`,    155,126);
-        if (otrosDesc > 0) { doc.text(d.otros_desc_detalle || "Otros Descuentos", 20, 134); doc.text(`S/ ${otrosDesc.toFixed(2)}`, 155, 134); }
+        // ── Encabezado tabla ─────────────────────────────────────────────────
+        doc.setFillColor(44,62,80);
+        doc.rect(15, 60, 180, 7, 'F');
+        doc.setTextColor(255,255,255); doc.setFont("","bold"); doc.setFontSize(8.5);
+        doc.text("CONCEPTO",    20, 65);
+        doc.text("INGRESOS",   122, 65);
+        doc.text("DESCUENTOS", 160, 65);
 
-        doc.line(15,140,195,140);
-        doc.setFont("","bold");
-        doc.text("TOTAL NETO A PAGAR:", 90, 148);
-        doc.setFontSize(12);
-        doc.text(`S/ ${neto.toFixed(2)}`, 155, 148);
+        // ── Filas dinámica ───────────────────────────────────────────────────
+        doc.setTextColor(0); doc.setFont("","normal"); doc.setFontSize(8.5);
+        let y = 74;
+        const fila = (concepto, ingreso, descuento, negrita) => {
+            if (negrita) doc.setFont("","bold"); else doc.setFont("","normal");
+            doc.text(concepto, 20, y);
+            if (ingreso)   doc.text(ingreso,   122, y);
+            if (descuento) doc.text(descuento, 160, y);
+            y += 6.5;
+        };
 
-        doc.setFontSize(9); doc.setFont("","normal");
-        doc.line(35,175,85,175);
-        doc.text("Lic. Edgar Cervantes", 60, 180, { align:"center" });
-        doc.text("Promotoría",           60, 185, { align:"center" });
-        doc.line(125,175,175,175);
-        doc.text(d.nombre,              150, 180, { align:"center" });
-        doc.text("Firma del Trabajador", 150, 185, { align:"center" });
-        doc.setFontSize(8); doc.setTextColor(150);
-        doc.text("Documento generado por el Sistema de Planilla Digital - I.E.P. Cervantes School", 105, 200, { align:"center" });
+        // INGRESOS
+        fila(`Sueldo Básico Mensual`, `S/ ${sb.toFixed(2)}`, '');
+        if (bono > 0) fila(`Bono Especial`, `S/ ${bono.toFixed(2)}`, '');
+
+        // DESCUENTOS OFICIALES
+        if (descAfp > 0) fila(`${tipoAfp} (13%)`, '', `S/ ${descAfp.toFixed(2)}`);
+
+        // DESCUENTOS PERSONALES
+        if (adelantos > 0) fila(`Adelantos`, '', `S/ ${adelantos.toFixed(2)}`);
+        if (creditos  > 0) fila(`Créditos`,  '', `S/ ${creditos.toFixed(2)}`);
+        if (prestamos > 0) fila(`Préstamos`, '', `S/ ${prestamos.toFixed(2)}`);
+        if (pension   > 0) fila(`Pensión por Hijo`, '', `S/ ${pension.toFixed(2)}`);
+
+        // FALTAS con detalle de días
+        if (faltas > 0) {
+            const det = numFaltas > 0 ? ` (${numFaltas} día${numFaltas>1?'s':''})` : '';
+            fila(`Faltas${det}`, '', `S/ ${faltas.toFixed(2)}`);
+        }
+        // TARDANZAS con detalle de horas
+        if (tardanza > 0) {
+            const det = numTardanzas > 0 ? ` (${numTardanzas} hr${numTardanzas>1?'s':''})` : '';
+            fila(`Tardanzas${det}`, '', `S/ ${tardanza.toFixed(2)}`);
+        }
+        // DESMÉRITO con nivel
+        if (desmrito > 0 && desmritoNivel) {
+            const niveles = { LEVE:'Falta Leve', GRAVE:'Falta Grave', MUY_GRAVE:'Falta Muy Grave' };
+            fila(`Desmérito: ${niveles[desmritoNivel]||desmritoNivel}`, '', `S/ ${desmrito.toFixed(2)}`);
+        }
+        // ACTIVIDADES fijo
+        fila(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
+
+        // ── Total ────────────────────────────────────────────────────────────
+        y += 2;
+        doc.setDrawColor(44,62,80); doc.line(15, y, 195, y);
+        y += 6;
+        doc.setFont("","bold"); doc.setFontSize(10);
+        doc.setTextColor(44,62,80);
+        doc.text("TOTAL NETO A PAGAR:", 90, y);
+        doc.setTextColor(neto >= 0 ? 39 : 192, neto >= 0 ? 174 : 57, neto >= 0 ? 96 : 43);
+        doc.text(`S/ ${neto.toFixed(2)}`, 165, y);
+
+        // ── Firmas ───────────────────────────────────────────────────────────
+        y += 16;
+        doc.setFontSize(8.5); doc.setFont("","normal"); doc.setTextColor(0);
+        doc.line(22,  y, 88,  y);
+        doc.text("Lic. Edgar Cervantes", 55,  y+5, { align:"center" });
+        doc.text("Promotoría",           55,  y+10,{ align:"center" });
+        doc.line(112, y, 185, y);
+        doc.text(d.nombre,               148, y+5, { align:"center" });
+        doc.text("Firma del Trabajador", 148, y+10,{ align:"center" });
+
+        // ── Marca GRTech ─────────────────────────────────────────────────────
+        y += 18;
+        doc.setFontSize(7); doc.setTextColor(150);
+        doc.text("Sistema de Planillas Digitales  •  I.E.P. Cervantes School", 105, y, { align:"center" });
+        doc.setTextColor(52,152,219);
+        doc.text("Desarrollado por GRTech Solutions  © 2026", 105, y+5, { align:"center" });
 
         return doc.output('blob');
     }
