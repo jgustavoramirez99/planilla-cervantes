@@ -94,20 +94,6 @@
 
         <h4 class="text-muted mb-1">I.E.P. Cervantes School</h4>
         <h3 class="fw-bold text-primary mb-4">Sistema de Planillas</h3>
-        <div class="text-center mb-3">
-            <span style="font-size:0.7rem;color:#aaa;letter-spacing:1px;">DESARROLLADO POR</span><br>
-            <span id="grtech-login-badge" style="
-                display:inline-flex;align-items:center;gap:6px;
-                background:linear-gradient(135deg,#2c3e50,#3498db);
-                color:white;border-radius:20px;padding:4px 12px;
-                font-size:0.78rem;font-weight:600;letter-spacing:0.5px;margin-top:3px;">
-                <svg width="18" height="18" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="17" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
-                    <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">GR</text>
-                </svg>
-                GRTech Solutions
-            </span>
-        </div>
 
         <!-- Alerta de error de login -->
         <div id="alerta-login" class="alert alert-danger d-none py-2 small" role="alert">
@@ -152,7 +138,7 @@
     <div class="container mt-4 mb-5">
         <div id="banner-bienvenida" class="welcome-banner shadow-sm">
             <i class="fa-solid fa-user-tie me-2"></i>
-            <strong id="texto-bienvenida">Bienvenido</strong> - Panel Administrativo.
+            <strong id="texto-bienvenida">Bienvenido</strong> - <span id="texto-panel">Panel Administrativo.</span>
         </div>
 
         <!-- FILTROS Y ESTADÍSTICAS -->
@@ -555,17 +541,23 @@
         document.getElementById('texto-bienvenida').innerText = `Bienvenido, ${userNombre}`;
 
         if (rol === 'user') {
-            document.getElementById('filtro-mes-container').style.display = 'none';
+            // Ocultar elementos solo de admin
             document.getElementById('buscador-container').style.display   = 'none';
             document.getElementById('graficos-container').style.display   = 'none';
-            // Mostrar sección de gráfico personal del docente
+            document.getElementById('tabla-header').style.display         = 'none';
+            // Mostrar selector de mes para ver boletas de otros meses
+            document.getElementById('filtro-mes-container').style.display = 'block';
+            // Mostrar gráfico personal
             document.getElementById('grafico-usuario-container').style.display = 'block';
+            // Cambiar texto del banner
+            document.getElementById('texto-panel').innerText = 'Mi Portal de Boletas.';
         }
 
         document.getElementById('buscador').value = '';
         if (rol === 'admin') {
             document.getElementById('grafico-usuario-container').style.display = 'none';
-            document.getElementById('tabla-header').style.display = 'flex';
+            document.getElementById('tabla-header').style.display              = 'flex';
+            document.getElementById('texto-panel').innerText                   = 'Panel Administrativo.';
         }
         cargarDatosServidor();
     }
@@ -928,27 +920,19 @@ ${err.message}`);
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        const sb          = Number(d.sueldo_base)      || 0;
-        const adelantos   = Number(d.adelantos)        || 0;
-        const faltas      = Number(d.faltas)           || 0;
-        const pension     = Number(d.pension)          || 0;
-        const tardanza    = Number(d.tardanza)         || 0;
-        const bono        = Number(d.bono)             || 0;
-        const creditos    = Number(d.creditos)         || 0;
-        const prestamos   = Number(d.prestamos)        || 0;
-        const desmrito    = Number(d.desmrito_monto)   || 0;
-        const numFaltas   = Number(d.num_faltas)       || 0;
-        const numTardanzas= Number(d.num_tardanzas)    || 0;
-        const tipoAfp     = d.tipo_afp   || 'AFP';
-        const tipoSalud   = d.tipo_salud || 'ESSALUD';
-        const desmritoNivel = d.desmrito_nivel || '';
-        const gastosEventos = 30;
-        const descAfp     = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
-        const totalDed    = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
-        const neto        = sb + bono - totalDed;
-        const mes         = document.getElementById('filtro-mes').value;
-        const meses = {'5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-        const mesNombre   = (meses[mes] || 'Mayo') + ' 2026';
+        const sb        = Number(d.sueldo_base) || 0;
+        const adelantos = Number(d.adelantos)   || 0;
+        const faltas    = Number(d.faltas)       || 0;
+        const pension   = Number(d.pension)      || 0;
+        const tardanza  = Number(d.tardanza)     || 0;
+        const bono      = Number(d.bono)         || 0;
+        const otrosDesc = Number(d.otros_descuentos) || 0;
+        const descAfp   = sb * 0.13;
+        const gastosEventos = 30; // Gastos para Eventos Especiales — fijo
+        const totalDed  = descAfp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEventos;
+        const neto      = sb + bono - totalDed;
+        const mes       = document.getElementById('filtro-mes').value;
+        const mesNombre = mes == '6' ? 'Junio 2026' : 'Mayo 2026';
 
         // Logo en PDF
         try {
@@ -965,92 +949,43 @@ ${err.message}`);
         doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 32, { align: "center" });
         doc.setDrawColor(200); doc.line(15, 38, 195, 38);
 
-        // ── Datos del docente ────────────────────────────────────────────────
         doc.setFontSize(10); doc.setTextColor(0); doc.setFont("","bold");
-        doc.text("DATOS DEL TRABAJADOR", 15, 45);
+        doc.text("DATOS DEL DOCENTE", 15, 45);
         doc.setFont("","normal");
-        doc.text(`Nombre   : ${d.nombre}`,                 15, 52);
-        doc.text(`Código   : ${d.codigo_trabajador || '—'}`,15, 58);
-        doc.text(`Periodo  : ${mesNombre}`,                140, 52);
-        doc.text(`AFP/ONP  : ${tipoAfp}`,                  140, 58);
-        doc.text(`Salud    : ${tipoSalud}`,                140, 64);
+        doc.text(`Nombre: ${d.nombre}`, 15, 52);
+        doc.text(`DNI: ${d.dni}`,        15, 58);
+        doc.text(`Periodo: ${mesNombre}`, 140, 52);
 
-        // ── Tabla de conceptos ───────────────────────────────────────────────
-        doc.setFillColor(44,62,80);
-        doc.rect(15, 70, 180, 8, 'F');
-        doc.setTextColor(255,255,255); doc.setFont("","bold"); doc.setFontSize(9);
-        doc.text("CONCEPTO",    20, 76);
-        doc.text("INGRESOS",   120, 76);
-        doc.text("DESCUENTOS", 158, 76);
-        doc.setTextColor(0); doc.setFont("","normal"); doc.setFontSize(9);
+        doc.setFillColor(245,245,245); doc.rect(15,65,180,8,'F');
+        doc.setFont("","bold");
+        doc.text("CONCEPTO",    20, 70);
+        doc.text("INGRESOS",   110, 70);
+        doc.text("DESCUENTOS", 155, 70);
+        doc.setFont("","normal");
+        doc.text("Sueldo Básico Mensual",           20,  80); doc.text(`S/ ${sb.toFixed(2)}`,              110, 80);
+        if (bono > 0) { doc.text("Bono Especial",            20,  86); doc.text(`S/ ${bono.toFixed(2)}`,             110, 86); }
+        doc.text("Aportes de Ley (13%)",              20,  94); doc.text(`S/ ${descAfp.toFixed(2)}`,         155, 94);
+        doc.text("Adelantos Recibidos",               20, 102); doc.text(`S/ ${adelantos.toFixed(2)}`,        155,102);
+        doc.text("Faltas / Tardanzas",                20, 110); doc.text(`S/ ${(faltas+tardanza).toFixed(2)}`,155,110);
+        doc.text("Pensión",                           20, 118); doc.text(`S/ ${pension.toFixed(2)}`,          155,118);
+        doc.text("Gastos para Eventos Especiales",    20, 126); doc.text(`S/ ${gastosEventos.toFixed(2)}`,    155,126);
+        if (otrosDesc > 0) { doc.text(d.otros_desc_detalle || "Otros Descuentos", 20, 134); doc.text(`S/ ${otrosDesc.toFixed(2)}`, 155, 134); }
 
-        let y = 85;
-        const row = (concepto, ingreso, descuento) => {
-            doc.text(concepto, 20, y);
-            if (ingreso)   doc.text(ingreso,   120, y);
-            if (descuento) doc.text(descuento, 158, y);
-            y += 7;
-        };
+        doc.line(15,140,195,140);
+        doc.setFont("","bold");
+        doc.text("TOTAL NETO A PAGAR:", 90, 148);
+        doc.setFontSize(12);
+        doc.text(`S/ ${neto.toFixed(2)}`, 155, 148);
 
-        // INGRESOS
-        row(`Sueldo Básico Mensual`, `S/ ${sb.toFixed(2)}`, '');
-        if (bono > 0) row(`Bono Especial`, `S/ ${bono.toFixed(2)}`, '');
-
-        // DESCUENTOS OFICIALES
-        if (descAfp > 0) row(`${tipoAfp} (13%)`, '', `S/ ${descAfp.toFixed(2)}`);
-
-        // DESCUENTOS PERSONALES
-        if (adelantos > 0)  row(`Adelantos`, '', `S/ ${adelantos.toFixed(2)}`);
-        if (creditos > 0)   row(`Créditos`, '', `S/ ${creditos.toFixed(2)}`);
-        if (prestamos > 0)  row(`Préstamos`, '', `S/ ${prestamos.toFixed(2)}`);
-        if (pension > 0)    row(`Pensión por Hijo`, '', `S/ ${pension.toFixed(2)}`);
-
-        // FALTAS Y TARDANZAS con detalle
-        if (faltas > 0 || numFaltas > 0) {
-            const detFaltas = numFaltas > 0 ? ` (${numFaltas} día${numFaltas>1?'s':''})` : '';
-            row(`Faltas${detFaltas}`, '', `S/ ${faltas.toFixed(2)}`);
-        }
-        if (tardanza > 0 || numTardanzas > 0) {
-            const detTard = numTardanzas > 0 ? ` (${numTardanzas} hr${numTardanzas>1?'s':''})` : '';
-            row(`Tardanzas${detTard}`, '', `S/ ${tardanza.toFixed(2)}`);
-        }
-
-        // DESMÉRITO
-        if (desmrito > 0 && desmritoNivel) {
-            const niveles = { LEVE:'Falta Leve', GRAVE:'Falta Grave', MUY_GRAVE:'Falta Muy Grave' };
-            row(`Desmérito: ${niveles[desmritoNivel]||desmritoNivel}`, '', `S/ ${desmrito.toFixed(2)}`);
-        }
-
-        // ACTIVIDADES (fijo)
-        row(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
-
-        // ── Línea total ──────────────────────────────────────────────────────
-        y += 2;
-        doc.setDrawColor(44,62,80); doc.setLineWidth(0.5);
-        doc.line(15, y, 195, y);
-        y += 6;
-        doc.setFont("","bold"); doc.setFontSize(11);
-        doc.setTextColor(44,62,80);
-        doc.text("TOTAL NETO A PAGAR:", 90, y);
-        doc.setTextColor(neto >= 0 ? 39 : 192, neto >= 0 ? 174 : 57, neto >= 0 ? 96 : 43);
-        doc.text(`S/ ${neto.toFixed(2)}`, 163, y);
-
-        // ── Firmas ───────────────────────────────────────────────────────────
-        y += 18;
-        doc.setFontSize(9); doc.setFont("","normal"); doc.setTextColor(0);
-        doc.line(25, y, 85, y);
-        doc.text("Lic. Edgar Cervantes", 55, y+5, { align:"center" });
-        doc.text("Promotoría", 55, y+10, { align:"center" });
-        doc.line(115, y, 185, y);
-        doc.text(d.nombre, 150, y+5, { align:"center" });
-        doc.text("Firma del Trabajador", 150, y+10, { align:"center" });
-
-        // ── Marca GRTech ─────────────────────────────────────────────────────
-        y += 20;
-        doc.setFontSize(7); doc.setTextColor(150);
-        doc.text("Sistema de Planillas Digitales  •  I.E.P. Cervantes School", 105, y, { align:"center" });
-        doc.setTextColor(52,152,219);
-        doc.text("Desarrollado por GRTech Solutions  © 2026", 105, y+5, { align:"center" });
+        doc.setFontSize(9); doc.setFont("","normal");
+        doc.line(35,175,85,175);
+        doc.text("Lic. Edgar Cervantes", 60, 180, { align:"center" });
+        doc.text("Promotoría",           60, 185, { align:"center" });
+        doc.line(125,175,175,175);
+        doc.text(d.nombre,              150, 180, { align:"center" });
+        doc.text("Firma del Trabajador", 150, 185, { align:"center" });
+        doc.setFontSize(8); doc.setTextColor(150);
+        doc.text("Documento generado por el Sistema de Planilla Digital - I.E.P. Cervantes School", 105, 200, { align:"center" });
 
         return doc.output('blob');
     }
@@ -1548,19 +1483,5 @@ ${err.message}`);
     }
 </script>
 
-<!-- ── FOOTER GRTECH ── -->
-<footer style="background:#2c3e50;color:#aaa;text-align:center;padding:12px;font-size:0.75rem;margin-top:20px;">
-    <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;">
-        <svg width="22" height="22" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="17" fill="none" stroke="#3498db" stroke-width="2"/>
-            <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="#3498db" font-family="Arial">GR</text>
-        </svg>
-        <span style="color:white;font-weight:600;letter-spacing:0.5px;">GRTech Solutions</span>
-        <span style="color:#666;">|</span>
-        Sistema de Planillas Digitales
-        <span style="color:#666;">|</span>
-        © 2026 Todos los derechos reservados
-    </span>
-</footer>
 </body>
 </html>
