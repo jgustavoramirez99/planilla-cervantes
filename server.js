@@ -3,7 +3,8 @@ const mysql   = require('mysql2');
 const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
-const jwt = require('jsonwebtoken'); // <--- FALTA ESTA LÍNEA
+const jwt    = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
 require('dotenv').config();
 
@@ -103,65 +104,21 @@ function conectarDB() {
 conectarDB();
 
 // ============================================================
-// USUARIOS DEL SISTEMA
+// USUARIOS DEL SISTEMA — cargados desde .env (hashes bcrypt)
 // ============================================================
-const usuarios = [
-    {
-        user: 'admin_cervantes',
-        pass: 'cervantes2026',
-        role: 'admin',
-        nombre: 'Promotor Edgar Cervantes',
-        codigo_trabajador: null,
-        telefono: null
-    },
-    // ── Docentes ──────────────────────────────────────────────
-    { user: 'UserCS_E000058', pass: 'CS_ReynaPiLar58', role: 'user', nombre: 'ARIZOLA TINTAYA, Reyna Del Pilar', codigo_trabajador: 'E000058', telefono: '923885144' },
-    { user: 'UserCS_E000071', pass: 'CS_LiseTh71', role: 'user', nombre: 'ARONE ROMERO, Liseth', codigo_trabajador: 'E000071', telefono: '987685524' },
-    { user: 'UserCS_E000051', pass: 'CS_RomuLo51', role: 'user', nombre: 'BURGA ALCALA, Romulo Moroni', codigo_trabajador: 'E000051', telefono: '934116384' },
-    { user: 'UserCS_E000065', pass: 'CS_FlorMaRia65', role: 'user', nombre: 'CARAZA HUAMANI, Flor De Maria', codigo_trabajador: 'E000065', telefono: '902631171' },
-    { user: 'UserCS_E000066', pass: 'CS_SamiRa66', role: 'user', nombre: 'CASTILLEJO CHILINGANA, Samira Nicol', codigo_trabajador: 'E000066', telefono: '931916714' },
-    { user: 'UserCS_E000002', pass: 'CS_AgripiNa02', role: 'user', nombre: 'CERVANTES REYES, Agripina', codigo_trabajador: 'E000002', telefono: null },
-    { user: 'UserCS_E000001', pass: 'CS_EdgaRd01', role: 'user', nombre: 'CERVANTES REYES, Edgar', codigo_trabajador: 'E000001', telefono: null },
-    { user: 'UserCS_E000031', pass: 'CS_BoNy31', role: 'user', nombre: 'CEVALLOS CARRILLO, Bony', codigo_trabajador: 'E000031', telefono: null },
-    { user: 'UserCS_E000072', pass: 'CS_LauRa72', role: 'user', nombre: 'CHAVEZ CHIRINOS, Laura Soledad', codigo_trabajador: 'E000072', telefono: null },
-    { user: 'UserCS_E000052', pass: 'CS_MelisSa52', role: 'user', nombre: 'CORONADO VARGAS, Melissa Lizehtt', codigo_trabajador: 'E000052', telefono: '947325101' },
-    { user: 'UserCS_E000033', pass: 'CS_HumbeRto33', role: 'user', nombre: 'CRUZ BELENDEZ, Humberto Maria', codigo_trabajador: 'E000033', telefono: null },
-    { user: 'UserCS_E000011', pass: 'CS_AnA11', role: 'user', nombre: 'DOMINGUEZ GOMEZ, Ana Elena', codigo_trabajador: 'E000011', telefono: null },
-    { user: 'UserCS_E000018', pass: 'CS_EdgaRd18', role: 'user', nombre: 'FLORES RIVERA, Edgar', codigo_trabajador: 'E000018', telefono: null },
-    { user: 'UserCS_E000030', pass: 'CS_ElOy30', role: 'user', nombre: 'GARCIA CARRION, Eloy', codigo_trabajador: 'E000030', telefono: null },
-    { user: 'UserCS_E000035', pass: 'CS_RuseLl35', role: 'user', nombre: 'GARCIA FERNANDEZ, Russell', codigo_trabajador: 'E000035', telefono: null },
-    { user: 'UserCS_E000036', pass: 'CS_MarIa36', role: 'user', nombre: 'GUERRERO LEYVA, Maria', codigo_trabajador: 'E000036', telefono: null },
-    { user: 'UserCS_E000047', pass: 'CS_JuliNho47', role: 'user', nombre: 'MEDINA BELLON, Julinho Americo Jesus', codigo_trabajador: 'E000047', telefono: null },
-    { user: 'UserCS_E000038', pass: 'CS_BelEn38', role: 'user', nombre: 'MENDOZA JUEZ DE TENORIO, Belen Milagros', codigo_trabajador: 'E000038', telefono: null },
-    { user: 'UserCS_E000067', pass: 'CS_JarlEn67', role: 'user', nombre: 'MEZA SALAZAR, Jarlen Jaqueline', codigo_trabajador: 'E000067', telefono: null },
-    { user: 'UserCS_E000055', pass: 'CS_EriKa55', role: 'user', nombre: 'MUÑOZ CERVANTES, Erika', codigo_trabajador: 'E000055', telefono: null },
-    { user: 'UserCS_E000074', pass: 'CS_RobeRtAl74', role: 'user', nombre: 'ORDINOLA CORREA, Roberto Alexander', codigo_trabajador: 'E000074', telefono: null },
-    { user: 'UserCS_E000003', pass: 'CS_PaoLa03', role: 'user', nombre: 'PAOLA ESTUPIÑAN, Ibeth', codigo_trabajador: 'E000003', telefono: null },
-    { user: 'UserCS_E000063', pass: 'CS_EdiSon63', role: 'user', nombre: 'PALACIOS BALDEON, Edison', codigo_trabajador: 'E000063', telefono: null },
-    { user: 'UserCS_E000020', pass: 'CS_RussEll20', role: 'user', nombre: 'PERFECTO ALEJO, Russell', codigo_trabajador: 'E000020', telefono: null },
-    { user: 'UserCS_E000070', pass: 'CS_MaRiaE70', role: 'user', nombre: 'PONCE HERRERA, Maria Elena', codigo_trabajador: 'E000070', telefono: null },
-    { user: 'UserCS_E000062', pass: 'CS_FatiMa62', role: 'user', nombre: 'PUMAPUILLO CJUIRO, Fatima Rosario', codigo_trabajador: 'E₀₀₀₀₆₂', telefono: '98831₀783' },
-    { user: 'UserCS_E000006', pass: 'CS_LuCia06', role: 'user', nombre: 'QUISPE BUSTAMANTE, Lucia', codigo_trabajador: 'E000006', telefono: null },
-    { user: 'UserCS_E000076', pass: 'CS_JaiMe76', role: 'user', nombre: 'RAMIREZ RAMIREZ, Jaime Gustavo', codigo_trabajador: 'E000076', telefono: '943706872' },
-    { user: 'UserCS_E000060', pass: 'CS_NicoLe60', role: 'user', nombre: 'RAMOS FLORES, Nicole Jamile', codigo_trabajador: 'E000060', telefono: '963961696' },
-    { user: 'UserCS_E000021', pass: 'CS_EduaRdo21', role: 'user', nombre: 'RIVAS ANGOMA, Eduardo Elias', codigo_trabajador: 'E000021', telefono: null },
-    { user: 'UserCS_E000056', pass: 'CS_CarMen56', role: 'user', nombre: 'RODRIGUEZ RIVAS, Carmen', codigo_trabajador: 'E000056', telefono: null },
-    { user: 'UserCS_E000073', pass: 'CS_LUz73', role: 'user', nombre: 'ROSALES ESPINOZA, Luz Nelly', codigo_trabajador: 'E₀₀₀₀₇₃', telefono: '97163₀₀57' },
-    { user: 'UserCS_E000022', pass: 'CS_AnGeL22', role: 'user', nombre: 'SALVATIERRA MEZA, Angel', codigo_trabajador: 'E000022', telefono: null },
-    { user: 'UserCS_E000057', pass: 'CS_SoLiS57', role: 'user', nombre: 'SOLIS GUTIERREZ, Naydelyn', codigo_trabajador: 'E000057', telefono: null},
-    { user: 'UserCS_E000016', pass: 'CS_TaFuR16', role: 'user', nombre: 'TAFUR YACTAYO, Yulisa Del Carmen', codigo_trabajador: 'E000016', telefono: null},
-    { user: 'UserCS_E000024', pass: 'CS_TeLlO24', role: 'user', nombre: 'TELLO HUAYN, Dylan', codigo_trabajador: 'E000024', telefono: null},
-    { user: 'UserCS_E000007', pass: 'CS_VelArdE07', role: 'user', nombre: 'VELARDE MENDOZA, Noemi Victoria', codigo_trabajador: 'E000007', telefono: null},
-    { user: 'UserCS_E000069', pass: 'CS_VerAno69', role: 'user', nombre: 'VERANO VILLAR, Hector', codigo_trabajador: 'E000069', telefono: null},
-    { user: 'UserCS_E000061', pass: 'CS_VilCheZ61', role: 'user', nombre: 'VILCHEZ ROSALES, Elena Carolina', codigo_trabajador: 'E000061', telefono: null}
-];
+let usuarios = [];
+try {
+    usuarios = JSON.parse(process.env.USUARIOS_JSON || '[]');
+} catch(e) {
+    console.error('❌ Error al parsear USUARIOS_JSON del .env:', e.message);
+}
 
 // ============================================================
 // POST /api/login
 // FIX: el frontend ahora llama a este endpoint en vez de validar
 //      las credenciales directamente en el cliente.
 // ============================================================
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     console.log(req.body);
     const { user, pass } = req.body;
 
@@ -173,16 +130,16 @@ app.post('/api/login', (req, res) => {
         });
     }
 
-    const cuenta = usuarios.find(
-        u => u.user === user && u.pass === pass
-    );
+    const cuenta = usuarios.find(u => u.user === user);
 
     if (!cuenta) {
+        return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+    }
 
-        return res.status(401).json({
-            success: false,
-            message: 'Usuario o contraseña incorrectos.'
-        });
+    const passValida = await bcrypt.compare(pass, cuenta.pass);
+
+    if (!passValida) {
+        return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
     }
 
     // ========================================================
@@ -223,13 +180,21 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 
     let sql = `
         SELECT d.*,
-               IFNULL(p.adelantos,          0)  AS adelantos,
-               IFNULL(p.faltas,             0)  AS faltas,
-               IFNULL(p.pension,            0)  AS pension,
-               IFNULL(p.tardanza,           0)  AS tardanza,
-               IFNULL(p.bono,               0)  AS bono,
-               IFNULL(p.otros_descuentos,   0)  AS otros_descuentos,
-               IFNULL(p.otros_desc_detalle, '') AS otros_desc_detalle
+               IFNULL(p.adelantos,           0)   AS adelantos,
+               IFNULL(p.faltas,              0)   AS faltas,
+               IFNULL(p.pension,             0)   AS pension,
+               IFNULL(p.tardanza,            0)   AS tardanza,
+               IFNULL(p.bono,                0)   AS bono,
+               IFNULL(p.otros_descuentos,    0)   AS otros_descuentos,
+               IFNULL(p.otros_desc_detalle,  '')  AS otros_desc_detalle,
+               IFNULL(p.tipo_afp,            'AFP') AS tipo_afp,
+               IFNULL(p.tipo_salud,          'ESSALUD') AS tipo_salud,
+               IFNULL(p.creditos,            0)   AS creditos,
+               IFNULL(p.prestamos,           0)   AS prestamos,
+               IFNULL(p.desmrito_nivel,      '')  AS desmrito_nivel,
+               IFNULL(p.desmrito_monto,      0)   AS desmrito_monto,
+               IFNULL(p.num_faltas,          0)   AS num_faltas,
+               IFNULL(p.num_tardanzas,       0)   AS num_tardanzas
         FROM docentes d
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
@@ -266,7 +231,9 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
-    const { sueldo_base, adelantos, faltas, pension, tardanza, bono, otros_descuentos, otros_desc_detalle } = req.body;
+    const { sueldo_base, adelantos, faltas, pension, tardanza, bono, otros_descuentos, otros_desc_detalle,
+              tipo_afp, tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto,
+              num_faltas, num_tardanzas } = req.body;
 
     // 1. Actualizar sueldo_base en la tabla docentes (si viene)
     if (sueldo_base !== undefined) {
@@ -277,11 +244,13 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
         );
     }
 
-    // 2. Upsert en planillas — incluye bono, otros_descuentos y detalle
+    // 2. Upsert en planillas — incluye todos los campos nuevos
     const sqlUpsert = `
         INSERT INTO planillas
-            (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono, otros_descuentos, otros_desc_detalle)
-        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?)
+            (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono,
+             otros_descuentos, otros_desc_detalle, tipo_afp, tipo_salud,
+             creditos, prestamos, desmrito_nivel, desmrito_monto, num_faltas, num_tardanzas)
+        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             adelantos          = VALUES(adelantos),
             faltas             = VALUES(faltas),
@@ -289,11 +258,22 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
             tardanza           = VALUES(tardanza),
             bono               = VALUES(bono),
             otros_descuentos   = VALUES(otros_descuentos),
-            otros_desc_detalle = VALUES(otros_desc_detalle)`;
-            
+            otros_desc_detalle = VALUES(otros_desc_detalle),
+            tipo_afp           = VALUES(tipo_afp),
+            tipo_salud         = VALUES(tipo_salud),
+            creditos           = VALUES(creditos),
+            prestamos          = VALUES(prestamos),
+            desmrito_nivel     = VALUES(desmrito_nivel),
+            desmrito_monto     = VALUES(desmrito_monto),
+            num_faltas         = VALUES(num_faltas),
+            num_tardanzas      = VALUES(num_tardanzas)`;
+
     db.query(
         sqlUpsert,
-        [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0, otros_descuentos||0, otros_desc_detalle||''],
+        [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
+         otros_descuentos||0, otros_desc_detalle||'', tipo_afp||'AFP', tipo_salud||'ESSALUD',
+         creditos||0, prestamos||0, desmrito_nivel||'', desmrito_monto||0,
+         num_faltas||0, num_tardanzas||0],
         (err) => {
             if (err) {
                 console.error('Error en PUT /api/docentes:', err);

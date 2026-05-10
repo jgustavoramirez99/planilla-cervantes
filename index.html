@@ -258,72 +258,184 @@
 
 <!-- ===================== MODAL EDICIÓN ===================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Actualizar Planilla</h5>
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#2c3e50,#3498db);">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0"><i class="fa-solid fa-user-pen me-2"></i>Actualizar Planilla</h5>
+                    <small id="edit-subtitulo" class="opacity-75"></small>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body px-4" style="max-height:80vh;overflow-y:auto;">
                 <input type="hidden" id="edit-id">
+
+                <!-- DATOS DEL DOCENTE -->
+                <div class="alert alert-light border-start border-primary border-3 py-2 mb-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-7">
+                            <div class="fw-bold text-primary" id="edit-nombre-display">—</div>
+                            <small class="text-muted" id="edit-codigo-display">Código: —</small>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold mb-1">Sueldo Base (S/)</label>
+                            <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="edit-nombre">
+
+                <!-- ══ DESCUENTOS OFICIALES ══ -->
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Nombre</label>
-                    <input type="text" id="edit-nombre" class="form-control bg-light" readonly>
-                </div>
-                <div class="row">
-                    <div class="col-6 mb-3">
-                        <label class="form-label small fw-bold">Sueldo Base (S/)</label>
-                        <input type="number" id="edit-sb" class="form-control border-primary" min="0">
+                    <div class="fw-bold small text-uppercase text-secondary mb-2">
+                        <i class="fa-solid fa-landmark me-1"></i>Descuentos Oficiales
                     </div>
-                    <div class="col-6 mb-3">
-                        <label class="form-label small fw-bold">Adelantos</label>
-                        <input type="number" id="edit-al" class="form-control" min="0">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-4 mb-3">
-                        <label class="form-label small fw-bold text-danger">Faltas</label>
-                        <input type="number" id="edit-fl" class="form-control" min="0">
-                    </div>
-                    <div class="col-4 mb-3">
-                        <label class="form-label small fw-bold text-danger">Pensión</label>
-                        <input type="number" id="edit-pen" class="form-control" min="0">
-                    </div>
-                    <div class="col-4 mb-3">
-                        <label class="form-label small fw-bold text-danger">Tardanza</label>
-                        <input type="number" id="edit-tar" class="form-control" min="0">
+                    <div class="row g-2">
+                        <!-- AFP / ONP -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-danger">Tipo de Aporte Pensión</label>
+                            <select id="edit-tipo-afp" class="form-select form-select-sm" onchange="actualizarLabelAfp()">
+                                <option value="AFP">AFP (13% del sueldo)</option>
+                                <option value="ONP">ONP (13% del sueldo)</option>
+                                <option value="NINGUNO">Sin aporte pensión</option>
+                            </select>
+                            <div class="text-muted small mt-1" id="label-calculo-afp"></div>
+                        </div>
+                        <!-- ESSALUD / SIS -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-danger">Tipo de Seguro Salud</label>
+                            <select id="edit-tipo-salud" class="form-select form-select-sm" onchange="actualizarLabelSalud()">
+                                <option value="ESSALUD">ESSALUD (9% a cargo empleador)</option>
+                                <option value="SIS">SIS (sin descuento al trabajador)</option>
+                            </select>
+                            <div class="text-muted small mt-1" id="label-calculo-salud"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- SEPARADOR -->
+                <!-- ══ DESCUENTOS PERSONALES ══ -->
+                <div class="mb-3">
+                    <div class="fw-bold small text-uppercase text-secondary mb-2">
+                        <i class="fa-solid fa-user-minus me-1"></i>Descuentos Personales
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold">Adelantos (S/)</label>
+                            <input type="number" id="edit-al" class="form-control form-control-sm" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold">Créditos (S/)</label>
+                            <input type="number" id="edit-creditos" class="form-control form-control-sm" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold">Préstamos (S/)</label>
+                            <input type="number" id="edit-prestamos" class="form-control form-control-sm" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold">Pensión por Hijo (S/)</label>
+                            <input type="number" id="edit-pen" class="form-control form-control-sm" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small fw-bold">Actividades (S/)</label>
+                            <input type="number" id="edit-actividades" class="form-control form-control-sm bg-light" value="30" readonly>
+                            <div class="text-info small">Fijo S/ 30.00 mensual</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ FALTAS Y TARDANZAS ══ -->
+                <div class="mb-3">
+                    <div class="fw-bold small text-uppercase text-secondary mb-2">
+                        <i class="fa-solid fa-clock me-1"></i>Faltas y Tardanzas
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-danger">N° de Faltas</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" id="edit-num-faltas" class="form-control" min="0" placeholder="0" oninput="calcularMontoFaltas()">
+                                <span class="input-group-text">faltas</span>
+                            </div>
+                            <div class="row g-1 mt-1">
+                                <div class="col-7">
+                                    <label class="form-label small text-muted mb-0">Monto total (S/)</label>
+                                    <input type="number" id="edit-fl" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="calcularNumFaltas()">
+                                </div>
+                                <div class="col-5 d-flex align-items-end">
+                                    <div class="text-danger small" id="label-faltas-detalle"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-warning">N° de Tardanzas</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" id="edit-num-tardanzas" class="form-control" min="0" placeholder="0" oninput="calcularMontoTardanzas()">
+                                <span class="input-group-text">tardanzas</span>
+                            </div>
+                            <div class="row g-1 mt-1">
+                                <div class="col-7">
+                                    <label class="form-label small text-muted mb-0">Monto total (S/)</label>
+                                    <input type="number" id="edit-tar" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="calcularNumTardanzas()">
+                                </div>
+                                <div class="col-5 d-flex align-items-end">
+                                    <div class="text-warning small" id="label-tardanzas-detalle"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ DESCUENTO POR DESMÉRITO ══ -->
+                <div class="mb-3">
+                    <div class="fw-bold small text-uppercase text-secondary mb-2">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Descuento por Desmérito
+                    </div>
+                    <div class="d-flex gap-3 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="desmrito" id="desmrito-ninguno" value="" checked onchange="toggleDesmrito()">
+                            <label class="form-check-label small" for="desmrito-ninguno">Sin desmérito</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input border-warning" type="radio" name="desmrito" id="desmrito-leve" value="LEVE" onchange="toggleDesmrito()">
+                            <label class="form-check-label small text-warning fw-bold" for="desmrito-leve">⚠ Leve</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input border-danger" type="radio" name="desmrito" id="desmrito-grave" value="GRAVE" onchange="toggleDesmrito()">
+                            <label class="form-check-label small text-danger fw-bold" for="desmrito-grave">🔴 Grave</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input border-danger" type="radio" name="desmrito" id="desmrito-muy-grave" value="MUY_GRAVE" onchange="toggleDesmrito()">
+                            <label class="form-check-label small text-danger fw-bold" for="desmrito-muy-grave">🚨 Muy Grave</label>
+                        </div>
+                    </div>
+                    <div id="desmrito-monto-container" style="display:none;">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold text-danger">Monto Descuento (S/)</label>
+                                <input type="number" id="edit-desmrito-monto" class="form-control form-control-sm" min="0" placeholder="0.00">
+                            </div>
+                            <div class="col-md-8">
+                                <div class="alert alert-warning py-1 px-2 mb-0 small mt-3" id="desmrito-descripcion"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══ BONIFICACIÓN ══ -->
                 <hr class="my-2">
-
-                <!-- BONO ESPECIAL -->
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-success">
-                        <i class="fa-solid fa-gift me-1"></i>Bono Especial (S/)
-                        <span class="text-muted fw-normal ms-1" style="font-size:0.78rem;">Fiestas Patrias, Navidad, etc.</span>
-                    </label>
-                    <input type="number" id="edit-bono" class="form-control border-success" min="0" placeholder="0.00">
-                </div>
-
-                <!-- OTROS DESCUENTOS -->
-                <div class="row">
-                    <div class="col-5 mb-2">
-                        <label class="form-label small fw-bold text-danger">
-                            <i class="fa-solid fa-circle-minus me-1"></i>Otros Descuentos (S/)
-                        </label>
-                        <input type="number" id="edit-otros-desc" class="form-control" min="0" placeholder="0.00">
+                <div class="mb-2">
+                    <div class="fw-bold small text-uppercase text-secondary mb-2">
+                        <i class="fa-solid fa-gift me-1 text-success"></i>Bonificación
                     </div>
-                    <div class="col-7 mb-2">
-                        <label class="form-label small fw-bold text-muted">Detalle del descuento</label>
-                        <input type="text" id="edit-otros-desc-detalle" class="form-control"
-                               placeholder="Ej: Préstamo, vestimenta, etc." maxlength="100">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-success">Bono Especial Jul-Dic (S/)</label>
+                            <input type="number" id="edit-bono" class="form-control form-control-sm border-success" min="0" placeholder="0.00">
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
                 <button type="button" class="btn btn-success px-4" onclick="guardarCambiosModal()">
                     <i class="fa-solid fa-floppy-disk me-1"></i> Sincronizar Datos
                 </button>
@@ -542,18 +654,16 @@
             const bono      = Number(d.bono)        || 0;
             const otrosDesc = Number(d.otros_descuentos) || 0;
 
-            const descAfp = sb * 0.13;
+            const tipoAfp     = d.tipo_afp || 'AFP';
+            const descAfp     = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+            const creditos    = Number(d.creditos)       || 0;
+            const prestamos   = Number(d.prestamos)      || 0;
+            const desmrito    = Number(d.desmrito_monto) || 0;
 
             const totalDedReal =
-                descAfp +
-                adelantos +
-                faltas +
-                pension +
-                tardanza +
-                otrosDesc +
-                GASTO_EVENTOS;
+                descAfp + adelantos + faltas + pension +
+                tardanza + otrosDesc + creditos + prestamos + desmrito + GASTO_EVENTOS;
 
-            // Si no tiene sueldo cargado, mostramos 0 en deducciones y neto
             const totalDed = sb === 0 ? 0 : totalDedReal;
             const neto     = sb === 0 ? 0 : sb + bono - totalDedReal;
 
@@ -783,10 +893,21 @@ ${err.message}`);
 
     function calcularNeto(d) {
         const sb = Number(d.sueldo_base) || 0;
-        if (sb === 0) return 0; // Sin sueldo cargado, neto = 0
-        const bono = Number(d.bono) || 0;
-        const otrosDesc = Number(d.otros_descuentos) || 0;
-        return sb + bono - (sb * 0.13) - (Number(d.adelantos)||0) - (Number(d.faltas)||0) - (Number(d.pension)||0) - (Number(d.tardanza)||0) - otrosDesc - GASTO_EVENTOS;
+        if (sb === 0) return 0;
+        const bono        = Number(d.bono)           || 0;
+        const tipoAfp     = d.tipo_afp || 'AFP';
+        const descPension = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+        const creditos    = Number(d.creditos)        || 0;
+        const prestamos   = Number(d.prestamos)       || 0;
+        const desmrito    = Number(d.desmrito_monto)  || 0;
+        return sb + bono
+            - descPension
+            - (Number(d.adelantos) || 0)
+            - (Number(d.faltas)    || 0)
+            - (Number(d.pension)   || 0)
+            - (Number(d.tardanza)  || 0)
+            - creditos - prestamos - desmrito
+            - GASTO_EVENTOS;
     }
 
     async function crearBoletaPdfBlob(d) {
@@ -1056,34 +1177,170 @@ ${err.message}`);
         if (userRole !== 'admin') return;
         const d = docentesData.find(doc => doc.id_docente == id);
         if (!d) return;
-        document.getElementById('edit-id').value                  = d.id_docente;
-        document.getElementById('edit-nombre').value               = d.nombre;
-        document.getElementById('edit-sb').value                   = d.sueldo_base;
-        document.getElementById('edit-al').value                   = d.adelantos;
-        document.getElementById('edit-fl').value                   = d.faltas;
-        document.getElementById('edit-pen').value                  = d.pension;
-        document.getElementById('edit-tar').value                  = d.tardanza;
-        document.getElementById('edit-bono').value                 = d.bono              || 0;
-        document.getElementById('edit-otros-desc').value           = d.otros_descuentos  || 0;
-        document.getElementById('edit-otros-desc-detalle').value   = d.otros_desc_detalle || '';
+
+        // Info del docente
+        document.getElementById('edit-id').value            = d.id_docente;
+        document.getElementById('edit-nombre').value        = d.nombre;
+        document.getElementById('edit-nombre-display').innerText = d.nombre;
+        document.getElementById('edit-codigo-display').innerText = 'Código: ' + (d.codigo_trabajador || '—');
+        document.getElementById('edit-subtitulo').innerText = d.codigo_trabajador || '';
+
+        // Campos base
+        document.getElementById('edit-sb').value            = d.sueldo_base || 0;
+        document.getElementById('edit-al').value            = d.adelantos   || 0;
+        document.getElementById('edit-fl').value            = d.faltas      || 0;
+        document.getElementById('edit-pen').value           = d.pension     || 0;
+        document.getElementById('edit-tar').value           = d.tardanza    || 0;
+        document.getElementById('edit-bono').value          = d.bono        || 0;
+
+        // Campos nuevos
+        document.getElementById('edit-creditos').value      = d.creditos    || 0;
+        document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
+        document.getElementById('edit-num-faltas').value    = d.num_faltas  || 0;
+        document.getElementById('edit-num-tardanzas').value = d.num_tardanzas || 0;
+
+        // AFP/ONP y Salud
+        const tipoAfp = d.tipo_afp || 'AFP';
+        document.getElementById('edit-tipo-afp').value = tipoAfp;
+        actualizarLabelAfp();
+        const tipoSalud = d.tipo_salud || 'ESSALUD';
+        document.getElementById('edit-tipo-salud').value = tipoSalud;
+        actualizarLabelSalud();
+
+        // Desmérito
+        const nivel = d.desmrito_nivel || '';
+        document.querySelectorAll('input[name="desmrito"]').forEach(r => {
+            r.checked = (r.value === nivel);
+        });
+        document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
+        toggleDesmrito();
+
+        // Labels de faltas/tardanzas
+        calcularNumFaltas();
+        calcularNumTardanzas();
+
         miModal.show();
+    }
+
+    // ── Helpers AFP/Salud/Desmérito ──────────────────────────────────────────
+    function actualizarLabelAfp() {
+        const tipo = document.getElementById('edit-tipo-afp').value;
+        const sb   = Number(document.getElementById('edit-sb').value) || 0;
+        const monto = sb * 0.13;
+        const textos = {
+            AFP: `Descuento: S/ ${monto.toFixed(2)} (13%)`,
+            ONP: `Descuento: S/ ${monto.toFixed(2)} (13%)`,
+            NINGUNO: 'Sin descuento por pensión'
+        };
+        document.getElementById('label-calculo-afp').innerText = textos[tipo] || '';
+    }
+
+    function actualizarLabelSalud() {
+        const tipo = document.getElementById('edit-tipo-salud').value;
+        const sb   = Number(document.getElementById('edit-sb').value) || 0;
+        if (tipo === 'ESSALUD') {
+            document.getElementById('label-calculo-salud').innerText = `Aporte empleador: S/ ${(sb*0.09).toFixed(2)} (9%) — no descuenta al trabajador`;
+        } else {
+            document.getElementById('label-calculo-salud').innerText = 'SIS: sin descuento al trabajador';
+        }
+    }
+
+    function toggleDesmrito() {
+        const nivel = document.querySelector('input[name="desmrito"]:checked')?.value || '';
+        const cont  = document.getElementById('desmrito-monto-container');
+        const desc  = document.getElementById('desmrito-descripcion');
+        if (!nivel) {
+            cont.style.display = 'none';
+        } else {
+            cont.style.display = 'block';
+            const textos = {
+                LEVE:      '⚠ Falta Leve: amonestación verbal o escrita. Ingrese el monto a descontar.',
+                GRAVE:     '🔴 Falta Grave: puede implicar suspensión. Ingrese el monto a descontar.',
+                MUY_GRAVE: '🚨 Falta Muy Grave: puede derivar en despido. Ingrese el monto a descontar.'
+            };
+            desc.innerText = textos[nivel] || '';
+        }
+    }
+
+    function calcularMontoFaltas() {
+        const n = Number(document.getElementById('edit-num-faltas').value) || 0;
+        const sb = Number(document.getElementById('edit-sb').value) || 0;
+        if (n > 0 && sb > 0) {
+            const montoPorDia = sb / 30;
+            const total = montoPorDia * n;
+            document.getElementById('edit-fl').value = total.toFixed(2);
+            document.getElementById('label-faltas-detalle').innerText = `S/ ${montoPorDia.toFixed(2)}/día`;
+        }
+    }
+
+    function calcularNumFaltas() {
+        const monto = Number(document.getElementById('edit-fl').value) || 0;
+        const sb = Number(document.getElementById('edit-sb').value) || 0;
+        if (monto > 0 && sb > 0) {
+            const montoPorDia = sb / 30;
+            const n = Math.round(monto / montoPorDia * 10) / 10;
+            document.getElementById('label-faltas-detalle').innerText = `≈ ${n} día(s)`;
+        } else {
+            document.getElementById('label-faltas-detalle').innerText = '';
+        }
+    }
+
+    function calcularMontoTardanzas() {
+        const n = Number(document.getElementById('edit-num-tardanzas').value) || 0;
+        const sb = Number(document.getElementById('edit-sb').value) || 0;
+        if (n > 0 && sb > 0) {
+            const montoPorHora = sb / 30 / 8;
+            const total = montoPorHora * n;
+            document.getElementById('edit-tar').value = total.toFixed(2);
+            document.getElementById('label-tardanzas-detalle').innerText = `S/ ${montoPorHora.toFixed(2)}/hr`;
+        }
+    }
+
+    function calcularNumTardanzas() {
+        const monto = Number(document.getElementById('edit-tar').value) || 0;
+        const sb = Number(document.getElementById('edit-sb').value) || 0;
+        if (monto > 0 && sb > 0) {
+            const montoPorHora = sb / 30 / 8;
+            const n = Math.round(monto / montoPorHora * 10) / 10;
+            document.getElementById('label-tardanzas-detalle').innerText = `≈ ${n} hr(s)`;
+        } else {
+            document.getElementById('label-tardanzas-detalle').innerText = '';
+        }
     }
 
     async function guardarCambiosModal() {
         if (userRole !== 'admin') return;
         const id  = document.getElementById('edit-id').value;
         const mes = document.getElementById('filtro-mes').value;
+        const sb  = Number(document.getElementById('edit-sb').value) || 0;
+
+        // Tipo AFP/ONP → calcula el descuento automáticamente
+        const tipoAfp    = document.getElementById('edit-tipo-afp').value;
+        const descPension = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+
+        const desmritoNivel = document.querySelector('input[name="desmrito"]:checked')?.value || '';
+        const desmritoMonto = Number(document.getElementById('edit-desmrito-monto').value) || 0;
+
         const payload = {
-            sueldo_base:         document.getElementById('edit-sb').value,
-            adelantos:           document.getElementById('edit-al').value,
-            faltas:              document.getElementById('edit-fl').value,
-            pension:             document.getElementById('edit-pen').value,
-            tardanza:            document.getElementById('edit-tar').value,
-            bono:                document.getElementById('edit-bono').value,
-            otros_descuentos:    document.getElementById('edit-otros-desc').value,
-            otros_desc_detalle:  document.getElementById('edit-otros-desc-detalle').value,
+            sueldo_base:        sb,
+            adelantos:          Number(document.getElementById('edit-al').value)          || 0,
+            faltas:             Number(document.getElementById('edit-fl').value)           || 0,
+            pension:            Number(document.getElementById('edit-pen').value)          || 0,
+            tardanza:           Number(document.getElementById('edit-tar').value)          || 0,
+            bono:               Number(document.getElementById('edit-bono').value)         || 0,
+            otros_descuentos:   0,
+            otros_desc_detalle: '',
+            tipo_afp:           tipoAfp,
+            tipo_salud:         document.getElementById('edit-tipo-salud').value,
+            creditos:           Number(document.getElementById('edit-creditos').value)     || 0,
+            prestamos:          Number(document.getElementById('edit-prestamos').value)    || 0,
+            desmrito_nivel:     desmritoNivel,
+            desmrito_monto:     desmritoMonto,
+            num_faltas:         Number(document.getElementById('edit-num-faltas').value)   || 0,
+            num_tardanzas:      Number(document.getElementById('edit-num-tardanzas').value)|| 0,
             mes
         };
+
         try {
             const res = await fetch(`${API_URL}/${id}`, {
                 method: 'PUT',
@@ -1098,19 +1355,27 @@ ${err.message}`);
                 // Marcar localmente al docente como "boleta emitida" → badge verde
                 const idx = docentesData.findIndex(doc => doc.id_docente == id);
                 if (idx !== -1) {
-                    docentesData[idx]._boletaEmitida = true;
-                    // Actualizar los valores en memoria para que el badge refleje lo guardado
+                    docentesData[idx]._boletaEmitida    = true;
                     docentesData[idx].sueldo_base       = payload.sueldo_base;
-                    docentesData[idx].adelantos          = payload.adelantos;
-                    docentesData[idx].faltas             = payload.faltas;
-                    docentesData[idx].pension            = payload.pension;
-                    docentesData[idx].tardanza           = payload.tardanza;
-                    docentesData[idx].bono               = payload.bono;
-                    docentesData[idx].otros_descuentos   = payload.otros_descuentos;
-                    docentesData[idx].otros_desc_detalle = payload.otros_desc_detalle;
+                    docentesData[idx].adelantos         = payload.adelantos;
+                    docentesData[idx].faltas            = payload.faltas;
+                    docentesData[idx].pension           = payload.pension;
+                    docentesData[idx].tardanza          = payload.tardanza;
+                    docentesData[idx].bono              = payload.bono;
+                    docentesData[idx].otros_descuentos  = payload.otros_descuentos;
+                    docentesData[idx].otros_desc_detalle= payload.otros_desc_detalle;
+                    docentesData[idx].tipo_afp          = payload.tipo_afp;
+                    docentesData[idx].tipo_salud        = payload.tipo_salud;
+                    docentesData[idx].creditos          = payload.creditos;
+                    docentesData[idx].prestamos         = payload.prestamos;
+                    docentesData[idx].desmrito_nivel    = payload.desmrito_nivel;
+                    docentesData[idx].desmrito_monto    = payload.desmrito_monto;
+                    docentesData[idx].num_faltas        = payload.num_faltas;
+                    docentesData[idx].num_tardanzas     = payload.num_tardanzas;
                 }
                 renderizarTabla(docentesData);
                 actualizarTotales(docentesData);
+                actualizarGraficos(); // ← FIX: actualiza el círculo de progreso
             }
             else { alert('Error al guardar. Revisa la consola.'); }
         } catch(e) {
