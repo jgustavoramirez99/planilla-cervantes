@@ -439,7 +439,7 @@
         document.getElementById('buscador').value = '';
         // Mostrar botón Excel solo para admin
         if (rol === 'admin') {
-            document.getElementById('tabla-header').style.display = 'flex';
+            document.getElementById('grafico-usuario-container').style.display = 'none';
         }
         cargarDatosServidor();
     }
@@ -654,13 +654,15 @@
     // BUSCADOR DE DOCENTES (filtra por trabajador y codigo)
     // ============================================================
     document.getElementById('buscador').addEventListener('input', function() {
-        if (userRole === 'user') return;
-        const q = this.value.toLowerCase().trim();
-        const filtrados = docentesData.filter(d =>
-            d.nombre.toLowerCase().includes(q) || d.dni.includes(q)
-        );
-        renderizarTabla(filtrados);
-    });
+    if (userRole === 'user') return;
+    const q = this.value.toLowerCase().trim();
+    if (!q) { renderizarTabla(docentesData); return; }
+    const filtrados = docentesData.filter(d =>
+        (d.nombre || '').toLowerCase().includes(q) ||
+        (d.codigo_trabajador || '').toLowerCase().includes(q)
+    );
+    renderizarTabla(filtrados);
+});
 
     // ============================================================
 // WHATSAPP — AHORA USA TELEFONO CON CONTACTO 
@@ -887,42 +889,69 @@ ${err.message}`);
         URL.revokeObjectURL(url);
     }
 
-    // ============================================================
-    // GRÁFICOS
-    // ============================================================
     function actualizarGraficos() {
-        if (!docentesData.length || userRole === 'user') return;
+    if (!docentesData.length || userRole === 'user') return;
 
-        const top5    = docentesData.slice(0, 5);
-        const nombres = top5.map(d => d.nombre.split(' ')[0]);
-        const netos   = top5.map(d => calcularNeto(d));
-        const totalNeto = docentesData.reduce((s, d) => s + calcularNeto(d), 0);
-        const totalRet  = docentesData.reduce((s, d) => s + (Number(d.sueldo_base)||0)*0.13, 0);
+    // ── Gráfico 1: Barras — sueldo base de todos los docentes ────────────────
+    const nombres = docentesData.map(d => d.nombre.split(' ')[0] + ' ' + (d.nombre.split(' ')[1]||''));
+    const sueldos = docentesData.map(d => Number(d.sueldo_base) || 0);
 
-        if (chartPrincipal) chartPrincipal.destroy();
-        chartPrincipal = new Chart(
-            document.getElementById('chartPlanilla').getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: nombres,
-                datasets: [{ label: 'Neto a Pagar (S/)', data: netos, backgroundColor: '#3498db', borderRadius: 6 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } } }
-        });
+    if (chartPrincipal) chartPrincipal.destroy();
+    chartPrincipal = new Chart(
+        document.getElementById('chartPlanilla').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: nombres,
+            datasets: [{ 
+                label: 'Sueldo Base (S/)', 
+                data: sueldos, 
+                backgroundColor: sueldos.map(s => s > 0 ? '#3498db' : '#bdc3c7'),
+                borderRadius: 6 
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
 
-        if (chartDona) chartDona.destroy();
-        chartDona = new Chart(
-            document.getElementById('chartDona').getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Neto Pagado', 'Retenciones AFP'],
-                datasets: [{ data: [totalNeto, totalRet],
-                    backgroundColor: ['#2ecc71','#e74c3c'], borderWidth: 2 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
+    // ── Gráfico 2: Dona — progreso de planillas emitidas ─────────────────────
+    const emitidos  = docentesData.filter(d => d._boletaEmitida).length;
+    const pendientes = docentesData.length - emitidos;
+
+    if (chartDona) chartDona.destroy();
+    chartDona = new Chart(
+        document.getElementById('chartDona').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: [`Emitidas (${emitidos})`, `Pendientes (${pendientes})`],
+            datasets: [{ 
+                data: [emitidos || 0, pendientes],
+                backgroundColor: ['#2ecc71', '#ecf0f1'], 
+                borderColor: ['#27ae60', '#bdc3c7'],
+                borderWidth: 2 
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.parsed} docente(s)`
+                    }
+                }
+            }
+        }
+    });
+
+    // Actualizar el título de la dona con el texto de progreso
+    document.querySelector('#graficos-container .col-md-4 h6').innerHTML =
+        `Progreso de Planillas <span class="badge bg-success ms-1">${emitidos}/${docentesData.length}</span>`;
+}
 
     // ============================================================
     // GRÁFICO PERSONAL DEL DOCENTE (rol user)
