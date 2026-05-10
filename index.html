@@ -544,7 +544,7 @@
 
             const descAfp = sb * 0.13;
 
-            const totalDed =
+            const totalDedReal =
                 descAfp +
                 adelantos +
                 faltas +
@@ -553,7 +553,9 @@
                 otrosDesc +
                 GASTO_EVENTOS;
 
-            const neto = sb + bono - totalDed;
+            // Si no tiene sueldo cargado, mostramos 0 en deducciones y neto
+            const totalDed = sb === 0 ? 0 : totalDedReal;
+            const neto     = sb === 0 ? 0 : sb + bono - totalDedReal;
 
             // Verde si ya fue editada/emitida por el admin, rojo si negativo, azul por defecto
             let badgeColor = 'bg-primary';
@@ -781,6 +783,7 @@ ${err.message}`);
 
     function calcularNeto(d) {
         const sb = Number(d.sueldo_base) || 0;
+        if (sb === 0) return 0; // Sin sueldo cargado, neto = 0
         const bono = Number(d.bono) || 0;
         const otrosDesc = Number(d.otros_descuentos) || 0;
         return sb + bono - (sb * 0.13) - (Number(d.adelantos)||0) - (Number(d.faltas)||0) - (Number(d.pension)||0) - (Number(d.tardanza)||0) - otrosDesc - GASTO_EVENTOS;
