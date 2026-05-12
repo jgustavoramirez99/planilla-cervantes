@@ -619,7 +619,10 @@
             // ... resto del código
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            docentesData = await response.json();
+                docentesData = await response.json();
+
+            // Ordenar alfabéticamente por nombre
+            docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
             // Filtro extra en cliente como segunda capa de seguridad
             if (userRole === 'user' && userDni) {
@@ -642,25 +645,21 @@
         }
     }
 
-    // ==========================================================================
-    // RENDERIZAR TABLA PARA ADMIN Y USUARIOS (con logica de calculos  y estilos)
+        // ==========================================================================
+    // RENDERIZAR TABLA PARA ADMIN Y USUARIOS
     // ==========================================================================
     function renderizarTabla(lista) {
 
         const cuerpo = document.getElementById('tabla-cuerpo');
-
         cuerpo.innerHTML = '';
 
         if (!lista || lista.length === 0) {
-
             cuerpo.innerHTML = `
                 <tr>
-                    <td colspan="5"
-                        class="text-center p-4 text-muted">
+                    <td colspan="5" class="text-center p-4 text-muted">
                         No se encontraron resultados
                     </td>
                 </tr>`;
-
             return;
         }
 
@@ -680,97 +679,31 @@
             const prestamos   = Number(d.prestamos)      || 0;
             const desmrito    = Number(d.desmrito_monto) || 0;
 
-            const totalDedReal =
-                descAfp + adelantos + faltas + pension +
-                tardanza + otrosDesc + creditos + prestamos + desmrito + GASTO_EVENTOS;
-
+            const totalDedReal = descAfp + adelantos + faltas + pension + tardanza + otrosDesc + creditos + prestamos + desmrito + 30;
             const totalDed = sb === 0 ? 0 : totalDedReal;
             const neto     = sb === 0 ? 0 : sb + bono - totalDedReal;
 
-            // Verde si ya fue editada/emitida por el admin, rojo si negativo, azul por defecto
             let badgeColor = 'bg-primary';
+            if (neto < 0) badgeColor = 'bg-danger';
+            else if (d._boletaEmitida) badgeColor = 'bg-success';
 
-            if (neto < 0) {
-                badgeColor = 'bg-danger';
-            } else if (d._boletaEmitida) {
-                badgeColor = 'bg-success';
-            }
-
-            const btnPDF = `
-                <button
-                    class="btn btn-sm btn-outline-danger"
-                    title="Descargar boleta PDF"
-                    onclick="generarBoletaPDF(${d.id_docente})">
-
-                    <i class="fa-solid fa-file-pdf"></i>
-                </button>`;
-
-            const btnWA = (
-                userRole === 'admin'
-            )
-            ? `
-                <button
-                    class="btn btn-sm btn-outline-success"
-                    title="Enviar por WhatsApp"
-                    id="btn-wa-${d.id_docente}"
-                    onclick="enviarWhatsApp(${d.id_docente})">
-
-                    <i class="fa-brands fa-whatsapp"></i>
-                </button>`
-            : '';
-
-            const btnEdit = (
-                userRole === 'admin'
-            )
-            ? `
-                <button
-                    class="btn btn-sm btn-outline-primary"
-                    title="Editar planilla"
-                    onclick="abrirModal(${d.id_docente})">
-
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>`
-            : '';
-
-            const onclickFila =
-                userRole === 'admin'
-                ? `abrirModal(${d.id_docente})`
-                : '';
+            const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
+            const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
+            const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
 
             cuerpo.innerHTML += `
                 <tr class="fila-docente">
-
-                    <td onclick="${onclickFila}" class="ps-3">
-
-                        <div class="fw-bold text-dark">
-                            ${d.nombre}
-                        </div>
-
-                        <!-- ===================================================
-                             NUEVO:
-                             codigo_trabajador
-                        ==================================================== -->
+                    <td class="ps-3">
+                        <div class="fw-bold text-dark">${d.nombre}</div>
                         <small class="text-muted">
-                            Código:
-                            ${d.codigo_trabajador || 'Sin código'}
+                            DNI: ${d.dni || 'Sin DNI'}
                         </small>
-
                     </td>
-
+                    <td class="text-center">S/ ${sb.toFixed(2)}</td>
+                    <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
                     <td class="text-center">
-                        S/ ${sb.toFixed(2)}
+                        <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
                     </td>
-
-                    <td class="text-center text-danger small">
-                        - S/ ${totalDed.toFixed(2)}
-                    </td>
-
-                    <td class="text-center">
-                        <span class="badge ${badgeColor} badge-neto">
-                            S/ ${neto.toFixed(2)}
-                        </span>
-                    </td>
-
                     <td class="text-center">
                         <div class="btn-group gap-1">
                             ${btnPDF}
@@ -778,7 +711,6 @@
                             ${btnEdit}
                         </div>
                     </td>
-
                 </tr>`;
         });
     }
@@ -910,41 +842,41 @@ async function enviarWhatsApp(id) {
 
         // ── Encabezado ───────────────────────────────────────────────────────
         doc.setFontSize(14); doc.setTextColor(40,74,117);
-        doc.text("I.E.P. CERVANTES SCHOOL", 105, 18, { align:"center" });
+        doc.text(" CERVANTES EDUCA SAC", 105, 18, { align:"center" });
         doc.setFontSize(9); doc.setTextColor(100);
         doc.text("Puente Piedra, Lima - Perú", 105, 24, { align:"center" });
         doc.text("BOLETA DE PAGO DE REMUNERACIONES", 105, 30, { align:"center" });
         doc.setDrawColor(44,62,80); doc.setLineWidth(0.5);
         doc.line(15, 34, 195, 34);
 
-           // ── Datos del trabajador ─────────────────────────────────────────────
+              // ── Datos del trabajador ─────────────────────────────────────────────
         doc.setFontSize(9); 
         doc.setTextColor(0); 
         doc.setFont("","bold");
         doc.text("DATOS DEL TRABAJADOR", 15, 41);
         doc.setFont("","normal");
 
-        doc.text(`Nombre  : ${d.nombre}`,                  15, 48);
-        doc.text(`Código  : ${d.codigo_trabajador || '—'}`, 15, 54);
+        doc.text(`Nombre  : ${d.nombre}`, 15, 48);
+        doc.text(`DNI     : ${d.dni || '—'}`, 15, 54);
 
-           // ── FECHA Y HORA DE EMISIÓN ─────────────────────────────────────
+        // ── FECHA Y HORA DE EMISIÓN ─────────────────────────────────────
         const ahora = new Date();
         const fechaHora = ahora.toLocaleString('es-PE', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-});
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text(`Emitido: ${fechaHora}`, 130, 36, { align: "right" });
+        doc.setFontSize(9);
+        doc.setTextColor(80);
+        doc.text(`Emitido: ${fechaHora}`, 130, 36, { align: "right" });
 
-    doc.text(`Periodo : ${mesNombre}`,                 130, 48);
-    doc.text(`${tipoAfp} | ${tipoSalud}`,              130, 54);
-    doc.line(15, 58, 195, 58);
+        doc.text(`Periodo : ${mesNombre}`, 130, 48);
+        doc.text(`${tipoAfp} | ${tipoSalud}`, 130, 54);
+        doc.line(15, 58, 195, 58);
 
         // ── Encabezado tabla ─────────────────────────────────────────────────
         doc.setFillColor(44,62,80);
