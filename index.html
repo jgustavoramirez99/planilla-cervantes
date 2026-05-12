@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Planilla - Cervantes School</title>
+    <title>Sistema de Planilla - Cervantes Educa SAC</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -92,7 +92,7 @@
                  onerror="mostrarLogoFallback()">
         </div>
 
-        <h4 class="text-muted mb-1">I.E.P. Cervantes School</h4>
+        <h4 class="text-muted mb-1"> Cervantes Educa SAC</h4>
         <h3 class="fw-bold text-primary mb-4">Sistema de Planillas</h3>
         <div class="text-center mb-3">
             <span style="font-size:0.7rem;color:#aaa;letter-spacing:1px;"> Powered by </span><br>
@@ -790,118 +790,61 @@
     const q = this.value.toLowerCase().trim();
     if (!q) { renderizarTabla(docentesData); return; }
     const filtrados = docentesData.filter(d =>
-        (d.nombre || '').toLowerCase().includes(q) ||
-        (d.codigo_trabajador || '').toLowerCase().includes(q)
+    (d.nombre || '').toLowerCase().includes(q) ||
+    (d.dni || '').toLowerCase().includes(q)
     );
     renderizarTabla(filtrados);
 });
 
-    // ============================================================
-// WHATSAPP — AHORA USA TELEFONO CON CONTACTO 
+// ============================================================
+// WHATSAPP — Usa el teléfono real de la BD
 // ============================================================
 async function enviarWhatsApp(id) {
-
     if (userRole !== 'admin') return;
 
-    const d = docentesData.find(
-        doc => doc.id_docente == id
-    );
-
+    const d = docentesData.find(doc => doc.id_docente == id);
     if (!d) return;
 
     const telefono = d.telefono || '';
-
     if (!telefono) {
-
-        alert('El docente no tiene teléfono registrado.');
-
+        alert('Este docente no tiene teléfono registrado.');
         return;
     }
 
-    const btnWA = document.getElementById(
-        `btn-wa-${id}`
-    );
-
+    const btnWA = document.getElementById(`btn-wa-${id}`);
     if (btnWA) {
-
         btnWA.disabled = true;
-
-        btnWA.innerHTML = `
-            <span class="spinner-border spinner-border-sm"></span>`;
+        btnWA.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
     }
 
     try {
-
-        const blob   = await crearBoletaPdfBlob(d);
-
+        const blob = await crearBoletaPdfBlob(d);
         const base64 = await blobToBase64(blob);
+        const filename = `Boleta_${d.nombre.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
 
-        const filename =
-            `Boleta_${d.nombre.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
-
-        const uploadRes = await fetch(
-            `${SERVER_BASE}/api/guardar-boleta`,
-            {
-                method: 'POST',
-
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization':
-                        `Bearer ${localStorage.getItem('token')}`
-                },
-
-                body: JSON.stringify({
-                    filename,
-                    base64
-                })
-            }
-        );
-
-        if (!uploadRes.ok) {
-
-            const errData =
-                await uploadRes.json().catch(() => ({}));
-
-            throw new Error(
-                errData.error ||
-                `Error del servidor: ${uploadRes.status}`
-            );
-        }
+        const uploadRes = await fetch(`${SERVER_BASE}/api/guardar-boleta`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ filename, base64 })
+        });
 
         const result = await uploadRes.json();
 
         const neto = calcularNeto(d);
+        const texto = `Hola *${d.nombre}*,\n\nAdjunto tu boleta de pago del mes.\n*Total Neto:* S/ ${neto.toFixed(2)}\n\nLink: ${result.url}`;
 
-        const texto = `
-Hola *${d.nombre}*,
-adjunto tu boleta de pago.
-
-*Total Neto:* S/ ${neto.toFixed(2)}
-
-*Link:* ${result.url}`;
-
-        window.open(
-            `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`,
-            '_blank'
-        );
+        window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`, '_blank');
 
     } catch (err) {
-
-        console.error('Error WhatsApp:', err);
-
-        alert(`
-No se pudo enviar por WhatsApp.
-
-${err.message}`);
-
+        console.error(err);
+        alert('No se pudo enviar por WhatsApp.');
     } finally {
-
         if (btnWA) {
-
             btnWA.disabled = false;
-
-            btnWA.innerHTML =
-                '<i class="fa-brands fa-whatsapp"></i>';
+            btnWA.innerHTML = `<i class="fa-brands fa-whatsapp"></i>`;
         }
     }
 }
@@ -974,15 +917,34 @@ ${err.message}`);
         doc.setDrawColor(44,62,80); doc.setLineWidth(0.5);
         doc.line(15, 34, 195, 34);
 
-        // ── Datos del trabajador ─────────────────────────────────────────────
-        doc.setFontSize(9); doc.setTextColor(0); doc.setFont("","bold");
+           // ── Datos del trabajador ─────────────────────────────────────────────
+        doc.setFontSize(9); 
+        doc.setTextColor(0); 
+        doc.setFont("","bold");
         doc.text("DATOS DEL TRABAJADOR", 15, 41);
         doc.setFont("","normal");
+
         doc.text(`Nombre  : ${d.nombre}`,                  15, 48);
         doc.text(`Código  : ${d.codigo_trabajador || '—'}`, 15, 54);
-        doc.text(`Periodo : ${mesNombre}`,                 130, 48);
-        doc.text(`${tipoAfp} | ${tipoSalud}`,              130, 54);
-        doc.line(15, 58, 195, 58);
+
+           // ── FECHA Y HORA DE EMISIÓN ─────────────────────────────────────
+        const ahora = new Date();
+        const fechaHora = ahora.toLocaleString('es-PE', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+});
+
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(`Emitido: ${fechaHora}`, 130, 36, { align: "right" });
+
+    doc.text(`Periodo : ${mesNombre}`,                 130, 48);
+    doc.text(`${tipoAfp} | ${tipoSalud}`,              130, 54);
+    doc.line(15, 58, 195, 58);
 
         // ── Encabezado tabla ─────────────────────────────────────────────────
         doc.setFillColor(44,62,80);

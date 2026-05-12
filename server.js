@@ -149,7 +149,7 @@ app.post('/api/login', async (req, res) => {
         {
             user: cuenta.user,
             role: cuenta.role,
-            codigo_trabajador: cuenta.codigo_trabajador
+            dni: cuenta.dni
         },
         JWT_SECRET,
         {
@@ -163,7 +163,7 @@ app.post('/api/login', async (req, res) => {
         user: cuenta.user,
         role: cuenta.role,
         nombre: cuenta.nombre,
-        codigo_trabajador: cuenta.codigo_trabajador,
+        dni: cuenta.dni,
         telefono: cuenta.telefono
     });
 });
@@ -175,8 +175,8 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/docentes', verificarToken, (req, res) => {
     const mes  = parseInt(req.query.mes) || 5;
     const role = req.usuario.role || '';
-    const codigoTrabajador =
-    req.usuario.codigo_trabajador || '';
+    const dni =
+    req.usuario.dni || '';
 
     let sql = `
         SELECT d.*,
@@ -202,13 +202,12 @@ app.get('/api/docentes', verificarToken, (req, res) => {
               AND p.anio = 2026`;
 
     const params = [mes];
-
-    if (role === 'user' && codigoTrabajador) {
-
-    sql += ' WHERE d.codigo_trabajador = ?';
-
-    params.push(codigoTrabajador);
-}
+ 
+    const dniUsuario = req.usuario.dni || '';
+    if (role === 'user' && dniUsuario) {
+        sql += ' WHERE d.dni = ?';
+        params.push(dniUsuario);
+    }
     db.query(sql, params, (err, result) => {
         if (err) {
             console.error('Error en /api/docentes:', err);
