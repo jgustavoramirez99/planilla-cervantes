@@ -1440,68 +1440,18 @@ function descargarExcel() {
                    '10':'Octubre','11':'Noviembre','12':'Diciembre'};
     const mesNombre = (meses[mes] || 'Mayo') + ' 2026';
 
-    const wb = XLSX.utils.book_new();
-
-    // Colores
-    const azulOscuro = { fgColor: { rgb: "1F3864" } };
-    const azulMedio  = { fgColor: { rgb: "2E75B6" } };
-    const azulClaro  = { fgColor: { rgb: "BDD7EE" } };
-    const verdeClaro = { fgColor: { rgb: "D9EAD3" } };
-    const rojo       = { fgColor: { rgb: "8B0000" } };
-    const naranja    = { fgColor: { rgb: "FCE4D6" } };
-    const grisClaro  = { fgColor: { rgb: "F2F2F2" } };
-
-    const fBold = (color = "000000", sz = 11) => ({ bold: true, color: { rgb: color }, sz });
-    const aCenter = { horizontal: "center", vertical: "center", wrapText: true };
-    const aLeft   = { horizontal: "left", vertical: "center" };
-    const aRight  = { horizontal: "right", vertical: "center" };
-    const border = { style: "thin", color: { rgb: "9E9E9E" } };
-
-    const COLS = [
-        { h: 'N°', wch: 5 },
-        { h: 'APELLIDOS Y NOMBRES', wch: 38 },
-        { h: 'DNI', wch: 12 },
-        { h: 'PAGADO', wch: 14 },
-        { h: 'SUELDO BASE', wch: 16 },
-        { h: 'AFP / ONP', wch: 14 },
-        { h: 'ESALUD (9%)', wch: 16 },
-        { h: 'ADELANTO', wch: 12 },
-        { h: 'CRÉDITOS', wch: 12 },
-        { h: 'PENSIÓN', wch: 14 },
-        { h: 'TARDANZAS + FALTAS', wch: 16 },
-        { h: 'ACTIVIDADES', wch: 12 },
-        { h: 'DESMÉRITO', wch: 12 },
-        { h: 'BONO', wch: 12 },
-        { h: 'NETO A PAGAR', wch: 16 },
-        { h: 'CONSOLIDADO BCP', wch: 16 },
-        { h: 'AFP %', wch: 10 }
+    // ===================== PREPARAR DATOS =====================
+    let data = [
+        ["CERVANTES EDUCA SAC"],
+        [`PLANILLA DE REMUNERACIONES - ${mesNombre}`],
+        [`Fecha: ${new Date().toLocaleDateString('es-PE')}`],
+        [], // línea en blanco
+        // Encabezados
+        ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
+         "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PENSIÓN", "TARDANZAS + FALTAS", 
+         "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO BCP", "AFP %"]
     ];
 
-    let R = 0;
-    const ws = {};
-    const EC = (r, c) => XLSX.utils.encode_cell({ r, c });
-
-    // Títulos
-    ws[EC(R,0)] = { v: "CERVANTES EDUCA SAC", t: "s", s: { fill: azulOscuro, font: fBold("FFFFFF", 16), alignment: aCenter } };
-    R++;
-    ws[EC(R,0)] = { v: `PLANILLA DE REMUNERACIONES - ${mesNombre}`, t: "s", s: { fill: azulMedio, font: fBold("FFFFFF", 13), alignment: aCenter } };
-    R++;
-
-    // Encabezados
-    COLS.forEach((col, c) => {
-        ws[EC(R, c)] = { 
-            v: col.h, 
-            t: "s", 
-            s: { 
-                fill: { patternType: "solid", fgColor: c <= 2 ? azulClaro.fgColor : (c <= 4 ? verdeClaro.fgColor : (c <= 6 ? rojo.fgColor : naranja.fgColor)) }, 
-                font: fBold("1F3864", 11), 
-                alignment: aCenter 
-            } 
-        };
-    });
-    R++;
-
-    // Datos + Totales
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0 };
 
     docentesData.forEach((d, i) => {
@@ -1519,8 +1469,27 @@ function descargarExcel() {
         const neto = parseFloat((sb + bono - afpMonto - adel - cred - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
 
-        const fila = [i+1, d.nombre||'', d.dni||'', pagado, sb, d.tipo_afp||'ONP', esalud, adel, cred, pen, tard, activ, desmr, bono, neto, consolidado, d.tipo_afp === 'NINGUNO' ? '—' : '13%'];
+        data.push([
+            i+1, 
+            d.nombre || '', 
+            d.dni || '', 
+            pagado, 
+            sb,
+            d.tipo_afp || 'ONP',
+            esalud,
+            adel,
+            cred,
+            pen,
+            tard,
+            activ,
+            desmr,
+            bono,
+            neto,
+            consolidado,
+            d.tipo_afp === 'NINGUNO' ? '—' : '13%'
+        ]);
 
+        // Acumular totales
         totales.pagado += pagado;
         totales.sb += sb;
         totales.esalud += esalud;
@@ -1533,34 +1502,30 @@ function descargarExcel() {
         totales.bono += bono;
         totales.neto += neto;
         totales.consolidado += consolidado;
-
-        fila.forEach((v, c) => {
-            ws[EC(R, c)] = {
-                v: v,
-                t: typeof v === 'number' ? 'n' : 's',
-                s: {
-                    fill: { patternType: "solid", fgColor: i%2 === 0 ? grisClaro.fgColor : { rgb: "FFFFFF" } },
-                    alignment: (c === 1 ? aLeft : (typeof v === 'number' ? aRight : aCenter)),
-                    border: border
-                }
-            };
-        });
-        R++;
     });
 
-    // Fila de Totales
-    const totalFila = ['', 'TOTAL GENERAL', '', totales.pagado, totales.sb, '', totales.esalud, totales.adel, totales.cred, totales.pen, totales.tard, totales.activ, totales.desmr, totales.bono, totales.neto, totales.consolidado, ''];
-    totalFila.forEach((v, c) => {
-        ws[EC(R, c)] = { 
-            v: v, 
-            t: typeof v === 'number' ? 'n' : 's', 
-            s: { fill: azulOscuro, font: fBold("FFFFFF", 12), alignment: aRight } 
-        };
-    });
+    // Fila de totales
+    data.push([
+        "", "TOTAL GENERAL", "", totales.pagado, totales.sb, "", totales.esalud, 
+        totales.adel, totales.cred, totales.pen, totales.tard, totales.activ, 
+        totales.desmr, totales.bono, totales.neto, totales.consolidado, ""
+    ]);
 
-    ws['!cols'] = COLS.map(c => ({ wch: c.wch }));
+    // ===================== CREAR EXCEL =====================
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Ajustar anchos de columna
+    ws['!cols'] = [
+        {wch:5}, {wch:40}, {wch:12}, {wch:14}, {wch:16}, {wch:14},
+        {wch:16}, {wch:12}, {wch:12}, {wch:14}, {wch:16}, {wch:12},
+        {wch:12}, {wch:12}, {wch:16}, {wch:18}, {wch:10}
+    ];
+
     XLSX.utils.book_append_sheet(wb, ws, `Planilla ${mesNombre}`);
     XLSX.writeFile(wb, `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`);
+
+    console.log("✅ Excel generado correctamente con", docentesData.length, "docentes");
 }
        
         // Actualizar resumen de Neto en el modal
