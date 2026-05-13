@@ -314,19 +314,19 @@
                         <i class="fa-solid fa-landmark me-1"></i>Descuentos Oficiales
                     </div>
                     <div class="row g-2">
-                        <!-- AFP / ONP -->
+                        <!-- AFP - Permanente -->
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-danger">Tipo de Aporte Pensión</label>
+                        <label class="form-label small fw-bold text-danger">Tipo de Aporte Pensión (Permanente)</label>
                             <select id="edit-tipo-afp" class="form-select form-select-sm" onchange="actualizarLabelAfp()">
-                                <option value="ONP">ONP (13% universal)</option>
-                                <option value="Profuturo">Profuturo</option>
-                                <option value="Integra">Integra</option>
-                                <option value="Habitat">Habitat</option>
-                                <option value="Prima">Prima</option>
-                                <option value="NINGUNO">Sin aporte pensión</option>
-                            </select>
-                            <div class="text-muted small mt-1" id="label-calculo-afp"></div>
-                        </div>
+                            <option value="ONP">ONP (13% universal)</option>
+                            <option value="Profuturo">Profuturo</option>
+                            <option value="Integra">Integra</option>
+                            <option value="Habitat">Habitat</option>
+                            <option value="Prima">Prima</option>
+                            <option value="NINGUNO">Sin aporte pensión</option>
+                        </select>
+                    <div class="text-muted small mt-1" id="label-calculo-afp"></div>
+                </div>
                         <!-- ESSALUD / SIS -->
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-danger">Tipo de Seguro Salud</label>
@@ -1149,77 +1149,77 @@ async function enviarWhatsApp(id) {
         document.getElementById('stat-planilla-total').innerText =
             `S/ ${totalNeto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
     }
+// ============================================================
+// MODAL EDICIÓN 
+// ============================================================
+function abrirModal(id) {
+    if (userRole !== 'admin') return;
+    const d = docentesData.find(doc => doc.id_docente == id);
+    if (!d) return;
 
-    // ============================================================
-    // MODAL EDICIÓN - PAGADO Opción A
-    // ============================================================
-    function abrirModal(id) {
-        if (userRole !== 'admin') return;
-        const d = docentesData.find(doc => doc.id_docente == id);
-        if (!d) return;
+    // Info del docente
+    document.getElementById('edit-id').value            = d.id_docente;
+    document.getElementById('edit-nombre').value        = d.nombre;
+    document.getElementById('edit-nombre-display').innerText = d.nombre;
+    document.getElementById('edit-codigo-display').innerText = 'DNI: ' + (d.dni || '—');
+    document.getElementById('edit-subtitulo').innerText = d.dni || '';
 
-        // Info del docente
-        document.getElementById('edit-id').value            = d.id_docente;
-        document.getElementById('edit-nombre').value        = d.nombre;
-        document.getElementById('edit-nombre-display').innerText = d.nombre;
-        document.getElementById('edit-codigo-display').innerText = 'DNI: ' + (d.dni || '—');
-        document.getElementById('edit-subtitulo').innerText = d.dni || '';
+    // Sueldo Base
+    document.getElementById('edit-sb').value = d.sueldo_base || 0;
 
-        // Sueldo Base
-        document.getElementById('edit-sb').value = d.sueldo_base || 0;
+    // PAGADO - Opción A (ya lo tienes bien)
+    const pagadoContainer = document.getElementById('pagado-container');
+    const pagadoValor = Number(d.pagado) || 0;
 
-        // PAGADO - Opción A
-        const pagadoContainer = document.getElementById('pagado-container');
-        const pagadoValor = Number(d.pagado) || 0;
-
-        if (pagadoValor > 0) {
-            // Ya tiene monto → Mostrar solo lectura
-            pagadoContainer.innerHTML = `
-                <div class="alert alert-success py-2">
-                    <strong>S/ ${pagadoValor.toFixed(2)}</strong> 
-                    <small class="text-muted">(Ya registrado - No editable)</small>
-                </div>
-                <input type="hidden" id="edit-pagado" value="${pagadoValor}">
-            `;
-        } else {
-            // Aún no tiene → Editable
-            pagadoContainer.innerHTML = `
-                <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00" value="0">
-                <small class="text-muted">Ingrese el monto PAGADO (solo una vez)</small>
-            `;
-        }
-
-        // Resto de campos...
-        document.getElementById('edit-al').value            = d.adelantos   || 0;
-        document.getElementById('edit-fl').value            = d.faltas      || 0;
-        document.getElementById('edit-pen').value           = d.pension     || 0;
-        document.getElementById('edit-tar').value           = d.tardanza    || 0;
-        document.getElementById('edit-bono').value          = d.bono        || 0;
-
-        document.getElementById('edit-creditos').value      = d.creditos    || 0;
-        document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
-        document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
-
-        // AFP
-        const afpGuardada = d.afp || 'ONP';
-        document.getElementById('edit-tipo-afp').value = afpGuardada;
-        actualizarLabelAfp();
-
-        const tipoSalud = d.tipo_salud || 'ESSALUD';
-        document.getElementById('edit-tipo-salud').value = tipoSalud;
-        actualizarLabelSalud();
-
-        // Desmérito
-        const nivel = d.desmrito_nivel || '';
-        document.querySelectorAll('input[name="desmrito"]').forEach(r => {
-            r.checked = (r.value === nivel);
-        });
-        document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
-        toggleDesmrito();
-
-        miModal.show();
-        actualizarResumenNeto();
+    if (pagadoValor > 0) {
+        pagadoContainer.innerHTML = `
+            <div class="alert alert-success py-2">
+                <strong>S/ ${pagadoValor.toFixed(2)}</strong> 
+                <small class="text-muted">(Ya registrado - No editable)</small>
+            </div>
+            <input type="hidden" id="edit-pagado" value="${pagadoValor}">
+        `;
+    } else {
+        pagadoContainer.innerHTML = `
+            <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00" value="0">
+            <small class="text-muted">Ingrese el monto PAGADO (solo una vez)</small>
+        `;
     }
+
+    // Resto de campos mensuales
+    document.getElementById('edit-al').value            = d.adelantos   || 0;
+    document.getElementById('edit-fl').value            = d.faltas      || 0;
+    document.getElementById('edit-pen').value           = d.pension     || 0;
+    document.getElementById('edit-tar').value           = d.tardanza    || 0;
+    document.getElementById('edit-bono').value          = d.bono        || 0;
+    document.getElementById('edit-creditos').value      = d.creditos    || 0;
+    document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
+    document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
+
+    // AFP - Permanente
+    const afpGuardada = d.afp || d.tipo_afp || 'ONP';
+    document.getElementById('edit-tipo-afp').value = afpGuardada;
+    actualizarLabelAfp();
+
+    // Salud
+    const tipoSalud = d.tipo_salud || 'ESSALUD';
+    document.getElementById('edit-tipo-salud').value = tipoSalud;
+    actualizarLabelSalud();
+
+    // Desmérito
+    const nivel = d.desmrito_nivel || '';
+    document.querySelectorAll('input[name="desmrito"]').forEach(r => {
+        r.checked = (r.value === nivel);
+    });
+    toggleDesmrito();
+
+    // === BLOQUEO DE CAMPOS PERMANENTES ===
+    currentDocente = d;                    // ← Más eficiente
+    bloquearCamposPermanentes();
+
+    miModal.show();
+    actualizarResumenNeto();
+}
 
         function actualizarLabelAfp() {
         const tipo = document.getElementById('edit-tipo-afp').value;
@@ -1257,18 +1257,27 @@ async function enviarWhatsApp(id) {
 
         let texto = '';
         if (tipo === 'NINGUNO') {
-            texto = 'Sin descuento por pensión';
+        document.getElementById('label-calculo-afp').innerText = 'Sin descuento por pensión';
         } else if (tipo === 'ONP') {
-            texto = `ONP - Descuento: S/ ${monto.toFixed(2)} (13%)`;
+        document.getElementById('label-calculo-afp').innerText = `ONP: S/ ${(sb*0.13).toFixed(2)} (13%)`;
         } else {
-            texto = `AFP ${nombreAFP} - Descuento: S/ ${monto.toFixed(2)} (${(porcentaje*100).toFixed(1)}%)`;
-        }
-
-        document.getElementById('label-calculo-afp').innerText = texto;
-
-        // Actualizar resumen también
-        actualizarResumenNeto();
+        document.getElementById('label-calculo-afp').innerText = `${tipo}: S/ ${(sb*0.13).toFixed(2)} (13%)`;
+       }
+      actualizarResumenNeto();
     }
+    // Bloquear AFP si ya está guardado (se llama al abrir el modal)
+        function bloquearCamposPermanentes() {
+        const afpSelect = document.getElementById('edit-tipo-afp');
+    
+        // Si ya tiene AFP guardado, bloquearlo
+            if (currentDocente && currentDocente.afp) {
+            afpSelect.value = currentDocente.afp;
+            afpSelect.disabled = true;
+            document.getElementById('label-calculo-afp').innerText += ' (Permanente - ya configurado)';
+            } else {
+        afpSelect.disabled = false;
+    }
+}
 
     function actualizarLabelSalud() {
         const tipo = document.getElementById('edit-tipo-salud').value;
@@ -1344,67 +1353,81 @@ async function enviarWhatsApp(id) {
     }
 
         async function guardarCambiosModal() {
-        if (userRole !== 'admin') return;
-        const id  = document.getElementById('edit-id').value;
-        const mes = document.getElementById('filtro-mes').value;
-        const sb  = Number(document.getElementById('edit-sb').value) || 0;
+    if (userRole !== 'admin') return;
 
-        const tipoAfp = document.getElementById('edit-tipo-afp').value;
-        const afpNombre = (tipoAfp === 'ONP' || tipoAfp === 'NINGUNO') ? tipoAfp : document.getElementById('edit-tipo-afp').value;
+    const id  = document.getElementById('edit-id').value;
+    const mes = document.getElementById('filtro-mes').value;
 
-        const payload = {
-            sueldo_base:        sb,
-            pagado:             Number(document.getElementById('edit-pagado').value) || 0,   // ← NUEVO
-            afp:                afpNombre,                                                    // ← NUEVO
-            adelantos:          Number(document.getElementById('edit-al').value)          || 0,
-            faltas:             Number(document.getElementById('edit-fl').value)           || 0,
-            pension:            Number(document.getElementById('edit-pen').value)          || 0,
-            tardanza:           Number(document.getElementById('edit-tar').value)          || 0,
-            bono:               Number(document.getElementById('edit-bono').value)         || 0,
-            otros_descuentos:   0,
-            otros_desc_detalle: '',
-            tipo_afp:           tipoAfp,
-            tipo_salud:         document.getElementById('edit-tipo-salud').value,
-            creditos:           Number(document.getElementById('edit-creditos').value)     || 0,
-            prestamos:          Number(document.getElementById('edit-prestamos').value)    || 0,
-            desmrito_nivel:     document.querySelector('input[name="desmrito"]:checked')?.value || '',
-            desmrito_monto:     Number(document.getElementById('edit-desmrito-monto').value) || 0,
-            num_faltas:         0,
-            num_tardanzas:      0,
-            mes
-        };
+    const sb = Number(document.getElementById('edit-sb').value) || 0;
 
-        try {
-            const res = await fetch(`${API_URL}/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(payload)
-            });
+    // === CAMPOS PERMANENTES ===
+    const pagado = Number(document.getElementById('edit-pagado') ? 
+                    document.getElementById('edit-pagado').value : 0) || 0;
+    
+    const tipoAfp = document.getElementById('edit-tipo-afp').value;
 
-            if (res.ok) {
-                miModal.hide();
-                alert('✅ Datos guardados correctamente');
-                
-                // Actualizar datos locales
-                const idx = docentesData.findIndex(doc => doc.id_docente == id);
-                if (idx !== -1) {
-                    Object.assign(docentesData[idx], payload);
-                    docentesData[idx]._boletaEmitida = true;
-                }
-                renderizarTabla(docentesData);
-                actualizarTotales(docentesData);
-                actualizarGraficos();
-            } else {
-                alert('Error al guardar. Revisa la consola.');
+    // === CAMPOS MENSUALES ===
+    const payload = {
+        sueldo_base:        sb,
+        pagado:             pagado,
+        afp:                tipoAfp,                    // ← Guardar permanente
+        adelantos:          Number(document.getElementById('edit-al').value) || 0,
+        faltas:             Number(document.getElementById('edit-fl').value) || 0,
+        pension:            Number(document.getElementById('edit-pen').value) || 0,
+        tardanza:           Number(document.getElementById('edit-tar').value) || 0,
+        bono:               Number(document.getElementById('edit-bono').value) || 0,
+        creditos:           Number(document.getElementById('edit-creditos').value) || 0,
+        prestamos:          Number(document.getElementById('edit-prestamos').value) || 0,
+        desmrito_nivel:     document.querySelector('input[name="desmrito"]:checked')?.value || '',
+        desmrito_monto:     Number(document.getElementById('edit-desmrito-monto').value) || 0,
+        tipo_salud:         document.getElementById('edit-tipo-salud').value,
+        mes:                mes
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            miModal.hide();
+            alert('✅ Datos guardados correctamente');
+
+            // Actualizar datos locales
+            const docente = docentesData.find(doc => doc.id_docente == id);
+            if (docente) {
+                docente.sueldo_base = sb;
+                docente.pagado = pagado;
+                docente.afp = tipoAfp;           // ← Actualizar en memoria
+                // Actualizar también otros campos mensuales si quieres
+                docente.adelantos = payload.adelantos;
+                docente.faltas = payload.faltas;
+                docente.pension = payload.pension;
+                docente.tardanza = payload.tardanza;
+                docente.bono = payload.bono;
+                docente.creditos = payload.creditos;
+                docente.prestamos = payload.prestamos;
+                docente.desmrito_nivel = payload.desmrito_nivel;
+                docente.desmrito_monto = payload.desmrito_monto;
+                docente.tipo_salud = payload.tipo_salud;
             }
-        } catch(e) {
-            console.error(e);
-            alert('Error de red al guardar.');
+
+            renderizarTabla(docentesData);
+            actualizarTotales(docentesData);
+            actualizarGraficos();
+        } else {
+            alert('❌ Error al guardar los datos');
         }
+    } catch (e) {
+        console.error(e);
+        alert('❌ Error de conexión');
     }
+}
 
     function descargarExcel() {
     if (userRole !== 'admin') return;

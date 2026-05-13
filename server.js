@@ -222,40 +222,39 @@ app.get('/api/docentes', verificarToken, (req, res) => {
     });
 });
 
-// ============================================================
-// PUT /api/docentes/:id  — actualizar planilla + pagado y afp
-// ============================================================
+// PUT /api/docentes/:id  — actualizar planilla + campos permanentes
 app.put('/api/docentes/:id', verificarToken, (req, res) => {
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
     const { 
         sueldo_base, 
+        pagado,
+        afp,                    // ← AFP permanente
+        tipo_afp,               // ← para compatibilidad
         adelantos, faltas, pension, tardanza, bono, 
         otros_descuentos, otros_desc_detalle,
-        tipo_afp, tipo_salud, creditos, prestamos, 
+        tipo_salud, creditos, prestamos, 
         desmrito_nivel, desmrito_monto,
-        num_faltas, num_tardanzas,
-        pagado,          // ← NUEVO
-        afp              // ← NUEVO
+        num_faltas, num_tardanzas
     } = req.body;
 
-    // 1. Actualizar datos FIJOS en tabla docentes (pagado y afp)
+    // 1. Actualizar datos PERMANENTES en tabla docentes
     db.query(
         'UPDATE docentes SET sueldo_base = ?, pagado = ?, afp = ? WHERE id_docente = ?',
         [sueldo_base, pagado || 0, afp || null, id],
         (err) => { 
-            if (err) console.error('Error actualizando datos fijos:', err); 
+            if (err) console.error('Error actualizando datos permanentes:', err); 
         }
     );
 
-    // 2. Upsert en planillas (datos mensuales)
+    // 2. Upsert en planillas (datos variables por mes)
     const sqlUpsert = `
         INSERT INTO planillas
             (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono,
-             otros_descuentos, otros_desc_detalle, tipo_afp, tipo_salud,
+             otros_descuentos, otros_desc_detalle, tipo_salud,
              creditos, prestamos, desmrito_nivel, desmrito_monto, num_faltas, num_tardanzas)
-        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             adelantos          = VALUES(adelantos),
             faltas             = VALUES(faltas),
@@ -264,7 +263,6 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
             bono               = VALUES(bono),
             otros_descuentos   = VALUES(otros_descuentos),
             otros_desc_detalle = VALUES(otros_desc_detalle),
-            tipo_afp           = VALUES(tipo_afp),
             tipo_salud         = VALUES(tipo_salud),
             creditos           = VALUES(creditos),
             prestamos          = VALUES(prestamos),
@@ -276,7 +274,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     db.query(
         sqlUpsert,
         [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
-         otros_descuentos||0, otros_desc_detalle||'', tipo_afp||'AFP', tipo_salud||'ESSALUD',
+         otros_descuentos||0, otros_desc_detalle||'', tipo_salud||'ESSALUD',
          creditos||0, prestamos||0, desmrito_nivel||'', desmrito_monto||0,
          num_faltas||0, num_tardanzas||0],
         (err) => {
