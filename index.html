@@ -1225,16 +1225,49 @@ async function enviarWhatsApp(id) {
         const tipo = document.getElementById('edit-tipo-afp').value;
         const sb   = Number(document.getElementById('edit-sb').value) || 0;
         
-        let texto = '';
-        if (tipo === 'ONP') {
-            texto = `Descuento: S/ ${(sb * 0.13).toFixed(2)} (13% universal)`;
-        } else if (tipo === 'NINGUNO') {
-            texto = 'Sin descuento por pensión';
-        } else if (tipo !== '') {
-            texto = `AFP ${tipo} - Descuento: S/ ${(sb * 0.13).toFixed(2)} (13%)`;
+        let porcentaje = 0.13;   // valor por defecto
+        let nombreAFP = tipo;
+
+        switch(tipo) {
+            case 'ONP':
+                porcentaje = 0.13;
+                nombreAFP = 'ONP';
+                break;
+            case 'Profuturo':
+                porcentaje = 0.13;     // puedes ajustar si quieres valores más reales
+                break;
+            case 'Integra':
+                porcentaje = 0.129;    // ejemplo: Integra suele ser un poco más baja
+                break;
+            case 'Habitat':
+                porcentaje = 0.131;
+                break;
+            case 'Prima':
+                porcentaje = 0.132;
+                break;
+            case 'NINGUNO':
+                porcentaje = 0;
+                nombreAFP = 'Sin aporte';
+                break;
+            default:
+                porcentaje = 0.13;
         }
-        
+
+        const monto = sb * porcentaje;
+
+        let texto = '';
+        if (tipo === 'NINGUNO') {
+            texto = 'Sin descuento por pensión';
+        } else if (tipo === 'ONP') {
+            texto = `ONP - Descuento: S/ ${monto.toFixed(2)} (13%)`;
+        } else {
+            texto = `AFP ${nombreAFP} - Descuento: S/ ${monto.toFixed(2)} (${(porcentaje*100).toFixed(1)}%)`;
+        }
+
         document.getElementById('label-calculo-afp').innerText = texto;
+
+        // Actualizar resumen también
+        actualizarResumenNeto();
     }
 
     function actualizarLabelSalud() {
