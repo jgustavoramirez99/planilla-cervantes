@@ -284,7 +284,7 @@
             <div class="modal-body px-4" style="max-height:80vh;overflow-y:auto;">
                 <input type="hidden" id="edit-id">
 
-                                <!-- DATOS DEL DOCENTE -->
+                <!-- DATOS DEL DOCENTE -->
                 <div class="alert alert-light border-start border-primary border-3 py-2 mb-3">
                     <div class="row align-items-center">
                         <div class="col-md-7">
@@ -293,18 +293,19 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label small fw-bold mb-1">Sueldo Base (S/)</label>
-                            <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00">
+                            <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
                         </div>
                     </div>
 
-                    <!-- NUEVO CAMPO PAGADO -->
+                    <!-- NUEVO CAMPO PAGADO - Opción A -->
                     <div class="row mt-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold mb-1 text-success">PAGADO (Una sola vez)</label>
-                            <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00">
+                            <div id="pagado-container">
+                                <!-- Se llenará con JS -->
+                            </div>
                         </div>
                     </div>
-                </div>
                 <input type="hidden" id="edit-nombre">
 
                 <!-- ══ DESCUENTOS OFICIALES ══ -->
@@ -346,19 +347,19 @@
                     <div class="row g-2">
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Adelantos (S/)</label>
-                            <input type="number" id="edit-al" class="form-control form-control-sm" min="0" placeholder="0.00">
+                            <input type="number" id="edit-al" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Créditos (S/)</label>
-                            <input type="number" id="edit-creditos" class="form-control form-control-sm" min="0" placeholder="0.00">
+                            <input type="number" id="edit-creditos" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Préstamos (S/)</label>
-                            <input type="number" id="edit-prestamos" class="form-control form-control-sm" min="0" placeholder="0.00">
+                            <input type="number" id="edit-prestamos" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Pensión por Hijo (S/)</label>
-                            <input type="number" id="edit-pen" class="form-control form-control-sm" min="0" placeholder="0.00">
+                            <input type="number" id="edit-pen" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Actividades (S/)</label>
@@ -368,43 +369,19 @@
                     </div>
                 </div>
 
-                <!-- ══ FALTAS Y TARDANZAS ══ -->
+                <!-- ══ FALTAS Y TARDANZAS (SOLO MONTOS MANUALES) ══ -->
                 <div class="mb-3">
                     <div class="fw-bold small text-uppercase text-secondary mb-2">
                         <i class="fa-solid fa-clock me-1"></i>Faltas y Tardanzas
                     </div>
-                    <div class="row g-2">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-danger">N° de Faltas</label>
-                            <div class="input-group input-group-sm">
-                                <input type="number" id="edit-num-faltas" class="form-control" min="0" placeholder="0" oninput="calcularMontoFaltas()">
-                                <span class="input-group-text">faltas</span>
-                            </div>
-                            <div class="row g-1 mt-1">
-                                <div class="col-7">
-                                    <label class="form-label small text-muted mb-0">Monto total (S/)</label>
-                                    <input type="number" id="edit-fl" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="calcularNumFaltas()">
-                                </div>
-                                <div class="col-5 d-flex align-items-end">
-                                    <div class="text-danger small" id="label-faltas-detalle"></div>
-                                </div>
-                            </div>
+                            <label class="form-label small fw-bold text-danger">Monto Faltas (S/)</label>
+                            <input type="number" id="edit-fl" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01" onchange="actualizarResumenNeto()">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-warning">N° de Tardanzas</label>
-                            <div class="input-group input-group-sm">
-                                <input type="number" id="edit-num-tardanzas" class="form-control" min="0" placeholder="0" oninput="calcularMontoTardanzas()">
-                                <span class="input-group-text">tardanzas</span>
-                            </div>
-                            <div class="row g-1 mt-1">
-                                <div class="col-7">
-                                    <label class="form-label small text-muted mb-0">Monto total (S/)</label>
-                                    <input type="number" id="edit-tar" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="calcularNumTardanzas()">
-                                </div>
-                                <div class="col-5 d-flex align-items-end">
-                                    <div class="text-warning small" id="label-tardanzas-detalle"></div>
-                                </div>
-                            </div>
+                            <label class="form-label small fw-bold text-warning">Monto Tardanzas (S/)</label>
+                            <input type="number" id="edit-tar" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01">
                         </div>
                     </div>
                 </div>
@@ -454,8 +431,26 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-success">Bono Especial Jul-Dic (S/)</label>
-                            <input type="number" id="edit-bono" class="form-control form-control-sm border-success" min="0" placeholder="0.00">
+                            <input type="number" id="edit-bono" class="form-control form-control-sm border-success" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
                         </div>
+                    </div>
+                </div>
+                <!-- ══ RESUMEN NETO A PAGAR ══ -->
+                <div class="alert alert-info border-2 mt-4" id="resumen-neto">
+                    <h6 class="fw-bold mb-2">📊 Resumen de Planilla</h6>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <small class="text-muted">Sueldo Base</small><br>
+                            <strong id="resumen-sb">S/ 0.00</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Total Descuentos</small><br>
+                            <strong id="resumen-descuentos" class="text-danger">S/ 0.00</strong>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <h5>NETO A PAGAR: <strong id="resumen-neto-final" class="text-success">S/ 0.00</strong></h5>
                     </div>
                 </div>
             </div>
@@ -1156,9 +1151,9 @@ async function enviarWhatsApp(id) {
     }
 
     // ============================================================
-    // MODAL EDICIÓN - ACTUALIZADO
+    // MODAL EDICIÓN - PAGADO Opción A
     // ============================================================
-        function abrirModal(id) {
+    function abrirModal(id) {
         if (userRole !== 'admin') return;
         const d = docentesData.find(doc => doc.id_docente == id);
         if (!d) return;
@@ -1170,10 +1165,31 @@ async function enviarWhatsApp(id) {
         document.getElementById('edit-codigo-display').innerText = 'DNI: ' + (d.dni || '—');
         document.getElementById('edit-subtitulo').innerText = d.dni || '';
 
-        // Campos base
-        document.getElementById('edit-sb').value     = d.sueldo_base || 0;
-        document.getElementById('edit-pagado').value = d.pagado || 0;        // ← NUEVO
+        // Sueldo Base
+        document.getElementById('edit-sb').value = d.sueldo_base || 0;
 
+        // PAGADO - Opción A
+        const pagadoContainer = document.getElementById('pagado-container');
+        const pagadoValor = Number(d.pagado) || 0;
+
+        if (pagadoValor > 0) {
+            // Ya tiene monto → Mostrar solo lectura
+            pagadoContainer.innerHTML = `
+                <div class="alert alert-success py-2">
+                    <strong>S/ ${pagadoValor.toFixed(2)}</strong> 
+                    <small class="text-muted">(Ya registrado - No editable)</small>
+                </div>
+                <input type="hidden" id="edit-pagado" value="${pagadoValor}">
+            `;
+        } else {
+            // Aún no tiene → Editable
+            pagadoContainer.innerHTML = `
+                <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00" value="0">
+                <small class="text-muted">Ingrese el monto PAGADO (solo una vez)</small>
+            `;
+        }
+
+        // Resto de campos...
         document.getElementById('edit-al').value            = d.adelantos   || 0;
         document.getElementById('edit-fl').value            = d.faltas      || 0;
         document.getElementById('edit-pen').value           = d.pension     || 0;
@@ -1182,6 +1198,7 @@ async function enviarWhatsApp(id) {
 
         document.getElementById('edit-creditos').value      = d.creditos    || 0;
         document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
+        document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
 
         // AFP
         const afpGuardada = d.afp || 'ONP';
@@ -1201,6 +1218,7 @@ async function enviarWhatsApp(id) {
         toggleDesmrito();
 
         miModal.show();
+        actualizarResumenNeto();
     }
 
         function actualizarLabelAfp() {
@@ -1445,6 +1463,30 @@ async function enviarWhatsApp(id) {
 
         // Descargar
         XLSX.writeFile(wb, `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`);
+    }
+        // Actualizar resumen de Neto en el modal
+    function actualizarResumenNeto() {
+        const sb = Number(document.getElementById('edit-sb').value) || 0;
+        const pagado = Number(document.getElementById('edit-pagado') ? document.getElementById('edit-pagado').value : 0) || 0; // solo referencia
+        const bono = Number(document.getElementById('edit-bono').value) || 0;
+        const adelantos = Number(document.getElementById('edit-al').value) || 0;
+        const faltas = Number(document.getElementById('edit-fl').value) || 0;
+        const pension = Number(document.getElementById('edit-pen').value) || 0;
+        const tardanza = Number(document.getElementById('edit-tar').value) || 0;
+        const creditos = Number(document.getElementById('edit-creditos').value) || 0;
+        const prestamos = Number(document.getElementById('edit-prestamos').value) || 0;
+        const desmrito = Number(document.getElementById('edit-desmrito-monto').value) || 0;
+
+        const tipoAfp = document.getElementById('edit-tipo-afp').value;
+        const descAfp = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+
+        const totalDescuentos = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + 30;
+        const neto = sb + bono - totalDescuentos;
+
+        document.getElementById('resumen-sb').textContent = `S/ ${sb.toFixed(2)}`;
+        document.getElementById('resumen-descuentos').textContent = `S/ ${totalDescuentos.toFixed(2)}`;
+        document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
+        document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
     }
 </script>
 
