@@ -1428,8 +1428,7 @@ function abrirModal(id) {
         alert('❌ Error de conexión');
     }
 }
-// DESCARGA EXCEL
-  function descargarExcel() {
+function descargarExcel() {
     if (userRole !== 'admin') return;
     if (!docentesData.length) { 
         alert('No hay datos para exportar.'); 
@@ -1453,14 +1452,10 @@ function abrirModal(id) {
     const grisClaro  = { fgColor: { rgb: "F2F2F2" } };
 
     const fBold = (color = "000000", sz = 11) => ({ bold: true, color: { rgb: color }, sz });
-    const fNormal = () => ({});
-
     const aCenter = { horizontal: "center", vertical: "center", wrapText: true };
     const aLeft   = { horizontal: "left", vertical: "center" };
     const aRight  = { horizontal: "right", vertical: "center" };
-
     const border = { style: "thin", color: { rgb: "9E9E9E" } };
-    const borderB = { style: "medium", color: { rgb: "1F3864" } };
 
     const COLS = [
         { h: 'N°', wch: 5 },
@@ -1491,8 +1486,6 @@ function abrirModal(id) {
     R++;
     ws[EC(R,0)] = { v: `PLANILLA DE REMUNERACIONES - ${mesNombre}`, t: "s", s: { fill: azulMedio, font: fBold("FFFFFF", 13), alignment: aCenter } };
     R++;
-    ws[EC(R,0)] = { v: `Fecha: ${new Date().toLocaleDateString('es-PE')}`, t: "s", s: { fill: azulClaro, font: fBold("1F3864"), alignment: aCenter } };
-    R++;
 
     // Encabezados
     COLS.forEach((col, c) => {
@@ -1508,7 +1501,7 @@ function abrirModal(id) {
     });
     R++;
 
-    // Datos
+    // Datos + Totales
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0 };
 
     docentesData.forEach((d, i) => {
@@ -1528,15 +1521,18 @@ function abrirModal(id) {
 
         const fila = [i+1, d.nombre||'', d.dni||'', pagado, sb, d.tipo_afp||'ONP', esalud, adel, cred, pen, tard, activ, desmr, bono, neto, consolidado, d.tipo_afp === 'NINGUNO' ? '—' : '13%'];
 
-        // Acumular totales
-        Object.keys(totales).forEach(key => {
-            if (fila[totales[key] !== undefined]) totales[key] += fila[/* index */]; // Mejor acumular manualmente
-        });
-
-        totales.pagado += pagado; totales.sb += sb; totales.esalud += esalud;
-        totales.adel += adel; totales.cred += cred; totales.pen += pen;
-        totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
-        totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
+        totales.pagado += pagado;
+        totales.sb += sb;
+        totales.esalud += esalud;
+        totales.adel += adel;
+        totales.cred += cred;
+        totales.pen += pen;
+        totales.tard += tard;
+        totales.activ += activ;
+        totales.desmr += desmr;
+        totales.bono += bono;
+        totales.neto += neto;
+        totales.consolidado += consolidado;
 
         fila.forEach((v, c) => {
             ws[EC(R, c)] = {
@@ -1552,16 +1548,21 @@ function abrirModal(id) {
         R++;
     });
 
-    // Totales
+    // Fila de Totales
     const totalFila = ['', 'TOTAL GENERAL', '', totales.pagado, totales.sb, '', totales.esalud, totales.adel, totales.cred, totales.pen, totales.tard, totales.activ, totales.desmr, totales.bono, totales.neto, totales.consolidado, ''];
     totalFila.forEach((v, c) => {
-        ws[EC(R, c)] = { v: v, t: typeof v === 'number' ? 'n' : 's', s: { fill: azulOscuro, font: fBold("FFFFFF", 12), alignment: aRight } };
+        ws[EC(R, c)] = { 
+            v: v, 
+            t: typeof v === 'number' ? 'n' : 's', 
+            s: { fill: azulOscuro, font: fBold("FFFFFF", 12), alignment: aRight } 
+        };
     });
 
     ws['!cols'] = COLS.map(c => ({ wch: c.wch }));
     XLSX.utils.book_append_sheet(wb, ws, `Planilla ${mesNombre}`);
     XLSX.writeFile(wb, `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`);
 }
+       
         // Actualizar resumen de Neto en el modal
     function actualizarResumenNeto() {
         const sb = Number(document.getElementById('edit-sb').value) || 0;
