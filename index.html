@@ -1429,7 +1429,7 @@ function abrirModal(id) {
     }
 }
 
-    function descargarExcel() {
+  function descargarExcel() {
     if (userRole !== 'admin') return;
     if (!docentesData.length) { 
         alert('No hay datos para exportar.'); 
@@ -1443,17 +1443,15 @@ function abrirModal(id) {
 
     const wb = XLSX.utils.book_new();
 
-    // ==================== ESTILOS ====================
+    // ===================== COLORES =====================
     const azulOscuro = { fgColor: { rgb: "1F3864" } };
     const azulMedio  = { fgColor: { rgb: "2E75B6" } };
     const azulClaro  = { fgColor: { rgb: "BDD7EE" } };
     const verde      = { fgColor: { rgb: "1E5631" } };
     const verdeClaro = { fgColor: { rgb: "D9EAD3" } };
     const rojo       = { fgColor: { rgb: "8B0000" } };
-    const rojoClaro  = { fgColor: { rgb: "F4CCCC" } };
     const naranja    = { fgColor: { rgb: "FCE4D6" } };
     const grisClaro  = { fgColor: { rgb: "F2F2F2" } };
-    const blanco     = { fgColor: { rgb: "FFFFFF" } };
 
     const fBold   = (color = "000000", sz = 11) => ({ bold: true, color: { rgb: color }, sz, name: "Calibri" });
     const fNormal = (color = "000000", sz = 10) => ({ bold: false, color: { rgb: color }, sz, name: "Calibri" });
@@ -1465,129 +1463,103 @@ function abrirModal(id) {
     const border = { style: "thin", color: { rgb: "9E9E9E" } };
     const borderB = { style: "medium", color: { rgb: "1F3864" } };
 
-    // ==================== COLUMNAS ====================
+    // ===================== COLUMNAS =====================
     const COLS = [
         { h: 'N°', wch: 5 },
-        { h: 'APELLIDOS Y NOMBRES', wch: 35 },
+        { h: 'APELLIDOS Y NOMBRES', wch: 38 },
         { h: 'DNI', wch: 12 },
-        { h: 'PAGADO', wch: 12 },
-        { h: 'PLANILLA\n(Sueldo Base)', wch: 15 },
+        { h: 'PAGADO', wch: 14 },
+        { h: 'PLANILLA\n(Sueldo Base)', wch: 16 },
         { h: 'AFP / ONP', wch: 14 },
-        { h: 'ESALUD\n(9% Empleador)', wch: 14 },
+        { h: 'ESALUD\n(9% Empleador)', wch: 16 },
         { h: 'ADELANTO', wch: 12 },
         { h: 'CRÉDITOS', wch: 12 },
-        { h: 'PENSIÓN\nPOR HIJO', wch: 12 },
-        { h: 'TARDANZAS\nY FALTAS', wch: 14 },
+        { h: 'PENSIÓN\nPOR HIJO', wch: 14 },
+        { h: 'TARDANZAS\nY FALTAS', wch: 16 },
         { h: 'ACTIVIDADES', wch: 12 },
         { h: 'DESMÉRITO', wch: 12 },
-        { h: 'NETO A PAGAR', wch: 15 },
-        { h: 'CONSOLID.\nBCP', wch: 14 },
+        { h: 'BONO', wch: 12 },
+        { h: 'NETO A PAGAR', wch: 16 },
+        { h: 'CONSOLIDADO\nBCP', wch: 16 },      // ← Nueva columna importante
         { h: 'AFP/ONP\n(%)', wch: 12 }
     ];
 
     let R = 0;
     const ws = {};
-
     const EC = (r, c) => XLSX.utils.encode_cell({ r, c });
 
-    // FILA 0 - TÍTULO PRINCIPAL
+    // ===================== TÍTULO CON LOGO (simulado) =====================
     ws[EC(R,0)] = { 
         v: "CERVANTES EDUCA SAC", 
         t: "s", 
-        s: { fill: azulOscuro, font: fBold("FFFFFF", 14), alignment: aCenter, border: borderB } 
+        s: { fill: azulOscuro, font: fBold("FFFFFF", 16), alignment: aCenter, border: borderB } 
+    };
+    // Logo simulado con texto (XLSX no permite imagen fácil sin base64)
+    ws[EC(R,1)] = { 
+        v: "LOGO", 
+        t: "s", 
+        s: { fill: azulClaro, font: fBold("1F3864", 14), alignment: aCenter, border: borderB } 
     };
     R++;
 
-    // FILA 1 - Subtítulo
     ws[EC(R,0)] = { 
         v: `PLANILLA DE REMUNERACIONES - ${mesNombre}`, 
         t: "s", 
-        s: { fill: azulMedio, font: fBold("FFFFFF", 12), alignment: aCenter, border: borderB } 
+        s: { fill: azulMedio, font: fBold("FFFFFF", 13), alignment: aCenter, border: borderB } 
     };
     R++;
 
-    // FILA 2 - Información
     const hoy = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
-    const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-    
     ws[EC(R,0)] = { 
-        v: `Fecha de emisión: ${hoy} ${hora}   |   Total docentes: ${docentesData.length}   |   GRTech Solutions`, 
+        v: `Fecha de emisión: ${hoy}   |   Total docentes: ${docentesData.length}`, 
         t: "s", 
         s: { fill: azulClaro, font: fBold("1F3864", 10), alignment: aCenter, border: borderB } 
     };
     R++;
 
-    // FILA 3 - Encabezados de grupos
-    const grupos = [
-        { v: "DATOS PERSONALES", cs: 0, ce: 2, fill: azulMedio },
-        { v: "INGRESOS",         cs: 3, ce: 4, fill: verde },
-        { v: "DESCUENTOS OFICIALES", cs: 5, ce: 6, fill: rojo },
-        { v: "DESCUENTOS PERSONALES", cs: 7, ce: 12, fill: naranja },
-        { v: "RESUMEN",          cs: 13, ce: 15, fill: verde }
-    ];
-
-    for (let c = 0; c < COLS.length; c++) {
-        ws[EC(R,c)] = { v: "", t: "s", s: { fill: azulOscuro } };
-    }
-    grupos.forEach(g => {
-        for (let c = g.cs; c <= g.ce; c++) {
-            ws[EC(R,c)] = { 
-                v: c === g.cs ? g.v : "", 
-                t: "s", 
-                s: { fill: g.fill, font: fBold("FFFFFF", 10), alignment: aCenter, border: borderB } 
-            };
-        }
-    });
-    R++;
-
-    // FILA 4 - Encabezados de columnas
+    // ===================== ENCABEZADOS =====================
     COLS.forEach((col, c) => {
         ws[EC(R,c)] = { 
             v: col.h, 
             t: "s", 
             s: { 
-                fill: { patternType: "solid", fgColor: { rgb: c <= 2 ? "BDD7EE" : (c <= 4 ? "D9EAD3" : (c <= 6 ? "F4CCCC" : "FCE4D6")) } }, 
-                font: fBold("1F3864", 10), 
+                fill: { patternType: "solid", fgColor: c <= 2 ? azulClaro.fgColor : (c <= 4 ? verdeClaro.fgColor : (c <= 6 ? rojo.fgColor : naranja.fgColor)) }, 
+                font: fBold("1F3864", 11), 
                 alignment: aCenter, 
                 border: borderB 
             } 
         };
     });
-    const HDR = R;
     R++;
 
-    // ==================== DATOS ====================
-    let totales = { pagado:0, sb:0, afp:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, neto:0 };
+    // ===================== DATOS =====================
+    let totales = { pagado:0, sb:0, afp:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0 };
 
     docentesData.forEach((d, i) => {
         const sb      = Number(d.sueldo_base) || 0;
         const pagado  = Number(d.pagado) || 0;
-        const afpMonto = d.tipo_afp === 'NINGUNO' ? 0 : parseFloat((sb * 0.13).toFixed(2));
+        const bono    = Number(d.bono) || 0;
+        const afpMonto = (d.tipo_afp === 'NINGUNO' || !d.tipo_afp) ? 0 : parseFloat((sb * 0.13).toFixed(2));
         const esalud  = parseFloat((sb * 0.09).toFixed(2));
         const adel    = Number(d.adelantos) || 0;
         const cred    = Number(d.creditos) || 0;
         const pen     = Number(d.pension) || 0;
-        const tard    = Number(d.tardanza) + Number(d.faltas) || 0;
+        const tard    = (Number(d.tardanza) || 0) + (Number(d.faltas) || 0);
         const activ   = 30;
         const desmr   = Number(d.desmrito_monto) || 0;
-        const neto    = parseFloat((sb + (d.bono||0) - afpMonto - adel - cred - pen - tard - activ - desmr).toFixed(2));
+
+        const neto = parseFloat((sb + bono - afpMonto - adel - cred - pen - tard - activ - desmr).toFixed(2));
+        const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));   // ← CÁLCULO SOLICITADO
 
         const fila = [
-            i+1,
-            d.nombre || '',
-            d.dni || '',
-            pagado,
+            i+1, 
+            d.nombre || '', 
+            d.dni || '', 
+            pagado, 
             sb,
-            d.tipo_afp || 'ONP',           // ← Nombre real de AFP
+            d.tipo_afp || 'ONP',
             esalud,
-            adel,
-            cred,
-            pen,
-            tard,
-            activ,
-            desmr,
-            neto,
-            neto,
+            adel, cred, pen, tard, activ, desmr, bono, neto, consolidado,
             d.tipo_afp === 'NINGUNO' ? '—' : '13%'
         ];
 
@@ -1602,17 +1574,18 @@ function abrirModal(id) {
         totales.tard += tard;
         totales.activ += activ;
         totales.desmr += desmr;
+        totales.bono += bono;
         totales.neto += neto;
+        totales.consolidado += consolidado;
 
-        // Escribir fila
         fila.forEach((v, c) => {
             const isNum = typeof v === 'number';
             ws[EC(R,c)] = {
                 v: v,
                 t: isNum ? 'n' : 's',
                 s: {
-                    fill: { patternType: "solid", fgColor: i%2 === 0 ? grisClaro.fgColor : blanco.fgColor },
-                    font: c === 1 ? fBold("1F3864") : fNormal(),
+                    fill: { patternType: "solid", fgColor: i%2 === 0 ? grisClaro.fgColor : { rgb: "FFFFFF" } },
+                    font: c === 1 ? fBold("1F3864", 11) : fNormal(),
                     alignment: (c === 1 ? aLeft : (isNum ? aRight : aCenter)),
                     border,
                     numFmt: isNum ? '#,##0.00' : '@'
@@ -1622,50 +1595,37 @@ function abrirModal(id) {
         R++;
     });
 
-    // ==================== TOTALES ====================
+    // ===================== TOTALES =====================
     const totalFila = [
         '', 'TOTAL PLANILLA', '', 
-        totales.pagado, totales.sb, totales.afp, totales.esalud,
-        totales.adel, totales.cred, totales.pen, totales.tard, totales.activ, 
-        totales.desmr, totales.neto, totales.neto, ''
+        totales.pagado, totales.sb, '', totales.esalud, 
+        totales.adel, totales.cred, totales.pen, totales.tard, 
+        totales.activ, totales.desmr, totales.bono, totales.neto, 
+        totales.consolidado, ''
     ];
 
     totalFila.forEach((v, c) => {
+        const isNum = typeof v === 'number';
         ws[EC(R,c)] = {
             v: v,
-            t: typeof v === 'number' ? 'n' : 's',
+            t: isNum ? 'n' : 's',
             s: { 
                 fill: azulOscuro, 
-                font: fBold("FFFFFF"), 
-                alignment: c === 1 ? aLeft : aRight,
+                font: fBold("FFFFFF", 12), 
+                alignment: (c === 1 ? aLeft : aRight),
                 border: borderB,
-                numFmt: typeof v === 'number' ? '#,##0.00' : '@'
+                numFmt: isNum ? '#,##0.00' : '@'
             }
         };
     });
-    R += 2;
 
-    // ==================== FIRMAS (Solo Promotor) ====================
-    ws[EC(R, 10)] = { v: "Promotor:", t: "s", s: { font: fBold() } };
-    R++;
-    ws[EC(R, 10)] = { v: "_________________________", t: "s", s: { alignment: aCenter } };
-    R++;
-    ws[EC(R, 10)] = { v: "Edgar Cervantes", t: "s", s: { font: fBold("1F3864") } };
-
-    // ==================== CONFIGURACIÓN FINAL ====================
-    ws['!merges'] = [
-        {s: {r:0,c:0}, e: {r:0,c:15}},
-        {s: {r:1,c:0}, e: {r:1,c:15}},
-        {s: {r:2,c:0}, e: {r:2,c:15}},
-        {s: {r:3,c:0}, e: {r:3,c:2}},
-        {s: {r:3,c:3}, e: {r:3,c:4}},
-        {s: {r:3,c:5}, e: {r:3,c:6}},
-        {s: {r:3,c:7}, e: {r:3,c:12}},
-        {s: {r:3,c:13}, e: {r:3,c:15}},
-    ];
-
+    // ===================== CONFIGURACIÓN FINAL =====================
     ws['!cols'] = COLS.map(col => ({ wch: col.wch }));
-    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: R, c: 15 } });
+    ws['!merges'] = [
+        {s: {r:0,c:0}, e: {r:0,c:16}},
+        {s: {r:1,c:0}, e: {r:1,c:16}},
+        {s: {r:2,c:0}, e: {r:2,c:16}}
+    ];
 
     XLSX.utils.book_append_sheet(wb, ws, `Planilla ${mesNombre}`);
     XLSX.writeFile(wb, `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`);

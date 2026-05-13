@@ -222,7 +222,7 @@ app.get('/api/docentes', verificarToken, (req, res) => {
     });
 });
 
-// PUT /api/docentes/:id  — actualizar planilla + campos permanentes
+// ===================== PUT /api/docentes/:id =====================
 app.put('/api/docentes/:id', verificarToken, (req, res) => {
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
@@ -230,63 +230,64 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     const { 
         sueldo_base, 
         pagado,
-        afp,                    // ← AFP permanente
-        tipo_afp,               // ← para compatibilidad
+        afp,                    // permanente
         adelantos, faltas, pension, tardanza, bono, 
-        otros_descuentos, otros_desc_detalle,
         tipo_salud, creditos, prestamos, 
-        desmrito_nivel, desmrito_monto,
-        num_faltas, num_tardanzas
+        desmrito_nivel, desmrito_monto
     } = req.body;
 
-    // 1. Actualizar datos PERMANENTES en tabla docentes
+    // === CÁLCULO DEL CONSOLIDADO BCP ===
+    const esalud = (Number(sueldo_base) || 0) * 0.09;
+    const consolidado = (Number(pagado) || 0) + esalud + (Number(bono) || 0);
+
+    console.log(`💰 Consolidado calculado para docente ${id}: S/ ${consolidado}`);
+
+    // 1. Actualizar datos permanentes (docentes)
     db.query(
         'UPDATE docentes SET sueldo_base = ?, pagado = ?, afp = ? WHERE id_docente = ?',
         [sueldo_base, pagado || 0, afp || null, id],
         (err) => { 
-            if (err) console.error('Error actualizando datos permanentes:', err); 
+            if (err) console.error('Error actualizando docentes:', err); 
         }
     );
 
-    // 2. Upsert en planillas (datos variables por mes)
+    // 2. Guardar datos mensuales + CONSOLIDADO en planillas
     const sqlUpsert = `
         INSERT INTO planillas
             (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono,
-             otros_descuentos, otros_desc_detalle, tipo_salud,
-             creditos, prestamos, desmrito_nivel, desmrito_monto, num_faltas, num_tardanzas)
-        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp)
+        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             adelantos          = VALUES(adelantos),
             faltas             = VALUES(faltas),
             pension            = VALUES(pension),
             tardanza           = VALUES(tardanza),
             bono               = VALUES(bono),
-            otros_descuentos   = VALUES(otros_descuentos),
-            otros_desc_detalle = VALUES(otros_desc_detalle),
             tipo_salud         = VALUES(tipo_salud),
             creditos           = VALUES(creditos),
             prestamos          = VALUES(prestamos),
             desmrito_nivel     = VALUES(desmrito_nivel),
             desmrito_monto     = VALUES(desmrito_monto),
-            num_faltas         = VALUES(num_faltas),
-            num_tardanzas      = VALUES(num_tardanzas)`;
+            consolidado_bcp    = VALUES(consolidado_bcp)`;
 
     db.query(
         sqlUpsert,
         [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
-         otros_descuentos||0, otros_desc_detalle||'', tipo_salud||'ESSALUD',
-         creditos||0, prestamos||0, desmrito_nivel||'', desmrito_monto||0,
-         num_faltas||0, num_tardanzas||0],
+         tipo_salud||'ESSALUD', creditos||0, prestamos||0, desmrito_nivel||'', 
+         desmrito_monto||0, consolidado],
         (err) => {
             if (err) {
-                console.error('Error en PUT /api/docentes:', err);
+                console.error('❌ Error en PUT /api/docentes:', err);
                 return res.status(500).json({ error: err.message });
             }
-            res.json({ success: true, message: 'Planilla actualizada correctamente.' });
+            res.json({ 
+                success: true, 
+                message: 'Planilla actualizada',
+                consolidado: consolidado 
+            });
         }
     );
 });
-
 // =================================================================
 // POST /api/guardar-boleta
 // FIX: este endpoint faltaba en el server original.
