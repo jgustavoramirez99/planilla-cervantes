@@ -223,27 +223,33 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 });
 
 // ============================================================
-// PUT /api/docentes/:id  — actualizar planilla de un docente
-// FIX: ahora también permite actualizar sueldo_base
+// PUT /api/docentes/:id  — actualizar planilla + pagado y afp
 // ============================================================
 app.put('/api/docentes/:id', verificarToken, (req, res) => {
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
-    const { sueldo_base, adelantos, faltas, pension, tardanza, bono, otros_descuentos, otros_desc_detalle,
-              tipo_afp, tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto,
-              num_faltas, num_tardanzas } = req.body;
+    const { 
+        sueldo_base, 
+        adelantos, faltas, pension, tardanza, bono, 
+        otros_descuentos, otros_desc_detalle,
+        tipo_afp, tipo_salud, creditos, prestamos, 
+        desmrito_nivel, desmrito_monto,
+        num_faltas, num_tardanzas,
+        pagado,          // ← NUEVO
+        afp              // ← NUEVO
+    } = req.body;
 
-    // 1. Actualizar sueldo_base en la tabla docentes (si viene)
-    if (sueldo_base !== undefined) {
-        db.query(
-            'UPDATE docentes SET sueldo_base = ? WHERE id_docente = ?',
-            [sueldo_base, id],
-            (err) => { if (err) console.error('Error actualizando sueldo:', err); }
-        );
-    }
+    // 1. Actualizar datos FIJOS en tabla docentes (pagado y afp)
+    db.query(
+        'UPDATE docentes SET sueldo_base = ?, pagado = ?, afp = ? WHERE id_docente = ?',
+        [sueldo_base, pagado || 0, afp || null, id],
+        (err) => { 
+            if (err) console.error('Error actualizando datos fijos:', err); 
+        }
+    );
 
-    // 2. Upsert en planillas — incluye todos los campos nuevos
+    // 2. Upsert en planillas (datos mensuales)
     const sqlUpsert = `
         INSERT INTO planillas
             (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono,

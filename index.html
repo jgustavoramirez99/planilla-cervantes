@@ -284,16 +284,24 @@
             <div class="modal-body px-4" style="max-height:80vh;overflow-y:auto;">
                 <input type="hidden" id="edit-id">
 
-                <!-- DATOS DEL DOCENTE -->
+                                <!-- DATOS DEL DOCENTE -->
                 <div class="alert alert-light border-start border-primary border-3 py-2 mb-3">
                     <div class="row align-items-center">
                         <div class="col-md-7">
                             <div class="fw-bold text-primary" id="edit-nombre-display">—</div>
-                            <small class="text-muted" id="edit-codigo-display">Código: —</small>
+                            <small class="text-muted" id="edit-codigo-display">DNI: —</small>
                         </div>
                         <div class="col-md-5">
                             <label class="form-label small fw-bold mb-1">Sueldo Base (S/)</label>
                             <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- NUEVO CAMPO PAGADO -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold mb-1 text-success">PAGADO (Una sola vez)</label>
+                            <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00">
                         </div>
                     </div>
                 </div>
@@ -309,8 +317,11 @@
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-danger">Tipo de Aporte Pensión</label>
                             <select id="edit-tipo-afp" class="form-select form-select-sm" onchange="actualizarLabelAfp()">
-                                <option value="AFP">AFP (13% del sueldo)</option>
-                                <option value="ONP">ONP (13% del sueldo)</option>
+                                <option value="ONP">ONP (13% universal)</option>
+                                <option value="Profuturo">Profuturo</option>
+                                <option value="Integra">Integra</option>
+                                <option value="Habitat">Habitat</option>
+                                <option value="Prima">Prima</option>
                                 <option value="NINGUNO">Sin aporte pensión</option>
                             </select>
                             <div class="text-muted small mt-1" id="label-calculo-afp"></div>
@@ -1145,9 +1156,9 @@ async function enviarWhatsApp(id) {
     }
 
     // ============================================================
-    // MODAL EDICIÓN
+    // MODAL EDICIÓN - ACTUALIZADO
     // ============================================================
-    function abrirModal(id) {
+        function abrirModal(id) {
         if (userRole !== 'admin') return;
         const d = docentesData.find(doc => doc.id_docente == id);
         if (!d) return;
@@ -1156,27 +1167,27 @@ async function enviarWhatsApp(id) {
         document.getElementById('edit-id').value            = d.id_docente;
         document.getElementById('edit-nombre').value        = d.nombre;
         document.getElementById('edit-nombre-display').innerText = d.nombre;
-        document.getElementById('edit-codigo-display').innerText = 'Código: ' + (d.codigo_trabajador || '—');
-        document.getElementById('edit-subtitulo').innerText = d.codigo_trabajador || '';
+        document.getElementById('edit-codigo-display').innerText = 'DNI: ' + (d.dni || '—');
+        document.getElementById('edit-subtitulo').innerText = d.dni || '';
 
         // Campos base
-        document.getElementById('edit-sb').value            = d.sueldo_base || 0;
+        document.getElementById('edit-sb').value     = d.sueldo_base || 0;
+        document.getElementById('edit-pagado').value = d.pagado || 0;        // ← NUEVO
+
         document.getElementById('edit-al').value            = d.adelantos   || 0;
         document.getElementById('edit-fl').value            = d.faltas      || 0;
         document.getElementById('edit-pen').value           = d.pension     || 0;
         document.getElementById('edit-tar').value           = d.tardanza    || 0;
         document.getElementById('edit-bono').value          = d.bono        || 0;
 
-        // Campos nuevos
         document.getElementById('edit-creditos').value      = d.creditos    || 0;
         document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
-        document.getElementById('edit-num-faltas').value    = d.num_faltas  || 0;
-        document.getElementById('edit-num-tardanzas').value = d.num_tardanzas || 0;
 
-        // AFP/ONP y Salud
-        const tipoAfp = d.tipo_afp || 'AFP';
-        document.getElementById('edit-tipo-afp').value = tipoAfp;
+        // AFP
+        const afpGuardada = d.afp || 'ONP';
+        document.getElementById('edit-tipo-afp').value = afpGuardada;
         actualizarLabelAfp();
+
         const tipoSalud = d.tipo_salud || 'ESSALUD';
         document.getElementById('edit-tipo-salud').value = tipoSalud;
         actualizarLabelSalud();
@@ -1189,24 +1200,23 @@ async function enviarWhatsApp(id) {
         document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
         toggleDesmrito();
 
-        // Labels de faltas/tardanzas
-        calcularNumFaltas();
-        calcularNumTardanzas();
-
         miModal.show();
     }
 
-    // ── Helpers AFP/Salud/Desmérito ──────────────────────────────────────────
-    function actualizarLabelAfp() {
+        function actualizarLabelAfp() {
         const tipo = document.getElementById('edit-tipo-afp').value;
         const sb   = Number(document.getElementById('edit-sb').value) || 0;
-        const monto = sb * 0.13;
-        const textos = {
-            AFP: `Descuento: S/ ${monto.toFixed(2)} (13%)`,
-            ONP: `Descuento: S/ ${monto.toFixed(2)} (13%)`,
-            NINGUNO: 'Sin descuento por pensión'
-        };
-        document.getElementById('label-calculo-afp').innerText = textos[tipo] || '';
+        
+        let texto = '';
+        if (tipo === 'ONP') {
+            texto = `Descuento: S/ ${(sb * 0.13).toFixed(2)} (13% universal)`;
+        } else if (tipo === 'NINGUNO') {
+            texto = 'Sin descuento por pensión';
+        } else if (tipo !== '') {
+            texto = `AFP ${tipo} - Descuento: S/ ${(sb * 0.13).toFixed(2)} (13%)`;
+        }
+        
+        document.getElementById('label-calculo-afp').innerText = texto;
     }
 
     function actualizarLabelSalud() {
@@ -1282,21 +1292,19 @@ async function enviarWhatsApp(id) {
         }
     }
 
-    async function guardarCambiosModal() {
+        async function guardarCambiosModal() {
         if (userRole !== 'admin') return;
         const id  = document.getElementById('edit-id').value;
         const mes = document.getElementById('filtro-mes').value;
         const sb  = Number(document.getElementById('edit-sb').value) || 0;
 
-        // Tipo AFP/ONP → calcula el descuento automáticamente
-        const tipoAfp    = document.getElementById('edit-tipo-afp').value;
-        const descPension = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
-
-        const desmritoNivel = document.querySelector('input[name="desmrito"]:checked')?.value || '';
-        const desmritoMonto = Number(document.getElementById('edit-desmrito-monto').value) || 0;
+        const tipoAfp = document.getElementById('edit-tipo-afp').value;
+        const afpNombre = (tipoAfp === 'ONP' || tipoAfp === 'NINGUNO') ? tipoAfp : document.getElementById('edit-tipo-afp').value;
 
         const payload = {
             sueldo_base:        sb,
+            pagado:             Number(document.getElementById('edit-pagado').value) || 0,   // ← NUEVO
+            afp:                afpNombre,                                                    // ← NUEVO
             adelantos:          Number(document.getElementById('edit-al').value)          || 0,
             faltas:             Number(document.getElementById('edit-fl').value)           || 0,
             pension:            Number(document.getElementById('edit-pen').value)          || 0,
@@ -1308,10 +1316,10 @@ async function enviarWhatsApp(id) {
             tipo_salud:         document.getElementById('edit-tipo-salud').value,
             creditos:           Number(document.getElementById('edit-creditos').value)     || 0,
             prestamos:          Number(document.getElementById('edit-prestamos').value)    || 0,
-            desmrito_nivel:     desmritoNivel,
-            desmrito_monto:     desmritoMonto,
-            num_faltas:         Number(document.getElementById('edit-num-faltas').value)   || 0,
-            num_tardanzas:      Number(document.getElementById('edit-num-tardanzas').value)|| 0,
+            desmrito_nivel:     document.querySelector('input[name="desmrito"]:checked')?.value || '',
+            desmrito_monto:     Number(document.getElementById('edit-desmrito-monto').value) || 0,
+            num_faltas:         0,
+            num_tardanzas:      0,
             mes
         };
 
@@ -1324,34 +1332,23 @@ async function enviarWhatsApp(id) {
                 },
                 body: JSON.stringify(payload)
             });
+
             if (res.ok) {
                 miModal.hide();
-                // Marcar localmente al docente como "boleta emitida" → badge verde
+                alert('✅ Datos guardados correctamente');
+                
+                // Actualizar datos locales
                 const idx = docentesData.findIndex(doc => doc.id_docente == id);
                 if (idx !== -1) {
-                    docentesData[idx]._boletaEmitida    = true;
-                    docentesData[idx].sueldo_base       = payload.sueldo_base;
-                    docentesData[idx].adelantos         = payload.adelantos;
-                    docentesData[idx].faltas            = payload.faltas;
-                    docentesData[idx].pension           = payload.pension;
-                    docentesData[idx].tardanza          = payload.tardanza;
-                    docentesData[idx].bono              = payload.bono;
-                    docentesData[idx].otros_descuentos  = payload.otros_descuentos;
-                    docentesData[idx].otros_desc_detalle= payload.otros_desc_detalle;
-                    docentesData[idx].tipo_afp          = payload.tipo_afp;
-                    docentesData[idx].tipo_salud        = payload.tipo_salud;
-                    docentesData[idx].creditos          = payload.creditos;
-                    docentesData[idx].prestamos         = payload.prestamos;
-                    docentesData[idx].desmrito_nivel    = payload.desmrito_nivel;
-                    docentesData[idx].desmrito_monto    = payload.desmrito_monto;
-                    docentesData[idx].num_faltas        = payload.num_faltas;
-                    docentesData[idx].num_tardanzas     = payload.num_tardanzas;
+                    Object.assign(docentesData[idx], payload);
+                    docentesData[idx]._boletaEmitida = true;
                 }
                 renderizarTabla(docentesData);
                 actualizarTotales(docentesData);
-                actualizarGraficos(); // ← FIX: actualiza el círculo de progreso
+                actualizarGraficos();
+            } else {
+                alert('Error al guardar. Revisa la consola.');
             }
-            else { alert('Error al guardar. Revisa la consola.'); }
         } catch(e) {
             console.error(e);
             alert('Error de red al guardar.');
