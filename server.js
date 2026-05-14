@@ -130,6 +130,7 @@ try {
 //      las credenciales directamente en el cliente.
 // ============================================================
 app.post('/api/login', async (req, res) => {
+    console.log('Usuarios cargados:', usuarios); // ← agrega esto
     console.log(req.body);
     const { user, pass } = req.body;
 
