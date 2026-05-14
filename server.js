@@ -37,6 +37,7 @@ db.connect((err) => {
         console.log("COPIA ESTE HASH PARA TABLEPLUS:");
         console.log(hash);
         console.log("------------------------------------------");
+        }).catch(e => console.error(e));
 });
 
 // --- 3. CARPETAS Y NODEMAILER ---
