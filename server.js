@@ -170,8 +170,6 @@ try {
 
 // ============================================================
 // POST /api/login
-// FIX: el frontend ahora llama a este endpoint en vez de validar
-//      las credenciales directamente en el cliente.
 // ============================================================
 app.post('/api/login', async (req, res) => {
     console.log('📨 Body recibido:', req.body);
@@ -183,21 +181,24 @@ app.post('/api/login', async (req, res) => {
 
     db.query('SELECT * FROM usuarios WHERE user = ?', [user], async (err, results) => {
         
-        console.log('🔍 Error BD:', err);
-        console.log('👤 Usuario encontrado:', results);  // ← esto es clave
+        if (err) {
+            console.error('🔍 Error BD:', err);
+            return res.status(500).json({ success: false, message: 'Error en el servidor' });
+        }
+
+        console.log('👤 Usuarios encontrados:', results.length);
         
-        if (err || results.length === 0) {
+        if (results.length === 0) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
 
         const cuenta = results[0];
         
         console.log('🔑 Hash en BD:', cuenta.pass);
-        console.log('🔑 Pass recibida:', pass);
         
         const passValida = await bcrypt.compare(pass, cuenta.pass);
         
-        console.log('✅ Pass válida:', passValida); // ← si sale false aquí, el hash está mal
+        console.log('✅ Pass válida:', passValida);
 
         if (!passValida) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
