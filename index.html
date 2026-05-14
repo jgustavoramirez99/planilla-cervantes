@@ -143,9 +143,13 @@
             </div>
             <div class="text-end text-white">
                 <span id="badge-rol" class="badge bg-danger mb-1 d-block"></span>
+    
+                <button class="btn btn-outline-light btn-sm me-2" onclick="abrirModalCambiarPassword()">
+                <i class="fa-solid fa-key me-1"></i> Cambiar Contraseña
+                </button> 
                 <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">
-                    <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
-                </button>
+                <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
+            </button>
             </div>
         </div>
     </div>
@@ -248,10 +252,15 @@
                     <span class="small text-muted fw-bold">
                         <i class="fa-solid fa-list me-1"></i> Listado de Docentes
                     </span>
+                    <div>
+                    <button class="btn btn-primary btn-sm fw-bold shadow-sm me-2" onclick="abrirGestionPersonal()">
+                        <i class="fa-solid fa-users me-1"></i> Gestionar Personal
+                    </button>
                     <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="descargarExcel()">
                         <i class="fa-solid fa-file-excel me-1"></i> Descargar Excel
                     </button>
                 </div>
+            </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-dark text-center">
@@ -464,7 +473,99 @@
         </div>
     </div>
 </div>
+<!-- ===================== MODAL GESTIÓN PERSONAL ===================== -->
+<div class="modal fade" id="modalGestionPersonal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-users"></i> Gestionar Personal</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <button class="btn btn-success mb-3" onclick="abrirModalAgregarDocente()">
+                    <i class="fa-solid fa-plus"></i> Agregar Nuevo Docente
+                </button>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tabla-gestion">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Código</th>
+                                <th>Sueldo Base</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-gestion"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- ===================== MODAL AGREGAR DOCENTE ===================== -->
+<div class="modal fade" id="modalAgregarDocente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Nuevo Docente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="nuevo-nombre" class="form-control" placeholder="Ej: Juan Pérez García">
+                </div>
+                <div class="mb-3">
+                    <label>DNI</label>
+                    <input type="text" id="nuevo-dni" class="form-control" maxlength="8">
+                </div>
+                <div class="mb-3">
+                    <label>Código Trabajador (opcional)</label>
+                    <input type="text" id="nuevo-codigo" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label>Sueldo Base (S/)</label>
+                    <input type="number" id="nuevo-sueldo" class="form-control" value="1000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="guardarNuevoDocente()">Guardar Docente</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ===================== MODAL CAMBIAR CONTRASEÑA ===================== -->
+<div class="modal fade" id="modalCambiarPassword" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-key"></i> Cambiar Contraseña</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Contraseña Actual</label>
+                    <input type="password" id="pass-actual" class="form-control" placeholder="••••••••">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nueva Contraseña</label>
+                    <input type="password" id="pass-nueva" class="form-control" placeholder="Nueva contraseña">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Confirmar Nueva Contraseña</label>
+                    <input type="password" id="pass-confirmar" class="form-control" placeholder="Repetir nueva contraseña">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="cambiarPassword()">Cambiar Contraseña</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     // ============================================================
     // CONFIGURACIÓN
@@ -1625,6 +1726,178 @@ async function descargarExcel() {
         document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
     }
+    let modalGestion = null;
+    let modalAgregar = null;
+
+// Inicializar modales
+function initModales() {
+    modalGestion = new bootstrap.Modal(document.getElementById('modalGestionPersonal'));
+    modalAgregar = new bootstrap.Modal(document.getElementById('modalAgregarDocente'));
+}
+
+// Abrir Gestión de Personal
+async function abrirGestionPersonal() {
+    if (userRole !== 'admin') return;
+    initModales();
+    modalGestion.show();
+    await cargarDocentesGestion();
+}
+
+// Cargar docentes en modal de gestión
+async function cargarDocentesGestion() {
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/docentes/all`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const docentes = await res.json();
+
+        let html = '';
+        docentes.forEach(d => {
+            html += `
+                <tr>
+                    <td>${d.nombre}</td>
+                    <td>${d.dni}</td>
+                    <td>${d.codigo_trabajador || '-'}</td>
+                    <td>S/ ${parseFloat(d.sueldo_base||0).toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarDocente(${d.id_docente}, '${d.nombre}')">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+        });
+        document.getElementById('cuerpo-gestion').innerHTML = html;
+    } catch(e) {
+        alert('Error al cargar docentes');
+    }
+}
+
+// Abrir modal para agregar
+function abrirModalAgregarDocente() {
+    document.getElementById('nuevo-nombre').value = '';
+    document.getElementById('nuevo-dni').value = '';
+    document.getElementById('nuevo-codigo').value = '';
+    document.getElementById('nuevo-sueldo').value = '1000';
+    modalAgregar.show();
+}
+
+// Guardar nuevo docente
+async function guardarNuevoDocente() {
+    const nombre = document.getElementById('nuevo-nombre').value.trim();
+    const dni = document.getElementById('nuevo-dni').value.trim();
+    const codigo = document.getElementById('nuevo-codigo').value.trim();
+    const sueldo = parseFloat(document.getElementById('nuevo-sueldo').value) || 0;
+
+    if (!nombre || !dni) {
+        alert("Nombre y DNI son obligatorios");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/docentes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ nombre, dni, codigo_trabajador: codigo, sueldo_base: sueldo })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            modalAgregar.hide();
+            cargarDocentesGestion(); // recargar lista
+            cargarDatosServidor();   // recargar tabla principal
+        } else {
+            alert(data.error || 'Error al guardar');
+        }
+    } catch(e) {
+        alert('Error de conexión');
+    }
+}
+
+// Eliminar docente
+async function eliminarDocente(id, nombre) {
+    if (!confirm(`¿Estás seguro de eliminar a ${nombre}?\n\nEsta acción no se puede deshacer.`)) return;
+
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/docentes/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+            cargarDocentesGestion();
+            cargarDatosServidor();
+        }
+    } catch(e) {
+        alert('Error al eliminar');
+    }
+}
+// ===================== CAMBIAR CONTRASEÑA =====================
+let modalPassword = null;
+
+function abrirModalCambiarPassword() {
+    if (!modalPassword) {
+        modalPassword = new bootstrap.Modal(document.getElementById('modalCambiarPassword'));
+    }
+    // Limpiar campos
+    document.getElementById('pass-actual').value = '';
+    document.getElementById('pass-nueva').value = '';
+    document.getElementById('pass-confirmar').value = '';
+    modalPassword.show();
+}
+
+async function cambiarPassword() {
+    const passActual = document.getElementById('pass-actual').value.trim();
+    const passNueva = document.getElementById('pass-nueva').value.trim();
+    const passConfirmar = document.getElementById('pass-confirmar').value.trim();
+
+    if (!passActual || !passNueva || !passConfirmar) {
+        alert("Todos los campos son obligatorios");
+        return;
+    }
+
+    if (passNueva !== passConfirmar) {
+        alert("Las nuevas contraseñas no coinciden");
+        return;
+    }
+
+    if (passNueva.length < 4) {
+        alert("La nueva contraseña debe tener al menos 4 caracteres");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/usuario/cambiar-password`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                passwordActual: passActual,
+                passwordNuevo: passNueva
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert("✅ Contraseña cambiada correctamente");
+            modalPassword.hide();
+            // Opcional: cerrar sesión para que vuelva a loguearse
+            // cerrarSesion();
+        } else {
+            alert(data.error || "Error al cambiar contraseña");
+        }
+    } catch (e) {
+        alert("Error de conexión");
+    }
+}
 </script>
 
 <!-- ── FOOTER GRTECH ── -->

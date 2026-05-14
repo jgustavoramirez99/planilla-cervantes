@@ -338,7 +338,84 @@ app.get('/api/whatsapp-link', (req, res) => {
     const link       = `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(texto)}`;
     res.json({ link });
 });
+// ===================== CRUD DOCENTES (ADMIN) =====================
 
+// GET - Obtener todos los docentes (para el formulario)
+app.get('/api/docentes/all', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin') return res.status(403).json({error: 'Acceso denegado'});
+
+    db.query('SELECT id_docente, nombre, dni, codigo_trabajador, sueldo_base FROM docentes ORDER BY nombre', (err, result) => {
+        if (err) return res.status(500).json({error: err.message});
+        res.json(result);
+    });
+});
+
+// POST - Crear nuevo docente
+app.post('/api/docentes', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin') return res.status(403).json({error: 'Acceso denegado'});
+
+    const { nombre, dni, codigo_trabajador, sueldo_base } = req.body;
+
+    if (!nombre || !dni) {
+        return res.status(400).json({error: 'Nombre y DNI son obligatorios'});
+    }
+
+    db.query(
+        'INSERT INTO docentes (nombre, dni, codigo_trabajador, sueldo_base) VALUES (?, ?, ?, ?)',
+        [nombre, dni, codigo_trabajador || dni, sueldo_base || 0],
+        (err, result) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(400).json({error: 'Ya existe un docente con ese DNI'});
+                }
+                return res.status(500).json({error: err.message});
+            }
+            res.json({success: true, message: 'Docente agregado correctamente', id: result.insertId});
+        }
+    );
+});
+
+// DELETE - Eliminar docente
+app.delete('/api/docentes/:id', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin') return res.status(403).json({error: 'Acceso denegado'});
+
+    const id = parseInt(req.params.id);
+
+    // Primero borramos sus planillas
+    db.query('DELETE FROM planillas WHERE id_docente = ?', [id], (err) => {
+        if (err) console.error(err);
+
+        // Luego borramos el docente
+        db.query('DELETE FROM docentes WHERE id_docente = ?', [id], (err) => {
+            if (err) return res.status(500).json({error: err.message});
+            res.json({success: true, message: 'Docente eliminado correctamente'});
+        });
+    });
+});
+
+// ===================== CAMBIAR CONTRASEÑA =====================
+app.put('/api/usuario/cambiar-password', verificarToken, async (req, res) => {
+    if (!req.body.passwordActual || !req.body.passwordNuevo) {
+        return res.status(400).json({error: 'Faltan datos'});
+    }
+
+    const { passwordActual, passwordNuevo } = req.body;
+    const username = req.usuario.user;
+
+    // Buscar usuario
+    const cuenta = usuarios.find(u => u.user === username);
+    if (!cuenta) return res.status(404).json({error: 'Usuario no encontrado'});
+
+    const esValida = await bcrypt.compare(passwordActual, cuenta.pass);
+    if (!esValida) return res.status(401).json({error: 'Contraseña actual incorrecta'});
+
+    // Actualizar contraseña
+    const nuevoHash = await bcrypt.hash(passwordNuevo, 10);
+    cuenta.pass = nuevoHash;
+
+    // Aquí deberías guardar el cambio en .env o en una tabla de usuarios, pero por simplicidad lo dejamos en memoria por ahora
+    res.json({success: true, message: 'Contraseña cambiada correctamente'});
+});
 // ============================================================
 // INICIO DEL SERVIDOR
 // ============================================================
