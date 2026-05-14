@@ -258,9 +258,6 @@
                         <i class="fa-solid fa-list me-1"></i> Listado de Docentes
                     </span>
                     <div>
-                    <button class="btn btn-primary btn-sm fw-bold shadow-sm me-2" onclick="abrirGestionPersonal()">
-                        <i class="fa-solid fa-users me-1"></i> Gestionar Personal
-                    </button>
                     <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="descargarExcel()">
                         <i class="fa-solid fa-file-excel me-1"></i> Descargar Excel
                     </button>
@@ -818,15 +815,14 @@ function renderizarTabla(data) {
     tbody.innerHTML = '';
 
     data.forEach(doc => {
-        const row = document.createElement('tr');
-        row.className = 'fila-docente';
-        
-        const neto = Number(doc.neto_a_pagar) || 0;
+        const neto = Number(doc.neto_a_pagar) || 
+                     (Number(doc.sueldo_base || 0) - 30); // simplificado
 
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td class="text-start ps-3">
-                <strong>${doc.nombre || ''}</strong><br>
-                <small>DNI: ${doc.dni || ''}</small>
+                <strong>${doc.nombre}</strong><br>
+                <small class="text-muted">DNI: ${doc.dni}</small>
             </td>
             <td class="text-center">S/ ${Number(doc.sueldo_base || 0).toFixed(2)}</td>
             <td class="text-center text-danger">- S/ 30.00</td>
@@ -834,21 +830,13 @@ function renderizarTabla(data) {
                 S/ ${neto.toFixed(2)}
             </td>
             <td class="text-center">
-                ${userRole === 'admin' ? `
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="editarDocente('${doc.id_docente}')">
-                    <i class="fa-solid fa-pen"></i>
+                    <i class="fa-solid fa-pen"></i> Editar
                 </button>
-                <button class="btn btn-sm btn-outline-success" onclick="enviarBoleta('${doc.id_docente}')">
-                    <i class="fa-solid fa-whatsapp"></i>
-                </button>` : ''}
             </td>
         `;
         tbody.appendChild(row);
     });
-
-    // Control de botones según rol
-    const header = document.getElementById('tabla-header');
-    if (header) header.style.display = userRole === 'admin' ? 'flex' : 'none';
 }
     // ============================================================
     // BUSCADOR DE DOCENTES (filtra por trabajador y codigo)
@@ -1891,17 +1879,18 @@ async function eliminarDocente(id, nombre) {
         alert('Error al eliminar');
     }
 }
-// ===================== CAMBIAR CONTRASEÑA (Admin y Usuarios) =====================
 function abrirModalCambiarPassword() {
     initModales();
-    
-    // Limpiar campos
-    document.getElementById('pass-actual').value = '';
-    document.getElementById('pass-nueva').value = '';
-    document.getElementById('pass-confirmar').value = '';
-    document.getElementById('email-recuperacion').value = '';
-
-    modalPassword.show();
+    if (modalPassword) {
+        // Limpiar campos
+        document.getElementById('pass-actual').value = '';
+        document.getElementById('pass-nueva').value = '';
+        document.getElementById('pass-confirmar').value = '';
+        document.getElementById('email-recuperacion').value = '';
+        modalPassword.show();
+    } else {
+        alert("Error cargando el modal. Recarga la página.");
+    }
 }
 
 async function cambiarPassword() {
@@ -2074,6 +2063,98 @@ function mostrarRecuperacion() {
         modalRecuperar.show();
     } else {
         alert("Error: Modal de recuperación no encontrado.");
+    }
+}
+// ===================== EDITAR DOCENTE (ABRIR MODAL) =====================
+async function editarDocente(id) {
+    initModales();
+
+    const modalEditar = new bootstrap.Modal(document.getElementById('modalEditar'));
+
+    try {
+        const mes = document.getElementById('filtro-mes').value;
+        const res = await fetch(`${SERVER_BASE}/api/docentes?mes=${mes}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        const docentes = await res.json();
+        const docente = docentes.find(d => d.id_docente == id);
+
+        if (!docente) {
+            alert("No se encontró el docente");
+            return;
+        }
+
+        // Llenar datos en el modal
+        document.getElementById('edit-id').value = docente.id_docente;
+        document.getElementById('edit-nombre-display').textContent = docente.nombre || 'Sin nombre';
+        document.getElementById('edit-codigo-display').textContent = `DNI: ${docente.dni || ''}`;
+
+        // Campos principales
+        document.getElementById('edit-sb').value = docente.sueldo_base || 0;
+        document.getElementById('edit-al').value = docente.adelantos || 0;
+        document.getElementById('edit-creditos').value = docente.creditos || 0;
+        document.getElementById('edit-prestamos').value = docente.prestamos || 0;
+        document.getElementById('edit-pen').value = docente.pension || 0;
+        document.getElementById('edit-fl').value = docente.faltas || 0;
+        document.getElementById('edit-tar').value = docente.tardanza || 0;
+        document.getElementById('edit-bono').value = docente.bono || 0;
+        document.getElementById('edit-desmrito-monto').value = docente.desmrito_monto || 0;
+
+        // Selects
+        if (docente.tipo_afp) document.getElementById('edit-tipo-afp').value = docente.tipo_afp;
+        if (docente.tipo_salud) document.getElementById('edit-tipo-salud').value = docente.tipo_salud;
+
+        // Actualizar resumen
+        actualizarResumenNeto();
+
+        modalEditar.show();
+
+    } catch (e) {
+        console.error(e);
+        alert("Error al cargar los datos del docente");
+    }
+}
+async function guardarCambiosModal() {
+    const id = document.getElementById('edit-id').value;
+    if (!id) return;
+
+    const payload = {
+        sueldo_base: Number(document.getElementById('edit-sb').value) || 0,
+        adelantos: Number(document.getElementById('edit-al').value) || 0,
+        creditos: Number(document.getElementById('edit-creditos').value) || 0,
+        prestamos: Number(document.getElementById('edit-prestamos').value) || 0,
+        pension: Number(document.getElementById('edit-pen').value) || 0,
+        faltas: Number(document.getElementById('edit-fl').value) || 0,
+        tardanza: Number(document.getElementById('edit-tar').value) || 0,
+        bono: Number(document.getElementById('edit-bono').value) || 0,
+        desmrito_monto: Number(document.getElementById('edit-desmrito-monto').value) || 0,
+        tipo_afp: document.getElementById('edit-tipo-afp').value,
+        tipo_salud: document.getElementById('edit-tipo-salud').value,
+        mes: document.getElementById('filtro-mes').value
+    };
+
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/docentes/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            alert("✅ Datos guardados correctamente");
+            bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+            cargarDatosServidor(); // Recargar tabla
+        } else {
+            alert("❌ Error al guardar los cambios");
+        }
+    } catch (e) {
+        alert("Error de conexión");
     }
 }
 </script>
