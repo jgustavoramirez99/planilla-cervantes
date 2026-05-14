@@ -3,8 +3,8 @@ const mysql   = require('mysql2');
 const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
-const jwt    = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
+const bcrypt  = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
 require('dotenv').config();
@@ -12,16 +12,74 @@ require('dotenv').config();
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'cervantes_secret_2026';
 
+// --- 1. CONFIGURACIÓN DE MIDDLEWARES ---
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, './')));
 
-// Carpeta donde se guardan las boletas para el link de WhatsApp
+// --- 2. CONEXIÓN A LA DB (MOVIDO ARRIBA) ---
+const db = mysql.createConnection({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'planilla_db'
+});
+
+db.connect((err) => {
+    if (err) {
+        console.error('Error conectando a la DB:', err);
+        return;
+    }
+    console.log('Conectado a la base de datos MySQL');
+    // === AGREGA ESTO AQUÍ PARA GENERAR TU HASH COMPATIBLE ===
+    bcrypt.hash('cervantes2026', 10).then(hash => {
+        console.log("------------------------------------------");
+        console.log("COPIA ESTE HASH PARA TABLEPLUS:");
+        console.log(hash);
+        console.log("------------------------------------------");
+});
+
+// --- 3. CARPETAS Y NODEMAILER ---
 const BOLETAS_DIR = path.join(__dirname, 'boletas');
 if (!fs.existsSync(BOLETAS_DIR)) {
     fs.mkdirSync(BOLETAS_DIR, { recursive: true });
 }
 
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER || 'tu_correo@gmail.com', 
+        pass: process.env.EMAIL_PASS || 'xxxx xxxx xxxx xxxx' 
+    }
+});
+
+// --- 4. RUTAS DE SEGURIDAD ---
+
+app.post('/usuario/cambiar-password', async (req, res) => {
+    const { userId, nuevaPassword } = req.body; 
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHasheada = await bcrypt.hash(nuevaPassword, salt);
+
+        // OJO: Asegúrate que tu columna sea 'pass' o 'password' según tu DB
+        const query = "UPDATE usuarios SET pass = ? WHERE id = ?"; 
+        db.query(query, [passwordHasheada, userId], (err, result) => {
+            if (err) return res.status(500).json({ error: "Error en DB" });
+            res.json({ mensaje: "¡Tu contraseña ha sido actualizada!" });
+        });
+    } catch (error) {
+        res.status(500).send("Error de cifrado");
+    }
+});
+
+app.post('/admin/actualizar-correo', (req, res) => {
+    const { usuarioId, nuevoEmail } = req.body;
+    const query = "UPDATE usuarios SET email = ? WHERE id = ?";
+    db.query(query, [nuevoEmail, usuarioId], (err, result) => {
+        if (err) return res.status(500).json({ error: "Error al guardar correo" });
+        res.json({ mensaje: "Correo del trabajador actualizado." });
+    });
+});
 // ============================================================
 // MIDDLEWARE JWT
 // ============================================================
@@ -534,6 +592,7 @@ app.post('/api/usuario/reset-password', async (req, res) => {
         res.status(400).json({ success: false, error: 'Enlace inválido o expirado' });
     }
 });
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);

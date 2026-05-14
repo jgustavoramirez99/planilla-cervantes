@@ -785,75 +785,69 @@
         }
     }
 
-        // ==========================================================================
-    // RENDERIZAR TABLA PARA ADMIN Y USUARIOS
-    // ==========================================================================
-    function renderizarTabla(lista) {
+function renderizarTabla(lista) {
+    const cuerpo = document.getElementById('tabla-cuerpo');
+    cuerpo.innerHTML = '';
 
-        const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = '';
-
-        if (!lista || lista.length === 0) {
-            cuerpo.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center p-4 text-muted">
-                        No se encontraron resultados
-                    </td>
-                </tr>`;
-            return;
-        }
-
-        lista.forEach(d => {
-
-            const sb        = Number(d.sueldo_base) || 0;
-            const adelantos = Number(d.adelantos)   || 0;
-            const faltas    = Number(d.faltas)      || 0;
-            const pension   = Number(d.pension)     || 0;
-            const tardanza  = Number(d.tardanza)    || 0;
-            const bono      = Number(d.bono)        || 0;
-            const otrosDesc = Number(d.otros_descuentos) || 0;
-
-            const tipoAfp     = d.tipo_afp || 'AFP';
-            const descAfp     = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
-            const creditos    = Number(d.creditos)       || 0;
-            const prestamos   = Number(d.prestamos)      || 0;
-            const desmrito    = Number(d.desmrito_monto) || 0;
-
-            const totalDedReal = descAfp + adelantos + faltas + pension + tardanza + otrosDesc + creditos + prestamos + desmrito + 30;
-            const totalDed = sb === 0 ? 0 : totalDedReal;
-            const neto     = sb === 0 ? 0 : sb + bono - totalDedReal;
-
-            let badgeColor = 'bg-primary';
-            if (neto < 0) badgeColor = 'bg-danger';
-            else if (d._boletaEmitida) badgeColor = 'bg-success';
-
-            const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
-            const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
-            const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
-
-            cuerpo.innerHTML += `
-                <tr class="fila-docente">
-                    <td class="ps-3">
-                        <div class="fw-bold text-dark">${d.nombre}</div>
-                        <small class="text-muted">
-                            DNI: ${d.dni || 'Sin DNI'}
-                        </small>
-                    </td>
-                    <td class="text-center">S/ ${sb.toFixed(2)}</td>
-                    <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
-                    <td class="text-center">
-                        <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group gap-1">
-                            ${btnPDF}
-                            ${btnWA}
-                            ${btnEdit}
-                        </div>
-                    </td>
-                </tr>`;
-        });
+    if (!lista || lista.length === 0) {
+        cuerpo.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center p-4 text-muted">
+                    No se encontraron resultados
+                </td>
+            </tr>`;
+        return;
     }
+
+    lista.forEach(d => {
+        const sb = Number(d.sueldo_base) || 0;
+        const totalDedReal = (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0) + 
+                             (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0) + 
+                             (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
+        
+        const totalDed = sb === 0 ? 0 : totalDedReal;
+        const neto = sb === 0 ? 0 : sb + (Number(d.bono) || 0) - totalDedReal;
+
+        let badgeColor = 'bg-primary';
+        if (neto < 0) badgeColor = 'bg-danger';
+        else if (d._boletaEmitida) badgeColor = 'bg-success';
+
+        // Botones existentes
+        const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
+        const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
+        const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
+
+        // NUEVO: Columna de Email y Botón Guardar (Solo para Admin)
+        const colEmail = (userRole === 'admin') ? `
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="email" id="email-${d.id_docente}" value="${d.email || ''}" class="form-control" placeholder="correo@ejemplo.com">
+                    <button class="btn btn-success" onclick="guardarCorreo(${d.id_docente}, document.getElementById('email-${d.id_docente}').value)">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </div>
+            </td>` : `<td>${d.email || 'Sin correo'}</td>`;
+
+        cuerpo.innerHTML += `
+            <tr class="fila-docente">
+                <td class="ps-3">
+                    <div class="fw-bold text-dark">${d.nombre}</div>
+                    <small class="text-muted">DNI: ${d.dni || 'Sin DNI'}</small>
+                </td>
+                <td class="text-center">S/ ${sb.toFixed(2)}</td>
+                <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
+                <td class="text-center">
+                    <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
+                </td>
+                ${colEmail}
+                <td class="text-center">
+                    <div class="btn-group gap-1">
+                        ${btnPDF} ${btnWA} ${btnEdit}
+                    </div>
+                </td>
+            </tr>`;
+    });
+}
     // ============================================================
     // BUSCADOR DE DOCENTES (filtra por trabajador y codigo)
     // ============================================================
@@ -1965,7 +1959,50 @@ async function enviarRecuperacion() {
         alert("❌ Error de conexión. Inténtalo más tarde.");
     }
 }
+    function guardarCorreo(id, email) {
+    if (!email) {
+        alert("Por favor, ingresa un correo válido.");
+        return;
+    }
 
+    fetch('/admin/actualizar-correo', {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}` // Si usas tokens
+        },
+        body: JSON.stringify({ usuarioId: id, nuevoEmail: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.mensaje || "Correo actualizado con éxito");
+    })
+    .catch(err => {
+        console.error("Error:", err);
+        alert("Hubo un error al actualizar el correo.");
+    });
+}
+async function solicitarRecuperacion() {
+    const email = prompt("Ingresa tu correo electrónico registrado:");
+    if (!email) return;
+
+    try {
+        const res = await fetch('/recuperar-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert("✅ " + data.mensaje);
+        } else {
+            alert("❌ " + (data.error || "Error al procesar la solicitud"));
+        }
+    } catch (e) {
+        alert("❌ Error de conexión con el servidor.");
+    }
+}
 </script>
 
 <!-- ── FOOTER GRTECH ── -->
