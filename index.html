@@ -1446,44 +1446,66 @@ async function descargarExcel() {
 
     // ==================== ESTILOS ====================
     const headerStyle = {
-        font: { bold: true, color: { argb: 'FFFFFFFF' } },
+        font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
-        alignment: { horizontal: 'center', vertical: 'middle' }
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
     };
 
     const celesteStyle = {
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'BDD7EE' } },
-        alignment: { horizontal: 'center', vertical: 'middle' }
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
     };
 
     const amarilloStyle = {
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } },
-        alignment: { horizontal: 'center', vertical: 'middle' }
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
     };
 
     const totalStyle = {
         font: { bold: true, color: { argb: 'FFFFFFFF' } },
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
-        alignment: { horizontal: 'center', vertical: 'middle' }
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
     };
 
-    // ==================== TÍTULOS ====================
+    // ==================== TÍTULOS + LOGO ====================
     ws.mergeCells('A1:Q1');
     const titulo = ws.getCell('A1');
     titulo.value = "CERVANTES EDUCA SAC";
     titulo.style = { ...headerStyle, font: { bold: true, size: 16, color: { argb: 'FFFFFFFF' } } };
+
+    // Logo (cambia la ruta si es necesario)
+    try {
+        const logoUrl = 'logo.png'; // debe estar en la misma carpeta que index.html
+        const response = await fetch(logoUrl);
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        const imageId = wb.addImage({
+            buffer: arrayBuffer,
+            extension: 'png',
+        });
+        ws.addImage(imageId, {
+            tl: { col: 13, row: 0 },   // Posición del logo (columna M, fila 1)
+            ext: { width: 120, height: 60 }
+        });
+    } catch (e) {
+        console.log("Logo no encontrado, se omite.");
+    }
 
     ws.mergeCells('A2:Q2');
     ws.getCell('A2').value = `PLANILLA DE REMUNERACIONES - ${mesNombre} 2026`;
     ws.getCell('A2').style = headerStyle;
 
     ws.getCell('A3').value = `Fecha: ${new Date().toLocaleDateString('es-PE')}`;
-    ws.getCell('A3').style = { alignment: { horizontal: 'center' } };
+    ws.getCell('A3').style = { alignment: { horizontal: 'left' } };
 
-    // ==================== ENCABEZADOS ====================
+    // ==================== ENCABEZADOS (fila 5 más alta) ====================
     const headers = ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
                     "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PENSIÓN", "TARDANZAS + FALTAS", 
-                    "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO BCP", "AFP %"];
+                    "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO", "AFP %"];
 
     headers.forEach((header, index) => {
         const cell = ws.getCell(5, index + 1);
@@ -1491,11 +1513,15 @@ async function descargarExcel() {
         cell.style = headerStyle;
     });
 
+    // Hacer fila 5 más alta
+    ws.getRow(5).height = 35;
+
     // ==================== DATOS ====================
     let row = 6;
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0 };
 
     docentesData.forEach(d => {
+        // ... (mismo cálculo de datos que antes)
         const sb = Number(d.sueldo_base) || 0;
         const pagado = Number(d.pagado) || 0;
         const bono = Number(d.bono) || 0;
@@ -1528,17 +1554,12 @@ async function descargarExcel() {
         ws.getCell(row, 16).value = consolidado;
         ws.getCell(row, 17).value = d.tipo_afp === 'NINGUNO' ? '—' : '13%';
 
-        // Aplicar colores por columna
         for (let col = 1; col <= 17; col++) {
             const cell = ws.getCell(row, col);
-            if (col <= 3) {
-                cell.style = celesteStyle;
-            } else {
-                cell.style = amarilloStyle;
-            }
+            if (col <= 3) cell.style = celesteStyle;
+            else cell.style = amarilloStyle;
         }
 
-        // Acumular totales
         totales.pagado += pagado; totales.sb += sb; totales.esalud += esalud;
         totales.adel += adel; totales.cred += cred; totales.pen += pen;
         totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
@@ -1547,7 +1568,7 @@ async function descargarExcel() {
         row++;
     });
 
-    // ==================== FILA TOTALES ====================
+    // Totales
     const totalRow = row;
     ws.getCell(totalRow, 2).value = "TOTAL GENERAL";
     ws.getCell(totalRow, 4).value = totales.pagado;
@@ -1567,9 +1588,9 @@ async function descargarExcel() {
         ws.getCell(totalRow, col).style = totalStyle;
     }
 
-    // Ajustar ancho de columnas
-    ws.columns.forEach((column, index) => {
-        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10][index] || 12;
+    // Ancho de columnas
+    ws.columns.forEach((column, i) => {
+        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10][i] || 12;
     });
 
     // Descargar
@@ -1579,7 +1600,7 @@ async function descargarExcel() {
     link.href = URL.createObjectURL(blob);
     link.download = `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`;
     link.click();
-}   
+}
         // Actualizar resumen de Neto en el modal
     function actualizarResumenNeto() {
         const sb = Number(document.getElementById('edit-sb').value) || 0;
