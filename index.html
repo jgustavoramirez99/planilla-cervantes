@@ -125,11 +125,6 @@
                 <label class="form-label small fw-bold">Contraseña</label>
                 <input type="password" id="pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
             </div>
-            <div class="text-end mb-3">
-                <a href="#" onclick="mostrarRecuperacion()" class="text-muted small">
-                    ¿Olvidaste tu contraseña?
-                </a>
-            </div>
             <button type="submit" id="btn-login" class="btn btn-primary w-100 py-2 fw-bold">
                 <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
                 INGRESAR AL SISTEMA
@@ -149,9 +144,6 @@
             <div class="text-end text-white">
                 <span id="badge-rol" class="badge bg-danger mb-1 d-block"></span>
     
-                <button class="btn btn-outline-light btn-sm me-2" onclick="abrirModalCambiarPassword()">
-                <i class="fa-solid fa-key me-1"></i> Cambiar Contraseña
-                </button> 
                 <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">
                 <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
             </button>
@@ -258,6 +250,9 @@
                         <i class="fa-solid fa-list me-1"></i> Listado de Docentes
                     </span>
                     <div>
+                    <button class="btn btn-primary btn-sm fw-bold shadow-sm me-2" onclick="abrirGestionPersonal()">
+                        <i class="fa-solid fa-users me-1"></i> Gestionar Personal
+                    </button>
                     <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="descargarExcel()">
                         <i class="fa-solid fa-file-excel me-1"></i> Descargar Excel
                     </button>
@@ -475,154 +470,7 @@
         </div>
     </div>
 </div>
-<!-- ===================== MODAL GESTIÓN PERSONAL ===================== -->
-<div class="modal fade" id="modalGestionPersonal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fa-solid fa-users"></i> Gestionar Personal</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <button class="btn btn-success mb-3" onclick="abrirModalAgregarDocente()">
-                    <i class="fa-solid fa-plus"></i> Agregar Nuevo Docente
-                </button>
-                <div class="table-responsive">
-                    <table class="table table-hover" id="tabla-gestion">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Nombre</th>
-                                <th>DNI</th>
-                                <th>Código</th>
-                                <th>Sueldo Base</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cuerpo-gestion"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- ===================== MODAL GESTIÓN PERSONAL ===================== -->
-<div class="modal fade" id="modalGestionPersonal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">Gestionar Personal</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex justify-content-end mb-3">
-                    <button class="btn btn-success btn-sm" onclick="abrirModalAgregarDocente()">
-                        <i class="fa-solid fa-plus"></i> Agregar Docente
-                    </button>
-                </div>
-                <table class="table table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Nombre</th>
-                            <th>DNI</th>
-                            <th>Código</th>
-                            <th>Sueldo Base</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cuerpo-gestion"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===================== MODAL AGREGAR DOCENTE ===================== -->
-<div class="modal fade" id="modalAgregarDocente" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Nuevo Docente</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label>Nombre Completo</label>
-                    <input type="text" id="nuevo-nombre" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label>DNI</label>
-                    <input type="text" id="nuevo-dni" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label>Código Trabajador (opcional)</label>
-                    <input type="text" id="nuevo-codigo" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label>Sueldo Base</label>
-                    <input type="number" id="nuevo-sueldo" class="form-control" value="1200">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="guardarNuevoDocente()">Guardar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===================== MODAL CAMBIAR CONTRASEÑA ===================== -->
-<div class="modal fade" id="modalCambiarPassword" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cambiar Contraseña</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label>Contraseña Actual</label>
-                    <input type="password" id="pass-actual" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label>Nueva Contraseña</label>
-                    <input type="password" id="pass-nueva" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label>Confirmar Nueva Contraseña</label>
-                    <input type="password" id="pass-confirmar" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label>Nuevo Correo (opcional)</label>
-                    <input type="email" id="email-recuperacion" class="form-control">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="cambiarPassword()">Guardar Cambios</button>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- MODAL RECUPERAR CONTRASEÑA -->
-<div class="modal fade" id="modalRecuperarPassword" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Recuperar Contraseña</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Ingresa tu correo electrónico registrado:</p>
-                <input type="email" id="email-recuperar" class="form-control" placeholder="tu@email.com">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="enviarRecuperacion()">Enviar Enlace</button>
-            </div>
-        </div>
-    </div>
-</div>
 <script>
     // ============================================================
     // CONFIGURACIÓN
@@ -810,32 +658,67 @@
         }
     }
 
-function renderizarTabla(data) {
-    const tbody = document.getElementById('tabla-cuerpo');
-    tbody.innerHTML = '';
+function renderizarTabla(lista) {
+    const cuerpo = document.getElementById('tabla-cuerpo');
+    cuerpo.innerHTML = '';
 
-    data.forEach(doc => {
-        const neto = Number(doc.neto_a_pagar) || 
-                     (Number(doc.sueldo_base || 0) - 30); // simplificado
+    if (!lista || lista.length === 0) {
+        cuerpo.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center p-4 text-muted">
+                    No se encontraron resultados
+                </td>
+            </tr>`;
+        return;
+    }
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="text-start ps-3">
-                <strong>${doc.nombre}</strong><br>
-                <small class="text-muted">DNI: ${doc.dni}</small>
-            </td>
-            <td class="text-center">S/ ${Number(doc.sueldo_base || 0).toFixed(2)}</td>
-            <td class="text-center text-danger">- S/ 30.00</td>
-            <td class="text-center fw-bold ${neto >= 0 ? 'text-success' : 'text-danger'}">
-                S/ ${neto.toFixed(2)}
-            </td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary me-1" onclick="editarDocente('${doc.id_docente}')">
-                    <i class="fa-solid fa-pen"></i> Editar
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
+    lista.forEach(d => {
+        const sb = Number(d.sueldo_base) || 0;
+        const totalDedReal = (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0) + 
+                             (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0) + 
+                             (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
+        
+        const totalDed = sb === 0 ? 0 : totalDedReal;
+        const neto = sb === 0 ? 0 : sb + (Number(d.bono) || 0) - totalDedReal;
+
+        let badgeColor = 'bg-primary';
+        if (neto < 0) badgeColor = 'bg-danger';
+        else if (d._boletaEmitida) badgeColor = 'bg-success';
+
+        // Botones existentes
+        const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
+        const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
+        const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
+
+        // NUEVO: Columna de Email y Botón Guardar (Solo para Admin)
+        const colEmail = (userRole === 'admin') ? `
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="email" id="email-${d.id_docente}" value="${d.email || ''}" class="form-control" placeholder="correo@ejemplo.com">
+                    <button class="btn btn-success" onclick="guardarCorreo(${d.id_docente}, document.getElementById('email-${d.id_docente}').value)">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </div>
+            </td>` : `<td>${d.email || 'Sin correo'}</td>`;
+
+        cuerpo.innerHTML += `
+            <tr class="fila-docente">
+                <td class="ps-3">
+                    <div class="fw-bold text-dark">${d.nombre}</div>
+                    <small class="text-muted">DNI: ${d.dni || 'Sin DNI'}</small>
+                </td>
+                <td class="text-center">S/ ${sb.toFixed(2)}</td>
+                <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
+                <td class="text-center">
+                    <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
+                </td>
+                ${colEmail}
+                <td class="text-center">
+                    <div class="btn-group gap-1">
+                        ${btnPDF} ${btnWA} ${btnEdit}
+                    </div>
+                </td>
+            </tr>`;
     });
 }
     // ============================================================
@@ -1470,7 +1353,7 @@ function abrirModal(id) {
         }
     }
 
-    async function guardarCambiosModal() {
+        async function guardarCambiosModal() {
     if (userRole !== 'admin') return;
 
     const id  = document.getElementById('edit-id').value;
@@ -1742,421 +1625,6 @@ async function descargarExcel() {
         document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
     }
-// ===================== MODALES (Inicialización) =====================
-// ===================== INICIALIZACIÓN DE MODALES =====================
-let modalGestion = null;
-let modalAgregar = null;
-let modalPassword = null;
-let modalRecuperar = null;
-
-function initModales() {
-    // Modal Gestión de Personal
-    if (!modalGestion) {
-        const modalEl = document.getElementById('modalGestionPersonal');
-        if (modalEl) modalGestion = new bootstrap.Modal(modalEl);
-    }
-
-    // Modal Agregar Docente
-    if (!modalAgregar) {
-        const modalEl = document.getElementById('modalAgregarDocente');
-        if (modalEl) modalAgregar = new bootstrap.Modal(modalEl);
-    }
-
-    // Modal Cambiar Contraseña
-    if (!modalPassword) {
-        const modalEl = document.getElementById('modalCambiarPassword');
-        if (modalEl) modalPassword = new bootstrap.Modal(modalEl);
-    }
-
-    // Modal Recuperar Contraseña
-    if (!modalRecuperar) {
-        const modalEl = document.getElementById('modalRecuperarPassword');
-        if (modalEl) modalRecuperar = new bootstrap.Modal(modalEl);
-    }
-}
-// ===================== ABRIR GESTIÓN DE PERSONAL (SOLO ADMIN) =====================
-async function abrirGestionPersonal() {
-    if (userRole !== 'admin') {
-        alert("Solo el administrador puede acceder a esta función.");
-        return;
-    }
-    initModales();
-    modalGestion.show();
-    await cargarDocentesGestion();
-}
-
-// Cargar docentes en modal de gestión
-async function cargarDocentesGestion() {
-    try {
-        const res = await fetch(`${SERVER_BASE}/api/docentes/all`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        const docentes = await res.json();
-
-        let html = '';
-        docentes.forEach(d => {
-            html += `
-                <tr>
-                    <td>${d.nombre}</td>
-                    <td>${d.dni}</td>
-                    <td>${d.codigo_trabajador || '-'}</td>
-                    <td>S/ ${parseFloat(d.sueldo_base||0).toFixed(2)}</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarDocente(${d.id_docente}, '${d.nombre}')">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>`;
-        });
-        document.getElementById('cuerpo-gestion').innerHTML = html;
-    } catch(e) {
-        alert('Error al cargar docentes');
-    }
-}
-
-// Abrir modal para agregar
-function abrirModalAgregarDocente() {
-    document.getElementById('nuevo-nombre').value = '';
-    document.getElementById('nuevo-dni').value = '';
-    document.getElementById('nuevo-codigo').value = '';
-    document.getElementById('nuevo-sueldo').value = '1000';
-    modalAgregar.show();
-}
-
-// Guardar nuevo docente
-async function guardarNuevoDocente() {
-    const nombre = document.getElementById('nuevo-nombre').value.trim();
-    const dni = document.getElementById('nuevo-dni').value.trim();
-    const codigo = document.getElementById('nuevo-codigo').value.trim();
-    const sueldo = parseFloat(document.getElementById('nuevo-sueldo').value) || 0;
-
-    if (!nombre || !dni) {
-        alert("Nombre y DNI son obligatorios");
-        return;
-    }
-
-    try {
-        const res = await fetch(`${SERVER_BASE}/api/docentes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ nombre, dni, codigo_trabajador: codigo, sueldo_base: sueldo })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            alert(data.message);
-            modalAgregar.hide();
-            cargarDocentesGestion(); // recargar lista
-            cargarDatosServidor();   // recargar tabla principal
-        } else {
-            alert(data.error || 'Error al guardar');
-        }
-    } catch(e) {
-        alert('Error de conexión');
-    }
-}
-
-// Eliminar docente
-async function eliminarDocente(id, nombre) {
-    if (!confirm(`¿Estás seguro de eliminar a ${nombre}?\n\nEsta acción no se puede deshacer.`)) return;
-
-    try {
-        const res = await fetch(`${SERVER_BASE}/api/docentes/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            alert(data.message);
-            cargarDocentesGestion();
-            cargarDatosServidor();
-        }
-    } catch(e) {
-        alert('Error al eliminar');
-    }
-}
-function abrirModalCambiarPassword() {
-    initModales();
-    if (modalPassword) {
-        // Limpiar campos
-        document.getElementById('pass-actual').value = '';
-        document.getElementById('pass-nueva').value = '';
-        document.getElementById('pass-confirmar').value = '';
-        document.getElementById('email-recuperacion').value = '';
-        modalPassword.show();
-    } else {
-        alert("Error cargando el modal. Recarga la página.");
-    }
-}
-
-async function cambiarPassword() {
-    const passActual = document.getElementById('pass-actual').value.trim();
-    const passNueva = document.getElementById('pass-nueva').value.trim();
-    const passConfirmar = document.getElementById('pass-confirmar').value.trim();
-    const email = document.getElementById('email-recuperacion').value.trim();
-
-    // Solo admin puede cambiar contraseña
-    if (userRole !== 'admin') {
-        alert("⚠️ Solo el administrador puede cambiar contraseña y correo.");
-        return;
-    }
-
-    if (!passActual || !passNueva || !passConfirmar) {
-        alert("⚠️ Todos los campos de contraseña son obligatorios");
-        return;
-    }
-
-    if (passNueva !== passConfirmar) {
-        alert("⚠️ Las nuevas contraseñas no coinciden");
-        return;
-    }
-
-    if (passNueva.length < 6) {
-        alert("⚠️ La nueva contraseña debe tener al menos 6 caracteres");
-        return;
-    }
-
-    try {
-        const res = await fetch(`${SERVER_BASE}/api/usuario/cambiar-password`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-                passwordActual: passActual,
-                passwordNuevo: passNueva,
-                email: email || null
-            })
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            alert("✅ ¡Contraseña y correo actualizados correctamente!");
-            modalPassword.hide();
-            // Limpiar campos
-            document.getElementById('pass-actual').value = '';
-            document.getElementById('pass-nueva').value = '';
-            document.getElementById('pass-confirmar').value = '';
-            document.getElementById('email-recuperacion').value = '';
-        } else {
-            alert("❌ " + (data.error || "No se pudo actualizar"));
-        }
-    } catch (e) {
-        console.error(e);
-        alert("❌ Error de conexión con el servidor");
-    }
-}
-// ===================== RECUPERAR CONTRASEÑA =====================
-function mostrarRecuperacion() {
-    initModales();
-    document.getElementById('email-recuperar').value = '';
-    modalRecuperar.show();
-}
-
-async function enviarRecuperacion() {
-    const email = document.getElementById('email-recuperar').value.trim();
-    
-    if (!email) {
-        alert("⚠️ Por favor ingresa tu correo electrónico");
-        return;
-    }
-
-    try {
-        const res = await fetch(`${SERVER_BASE}/api/usuario/recuperar-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-
-        const data = await res.json();
-        alert(data.message || "✅ Si el correo está registrado, recibirás un enlace.");
-        modalRecuperar.hide();
-
-    } catch (e) {
-        alert("❌ Error de conexión. Inténtalo más tarde.");
-    }
-}
-    function guardarCorreo(id, email) {
-    if (!email) {
-        alert("Por favor, ingresa un correo válido.");
-        return;
-    }
-
-    fetch('/admin/actualizar-correo', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}` // Si usas tokens
-        },
-        body: JSON.stringify({ usuarioId: id, nuevoEmail: email })
-    })
-    .then(res => res.json())
-    .then(data => {
-        alert(data.mensaje || "Correo actualizado con éxito");
-    })
-    .catch(err => {
-        console.error("Error:", err);
-        alert("Hubo un error al actualizar el correo.");
-    });
-}
-async function solicitarRecuperacion() {
-    const email = prompt("Ingresa tu correo electrónico registrado:");
-    if (!email) return;
-
-    try {
-        const res = await fetch('/recuperar-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-            alert("✅ " + data.mensaje);
-        } else {
-            alert("❌ " + (data.error || "Error al procesar la solicitud"));
-        }
-    } catch (e) {
-        alert("❌ Error de conexión con el servidor.");
-    }
-}
-// ===================== FUNCIONES DE ACCIONES =====================
-function editarDocente(id) {
-    initModales();
-    // Aquí deberías cargar los datos del docente y abrir el modal de edición
-    alert("Función de edición en desarrollo...\nID: " + id);
-    // Luego implementaremos el modalEditar completo
-}
-
-function abrirGestionPersonal() {
-    if (userRole !== 'admin') {
-        alert("Solo el administrador puede acceder.");
-        return;
-    }
-    initModales();
-    if (modalGestion) {
-        modalGestion.show();
-        cargarDocentesGestion();
-    } else {
-        alert("Error: Modal de gestión no encontrado.");
-    }
-}
-
-function abrirModalCambiarPassword() {
-    initModales();
-    if (modalPassword) {
-        modalPassword.show();
-    } else {
-        alert("Error: Modal de contraseña no encontrado.");
-    }
-}
-
-function mostrarRecuperacion() {
-    initModales();
-    if (modalRecuperar) {
-        modalRecuperar.show();
-    } else {
-        alert("Error: Modal de recuperación no encontrado.");
-    }
-}
-// ===================== EDITAR DOCENTE (ABRIR MODAL) =====================
-async function editarDocente(id) {
-    initModales();
-
-    const modalEditar = new bootstrap.Modal(document.getElementById('modalEditar'));
-
-    try {
-        const mes = document.getElementById('filtro-mes').value;
-        const res = await fetch(`${SERVER_BASE}/api/docentes?mes=${mes}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-
-        const docentes = await res.json();
-        const docente = docentes.find(d => d.id_docente == id);
-
-        if (!docente) {
-            alert("No se encontró el docente");
-            return;
-        }
-
-        // Llenar datos en el modal
-        document.getElementById('edit-id').value = docente.id_docente;
-        document.getElementById('edit-nombre-display').textContent = docente.nombre || 'Sin nombre';
-        document.getElementById('edit-codigo-display').textContent = `DNI: ${docente.dni || ''}`;
-
-        // Campos principales
-        document.getElementById('edit-sb').value = docente.sueldo_base || 0;
-        document.getElementById('edit-al').value = docente.adelantos || 0;
-        document.getElementById('edit-creditos').value = docente.creditos || 0;
-        document.getElementById('edit-prestamos').value = docente.prestamos || 0;
-        document.getElementById('edit-pen').value = docente.pension || 0;
-        document.getElementById('edit-fl').value = docente.faltas || 0;
-        document.getElementById('edit-tar').value = docente.tardanza || 0;
-        document.getElementById('edit-bono').value = docente.bono || 0;
-        document.getElementById('edit-desmrito-monto').value = docente.desmrito_monto || 0;
-
-        // Selects
-        if (docente.tipo_afp) document.getElementById('edit-tipo-afp').value = docente.tipo_afp;
-        if (docente.tipo_salud) document.getElementById('edit-tipo-salud').value = docente.tipo_salud;
-
-        // Actualizar resumen
-        actualizarResumenNeto();
-
-        modalEditar.show();
-
-    } catch (e) {
-        console.error(e);
-        alert("Error al cargar los datos del docente");
-    }
-}
-async function guardarCambiosModal() {
-    const id = document.getElementById('edit-id').value;
-    if (!id) return;
-
-    const payload = {
-        sueldo_base: Number(document.getElementById('edit-sb').value) || 0,
-        adelantos: Number(document.getElementById('edit-al').value) || 0,
-        creditos: Number(document.getElementById('edit-creditos').value) || 0,
-        prestamos: Number(document.getElementById('edit-prestamos').value) || 0,
-        pension: Number(document.getElementById('edit-pen').value) || 0,
-        faltas: Number(document.getElementById('edit-fl').value) || 0,
-        tardanza: Number(document.getElementById('edit-tar').value) || 0,
-        bono: Number(document.getElementById('edit-bono').value) || 0,
-        desmrito_monto: Number(document.getElementById('edit-desmrito-monto').value) || 0,
-        tipo_afp: document.getElementById('edit-tipo-afp').value,
-        tipo_salud: document.getElementById('edit-tipo-salud').value,
-        mes: document.getElementById('filtro-mes').value
-    };
-
-    try {
-        const res = await fetch(`${SERVER_BASE}/api/docentes/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-            alert("✅ Datos guardados correctamente");
-            bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
-            cargarDatosServidor(); // Recargar tabla
-        } else {
-            alert("❌ Error al guardar los cambios");
-        }
-    } catch (e) {
-        alert("Error de conexión");
-    }
-}
 </script>
 
 <!-- ── FOOTER GRTECH ── -->
