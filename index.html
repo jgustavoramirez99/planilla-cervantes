@@ -1766,17 +1766,36 @@ async function descargarExcel() {
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
     }
 // ===================== MODALES (Inicialización) =====================
+// ===================== INICIALIZACIÓN DE MODALES =====================
 let modalGestion = null;
 let modalAgregar = null;
 let modalPassword = null;
 let modalRecuperar = null;
 
-// Inicializar modales
 function initModales() {
-    if (!modalGestion) modalGestion = new bootstrap.Modal(document.getElementById('modalGestionPersonal'));
-    if (!modalAgregar) modalAgregar = new bootstrap.Modal(document.getElementById('modalAgregarDocente'));
-    if (!modalPassword) modalPassword = new bootstrap.Modal(document.getElementById('modalCambiarPassword'));
-    if (!modalRecuperar) modalRecuperar = new bootstrap.Modal(document.getElementById('modalRecuperarPassword'));
+    // Modal Gestión de Personal
+    if (!modalGestion) {
+        const modalEl = document.getElementById('modalGestionPersonal');
+        if (modalEl) modalGestion = new bootstrap.Modal(modalEl);
+    }
+
+    // Modal Agregar Docente
+    if (!modalAgregar) {
+        const modalEl = document.getElementById('modalAgregarDocente');
+        if (modalEl) modalAgregar = new bootstrap.Modal(modalEl);
+    }
+
+    // Modal Cambiar Contraseña
+    if (!modalPassword) {
+        const modalEl = document.getElementById('modalCambiarPassword');
+        if (modalEl) modalPassword = new bootstrap.Modal(modalEl);
+    }
+
+    // Modal Recuperar Contraseña
+    if (!modalRecuperar) {
+        const modalEl = document.getElementById('modalRecuperarPassword');
+        if (modalEl) modalRecuperar = new bootstrap.Modal(modalEl);
+    }
 }
 // ===================== ABRIR GESTIÓN DE PERSONAL (SOLO ADMIN) =====================
 async function abrirGestionPersonal() {
@@ -1902,7 +1921,7 @@ async function cambiarPassword() {
     const passConfirmar = document.getElementById('pass-confirmar').value.trim();
     const email = document.getElementById('email-recuperacion').value.trim();
 
-    // Validación de rol primero
+    // Solo admin puede cambiar contraseña
     if (userRole !== 'admin') {
         alert("⚠️ Solo el administrador puede cambiar contraseña y correo.");
         return;
@@ -1942,6 +1961,11 @@ async function cambiarPassword() {
         if (data.success) {
             alert("✅ ¡Contraseña y correo actualizados correctamente!");
             modalPassword.hide();
+            // Limpiar campos
+            document.getElementById('pass-actual').value = '';
+            document.getElementById('pass-nueva').value = '';
+            document.getElementById('pass-confirmar').value = '';
+            document.getElementById('email-recuperacion').value = '';
         } else {
             alert("❌ " + (data.error || "No se pudo actualizar"));
         }
