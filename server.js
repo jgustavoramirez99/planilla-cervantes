@@ -19,11 +19,14 @@ app.use(express.static(path.join(__dirname, './')));
 
 // --- 2. CONEXIÓN A LA DB (MOVIDO ARRIBA) ---
 const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'planilla_db'
-    
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 25060,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false   // Necesario para Aiven en Render
+    }
 });
 
 db.connect((err) => {
