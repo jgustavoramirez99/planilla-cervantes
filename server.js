@@ -17,27 +17,27 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, './')));
 
-// --- 2. CONEXIÓN A LA DB (MOVIDO ARRIBA) ---
+// ===================== CONEXIÓN A AIVEN (SSL OBLIGATORIO) =====================
 const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'planilla_db'
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: true,   // Muy importante
+        // Si tienes el certificado CA de Aiven:
+        // ca: fs.readFileSync(path.join(__dirname, 'ca.pem'))
+    }
 });
 
 db.connect((err) => {
     if (err) {
-        console.error('Error conectando a la DB:', err);
+        console.error('❌ Error conectando a Aiven:', err.message);
+        console.error('   → Revisa que el SSL esté correcto y que el host/puerto sean los de Aiven');
         return;
     }
-    console.log('Conectado a la base de datos MySQL');
-    // === AGREGA ESTO AQUÍ PARA GENERAR TU HASH COMPATIBLE ===
-    bcrypt.hash('cervantes2026', 10).then(hash => {
-        console.log("------------------------------------------");
-        console.log("COPIA ESTE HASH PARA TABLEPLUS:");
-        console.log(hash);
-        console.log("------------------------------------------");
-        }).catch(e => console.error(e));
+    console.log('✅ Conectado exitosamente a Aiven MySQL');
 });
 
 // --- 3. CARPETAS Y NODEMAILER ---
@@ -444,36 +444,63 @@ app.delete('/api/docentes/:id', verificarToken, (req, res) => {
     });
 });
 
-// ===================== CAMBIAR CONTRASEÑA + ACTUALIZAR EMAIL =====================
+// ===================== CAMBIAR CONTRASEÑA (SOLO ADMIN) =====================
 app.put('/api/usuario/cambiar-password', verificarToken, async (req, res) => {
     const { passwordActual, passwordNuevo, email } = req.body;
     const username = req.usuario.user;
+    const role = req.usuario.role;
 
-    if (!passwordActual || !passwordNuevo) {
-        return res.status(400).json({ error: 'Faltan campos requeridos' });
+    // 🔥 Solo el administrador puede cambiar contraseña y correo
+    if (role !== 'admin') {
+        return res.status(403).json({ 
+            success: false, 
+            error: 'Solo el administrador puede cambiar contraseña y correo.' 
+        });
     }
 
-    // ✅ Busca en la BD directamente
+    if (!passwordActual || !passwordNuevo) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'La contraseña actual y la nueva son obligatorias' 
+        });
+    }
+
+    // Buscar usuario en la base de datos
     db.query('SELECT * FROM usuarios WHERE user = ?', [username], async (err, results) => {
-        if (err || results.length === 0) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (err) {
+            console.error('Error en DB:', err);
+            return res.status(500).json({ success: false, error: 'Error del servidor' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
         }
 
         const cuenta = results[0];
-        const esValida = await bcrypt.compare(passwordActual, cuenta.pass);
 
+        // Verificar contraseña actual
+        const esValida = await bcrypt.compare(passwordActual, cuenta.pass);
         if (!esValida) {
-            return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+            return res.status(401).json({ success: false, error: 'Contraseña actual incorrecta' });
         }
 
+        // Generar nuevo hash
         const nuevoHash = await bcrypt.hash(passwordNuevo, 10);
 
+        // Actualizar contraseña y correo (si se envió)
         db.query(
             'UPDATE usuarios SET pass = ?, email = ? WHERE user = ?',
             [nuevoHash, email || cuenta.email, username],
             (err2) => {
-                if (err2) return res.status(500).json({ error: err2.message });
-                res.json({ success: true, message: '✅ Contraseña y correo actualizados correctamente' });
+                if (err2) {
+                    console.error('Error actualizando:', err2);
+                    return res.status(500).json({ success: false, error: 'Error al actualizar en la base de datos' });
+                }
+
+                res.json({ 
+                    success: true, 
+                    message: '✅ Contraseña y correo actualizados correctamente' 
+                });
             }
         );
     });

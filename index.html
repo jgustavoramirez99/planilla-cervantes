@@ -1480,7 +1480,7 @@ function abrirModal(id) {
         }
     }
 
-        async function guardarCambiosModal() {
+    async function guardarCambiosModal() {
     if (userRole !== 'admin') return;
 
     const id  = document.getElementById('edit-id').value;
@@ -1889,14 +1889,22 @@ async function cambiarPassword() {
     const passConfirmar = document.getElementById('pass-confirmar').value.trim();
     const email = document.getElementById('email-recuperacion').value.trim();
 
+    // Validación de rol primero
+    if (userRole !== 'admin') {
+        alert("⚠️ Solo el administrador puede cambiar contraseña y correo.");
+        return;
+    }
+
     if (!passActual || !passNueva || !passConfirmar) {
         alert("⚠️ Todos los campos de contraseña son obligatorios");
         return;
     }
+
     if (passNueva !== passConfirmar) {
         alert("⚠️ Las nuevas contraseñas no coinciden");
         return;
     }
+
     if (passNueva.length < 6) {
         alert("⚠️ La nueva contraseña debe tener al menos 6 caracteres");
         return;
@@ -1925,10 +1933,10 @@ async function cambiarPassword() {
             alert("❌ " + (data.error || "No se pudo actualizar"));
         }
     } catch (e) {
+        console.error(e);
         alert("❌ Error de conexión con el servidor");
     }
 }
-
 // ===================== RECUPERAR CONTRASEÑA =====================
 function mostrarRecuperacion() {
     initModales();
