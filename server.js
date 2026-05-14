@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, './')));
 
-// ===================== CONEXIÓN A AIVEN MYSQL (CON ca.pem) =====================
+// ===================== CONEXIÓN A AIVEN MYSQL (TEMPORAL - SSL) =====================
 const fs = require('fs');
 const path = require('path');
 
@@ -28,26 +28,20 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ssl: {
-        ca: fs.readFileSync(path.join(__dirname, 'ca.pem')),  // ← Usando el certificado
-        rejectUnauthorized: true
+        rejectUnauthorized: false   // ← Temporalmente desactivamos verificación estricta
     }
 });
 
 db.connect((err) => {
     if (err) {
         console.error('❌ Error conectando a Aiven:', err.message);
-        console.error('   → Verifica que el archivo ca.pem esté en la raíz del proyecto');
         return;
     }
-    console.log('✅ ¡Conectado exitosamente a Aiven MySQL con SSL!');
+    console.log('✅ ¡Conectado exitosamente a Aiven MySQL!');
 });
 
-// Manejo de errores de conexión
 db.on('error', (err) => {
-    console.error('❌ Error de BD en tiempo de ejecución:', err.message);
-    if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
-        console.log('🔄 Intentando reconectar...');
-    }
+    console.error('❌ Error de BD:', err.message);
 });
 
 // --- 3. CARPETAS Y NODEMAILER ---
