@@ -184,26 +184,29 @@ app.post('/api/login', async (req, res) => {
             return res.status(500).json({ success: false, message: 'Error en el servidor' });
         }
 
-        console.log('👤 Usuarios encontrados:', results.length);
-        
         if (results.length === 0) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
 
         const cuenta = results[0];
         
-        console.log('🔑 Hash en BD:', cuenta.pass);
-        
         const passValida = await bcrypt.compare(pass, cuenta.pass);
         
-        console.log('✅ Pass válida:', passValida);
-
         if (!passValida) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
 
+        // 🔥 CORRECCIÓN: Usar la columna correcta
+        const userRole = cuenta.rol || cuenta.role || 'user';
+
+        console.log(`✅ Login exitoso - Usuario: ${cuenta.user} | Rol: ${userRole}`);
+
         const token = jwt.sign(
-            { user: cuenta.user, role: cuenta.role, dni: cuenta.dni },
+            { 
+                user: cuenta.user, 
+                role: userRole,           // ← Usamos el rol correcto
+                dni: cuenta.dni 
+            },
             JWT_SECRET,
             { expiresIn: '8h' }
         );
@@ -212,7 +215,7 @@ app.post('/api/login', async (req, res) => {
             success: true,
             token,
             user: cuenta.user,
-            role: cuenta.role,
+            role: userRole,
             nombre: cuenta.nombre,
             dni: cuenta.dni,
             telefono: cuenta.telefono
