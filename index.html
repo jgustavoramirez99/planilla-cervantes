@@ -1440,17 +1440,18 @@ function descargarExcel() {
                    '10':'Octubre','11':'Noviembre','12':'Diciembre'};
     const mesNombre = (meses[mes] || 'Mayo') + ' 2026';
 
-    // ===================== PREPARAR DATOS =====================
     let data = [
         ["CERVANTES EDUCA SAC"],
-        [`PLANILLA DE REMUNERACIONES - ${mesNombre}`],
-        [`Fecha: ${new Date().toLocaleDateString('es-PE')}`],
-        [], // línea en blanco
-        // Encabezados
-        ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
-         "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PENSIÓN", "TARDANZAS + FALTAS", 
-         "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO BCP", "AFP %"]
+        [`PLANILLA DE REMUNERACIONES - ${mesNombre} 2026`],
+        [`Fecha de emisión: ${new Date().toLocaleDateString('es-PE', {day:'2-digit', month:'long', year:'numeric'})}`],
+        [""]
     ];
+
+    // Encabezados
+    const headers = ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
+                    "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PENSIÓN", "TARDANZAS + FALTAS", 
+                    "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO BCP", "AFP %"];
+    data.push(headers);
 
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0 };
 
@@ -1470,62 +1471,77 @@ function descargarExcel() {
         const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
 
         data.push([
-            i+1, 
-            d.nombre || '', 
-            d.dni || '', 
-            pagado, 
-            sb,
-            d.tipo_afp || 'ONP',
-            esalud,
-            adel,
-            cred,
-            pen,
-            tard,
-            activ,
-            desmr,
-            bono,
-            neto,
-            consolidado,
+            i+1, d.nombre || '', d.dni || '', pagado, sb, d.tipo_afp || 'ONP',
+            esalud, adel, cred, pen, tard, activ, desmr, bono, neto, consolidado,
             d.tipo_afp === 'NINGUNO' ? '—' : '13%'
         ]);
 
-        // Acumular totales
-        totales.pagado += pagado;
-        totales.sb += sb;
-        totales.esalud += esalud;
-        totales.adel += adel;
-        totales.cred += cred;
-        totales.pen += pen;
-        totales.tard += tard;
-        totales.activ += activ;
-        totales.desmr += desmr;
-        totales.bono += bono;
-        totales.neto += neto;
-        totales.consolidado += consolidado;
+        totales.pagado += pagado; totales.sb += sb; totales.esalud += esalud;
+        totales.adel += adel; totales.cred += cred; totales.pen += pen;
+        totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
+        totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
     });
 
-    // Fila de totales
-    data.push([
-        "", "TOTAL GENERAL", "", totales.pagado, totales.sb, "", totales.esalud, 
-        totales.adel, totales.cred, totales.pen, totales.tard, totales.activ, 
-        totales.desmr, totales.bono, totales.neto, totales.consolidado, ""
-    ]);
+    // Totales
+    data.push(["", "TOTAL GENERAL", "", totales.pagado, totales.sb, "", totales.esalud, 
+               totales.adel, totales.cred, totales.pen, totales.tard, totales.activ, 
+               totales.desmr, totales.bono, totales.neto, totales.consolidado, ""]);
 
-    // ===================== CREAR EXCEL =====================
+    // ===================== CREAR EXCEL CON ESTILOS =====================
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // Ajustar anchos de columna
+    // Ancho de columnas
     ws['!cols'] = [
-        {wch:5}, {wch:40}, {wch:12}, {wch:14}, {wch:16}, {wch:14},
-        {wch:16}, {wch:12}, {wch:12}, {wch:14}, {wch:16}, {wch:12},
-        {wch:12}, {wch:12}, {wch:16}, {wch:18}, {wch:10}
+        {wch:6}, {wch:42}, {wch:13}, {wch:14}, {wch:16}, {wch:14}, {wch:16},
+        {wch:13}, {wch:13}, {wch:14}, {wch:18}, {wch:13}, {wch:13}, {wch:13},
+        {wch:16}, {wch:18}, {wch:10}
     ];
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+
+    // Aplicar estilos celda por celda
+    for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+            const cell_address = XLSX.utils.encode_cell({r: R, c: C});
+            if (!ws[cell_address]) continue;
+
+            const cell = ws[cell_address];
+            
+            // Estilo por defecto (centrado)
+            cell.s = {
+                alignment: { horizontal: "center", vertical: "center" }
+            };
+
+            // === FILA DE ENCABEZADOS (fila 4 - índice 4) ===
+            if (R === 4) {
+                cell.s.fill = { fgColor: { rgb: "1F3864" } };     // Azul oscuro
+                cell.s.font = { bold: true, color: { rgb: "FFFFFF" } };
+                cell.s.alignment = { horizontal: "center", vertical: "center" };
+            }
+
+            // === FILAS DE DATOS (desde fila 5) ===
+            if (R > 4) {
+                // Columnas A, B, C → Celeste claro
+                if (C <= 2) {
+                    cell.s.fill = { fgColor: { rgb: "BDD7EE" } };   // Celeste
+                } 
+                // Columnas D en adelante → Amarillo pálido
+                else {
+                    cell.s.fill = { fgColor: { rgb: "FFF2CC" } };   // Amarillo pálido
+                }
+            }
+
+            // Totales (última fila) en negrita con fondo azul oscuro
+            if (R === range.e.r) {
+                cell.s.fill = { fgColor: { rgb: "1F3864" } };
+                cell.s.font = { bold: true, color: { rgb: "FFFFFF" } };
+            }
+        }
+    }
 
     XLSX.utils.book_append_sheet(wb, ws, `Planilla ${mesNombre}`);
     XLSX.writeFile(wb, `Planilla_Cervantes_${mesNombre.replace(' ', '_')}.xlsx`);
-
-    console.log("✅ Excel generado correctamente con", docentesData.length, "docentes");
 }
        
         // Actualizar resumen de Neto en el modal
