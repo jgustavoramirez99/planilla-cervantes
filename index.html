@@ -1470,6 +1470,13 @@ async function descargarExcel() {
         border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
     };
 
+    const monedaStyle = {
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } },
+    alignment: { horizontal: 'center', vertical: 'middle' },
+    border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
+    numFmt: '"S/ "#,##0.00'
+    };
+
     const totalStyle = {
         font: { bold: true, color: { argb: 'FFFFFFFF' } },
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
@@ -1547,7 +1554,7 @@ async function descargarExcel() {
         ws.getCell(row, 3).value = d.dni || '';
         ws.getCell(row, 4).value = pagado;
         ws.getCell(row, 5).value = sb;
-        ws.getCell(row, 6).value = d.tipo_afp || 'ONP';
+        ws.getCell(row, 6).value = d.afp || d.tipo_afp || 'ONP';
         ws.getCell(row, 7).value = esalud;
         ws.getCell(row, 8).value = adel;
         ws.getCell(row, 9).value = cred;
@@ -1560,11 +1567,13 @@ async function descargarExcel() {
         ws.getCell(row, 16).value = consolidado;
         ws.getCell(row, 17).value = d.tipo_afp === 'NINGUNO' ? '—' : '13%';
 
+        const colsMoneda = [4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         for (let col = 1; col <= 17; col++) {
             const cell = ws.getCell(row, col);
             if (col <= 3) cell.style = celesteStyle;
+            else if (colsMoneda.includes(col)) cell.style = monedaStyle;
             else cell.style = amarilloStyle;
-        }
+    }
 
         totales.pagado += pagado; totales.sb += sb; totales.esalud += esalud;
         totales.adel += adel; totales.cred += cred; totales.pen += pen;
@@ -1590,9 +1599,17 @@ async function descargarExcel() {
     ws.getCell(totalRow, 15).value = totales.neto;
     ws.getCell(totalRow, 16).value = totales.consolidado;
 
-    for (let col = 1; col <= 17; col++) {
-        ws.getCell(totalRow, col).style = totalStyle;
-    }
+    const totalMonedaStyle = {
+    font: { bold: true, color: { argb: 'FFFFFFFF' } },
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
+    alignment: { horizontal: 'center', vertical: 'middle' },
+    border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
+    numFmt: '"S/ "#,##0.00'
+};
+for (let col = 1; col <= 17; col++) {
+    const cell = ws.getCell(totalRow, col);
+    cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
+}
 
     // Ancho de columnas
     ws.columns.forEach((column, i) => {
