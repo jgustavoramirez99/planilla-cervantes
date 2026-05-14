@@ -4,7 +4,8 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 const jwt    = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 require('dotenv').config();
 
@@ -90,6 +91,7 @@ function conectarDB() {
         } else {
             console.log('✅ Conectado a MySQL (Aiven) correctamente.');
         }
+        
     });
 
     db.on('error', err => {
@@ -102,7 +104,16 @@ function conectarDB() {
 }
 
 conectarDB();
+// ===================== CONFIGURACIÓN DE CORREO =====================
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
+console.log('📧 Transporter de correo configurado');
 // ============================================================
 // USUARIOS DEL SISTEMA — cargados desde .env (hashes bcrypt)
 // ============================================================
@@ -236,7 +247,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
         desmrito_nivel, desmrito_monto
     } = req.body;
 
-    // === CÁLCULO DEL CONSOLIDADO BCP ===
+    // === CÁLCULO DEL CONSOLIDADO  ===
     const esalud = (Number(sueldo_base) || 0) * 0.09;
     const consolidado = (Number(pagado) || 0) + esalud + (Number(bono) || 0);
 
@@ -393,32 +404,132 @@ app.delete('/api/docentes/:id', verificarToken, (req, res) => {
     });
 });
 
-// ===================== CAMBIAR CONTRASEÑA =====================
+// ===================== CAMBIAR CONTRASEÑA + ACTUALIZAR EMAIL =====================
 app.put('/api/usuario/cambiar-password', verificarToken, async (req, res) => {
-    if (!req.body.passwordActual || !req.body.passwordNuevo) {
-        return res.status(400).json({error: 'Faltan datos'});
-    }
-
-    const { passwordActual, passwordNuevo } = req.body;
+    const { passwordActual, passwordNuevo, email } = req.body;
     const username = req.usuario.user;
 
-    // Buscar usuario
-    const cuenta = usuarios.find(u => u.user === username);
-    if (!cuenta) return res.status(404).json({error: 'Usuario no encontrado'});
+    try {
+        const usuariosDB = await getUsuarios();
+        const cuentaIndex = usuariosDB.findIndex(u => u.user === username);
+        if (cuentaIndex === -1) return res.status(404).json({error: 'Usuario no encontrado'});
 
-    const esValida = await bcrypt.compare(passwordActual, cuenta.pass);
-    if (!esValida) return res.status(401).json({error: 'Contraseña actual incorrecta'});
+        const cuenta = usuariosDB[cuentaIndex];
 
-    // Actualizar contraseña
-    const nuevoHash = await bcrypt.hash(passwordNuevo, 10);
-    cuenta.pass = nuevoHash;
+        const esValida = await bcrypt.compare(passwordActual, cuenta.pass);
+        if (!esValida) return res.status(401).json({error: 'Contraseña actual incorrecta'});
 
-    // Aquí deberías guardar el cambio en .env o en una tabla de usuarios, pero por simplicidad lo dejamos en memoria por ahora
-    res.json({success: true, message: 'Contraseña cambiada correctamente'});
+        const nuevoHash = await bcrypt.hash(passwordNuevo, 10);
+
+        db.query(
+            'UPDATE usuarios SET pass = ?, email = ? WHERE user = ?',
+            [nuevoHash, email || cuenta.email, username],
+            (err) => {
+                if (err) return res.status(500).json({error: err.message});
+                
+                cuenta.pass = nuevoHash;
+                if (email) cuenta.email = email;
+
+                res.json({success: true, message: 'Contraseña y correo actualizados correctamente'});
+            }
+        );
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({error: 'Error del servidor'});
+    }
 });
 // ============================================================
 // INICIO DEL SERVIDOR
 // ============================================================
+// ===================== RECUPERAR CONTRASEÑA (Olvidé mi contraseña) =====================
+app.post('/api/usuario/recuperar-password', async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({error: 'Email es requerido'});
+
+    try {
+        const usuariosDB = await getUsuarios();
+        const cuenta = usuariosDB.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+        if (!cuenta) {
+            return res.json({success: true, message: 'Si el correo está registrado, recibirás un enlace.'});
+        }
+
+        const resetToken = jwt.sign({ user: cuenta.user }, JWT_SECRET, { expiresIn: '1h' });
+
+        db.query(
+            'UPDATE usuarios SET reset_token = ?, reset_expira = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE user = ?',
+            [resetToken, cuenta.user]
+        );
+
+        const resetLink = `https://${req.get('host')}/reset-password.html?token=${resetToken}`;
+
+        await transporter.sendMail({
+            from: `"Sistema de Planillas" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "🔑 Restablecer Contraseña - Cervantes Planilla",
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Restablecer tu Contraseña</h2>
+                    <p>Hola <strong>${cuenta.nombre}</strong>,</p>
+                    <p>Has solicitado restablecer tu contraseña del Sistema de Planillas.</p>
+                    <p style="margin: 30px 0;">
+                        <a href="${resetLink}" 
+                           style="background: #3498db; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                            Restablecer Contraseña
+                        </a>
+                    </p>
+                    <p>Este enlace expirará en <strong>1 hora</strong>.</p>
+                    <small>Si no solicitaste esto, ignora este correo.</small>
+                </div>
+            `
+        });
+
+        res.json({success: true, message: 'Se ha enviado un enlace de recuperación a tu correo.'});
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({error: 'Error al procesar la solicitud'});
+    }
+});
+// ===================== RESTABLECER CONTRASEÑA (desde el enlace del correo) =====================
+app.post('/api/usuario/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.status(400).json({ success: false, error: 'Token y contraseña son requeridos' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const username = decoded.user;
+
+        // Verificar que el token no haya expirado
+        db.query(
+            'SELECT * FROM usuarios WHERE user = ? AND reset_token = ? AND reset_expira > NOW()',
+            [username, token],
+            async (err, results) => {
+                if (err || results.length === 0) {
+                    return res.status(400).json({ success: false, error: 'Enlace inválido o expirado' });
+                }
+
+                const nuevoHash = await bcrypt.hash(password, 10);
+
+                db.query(
+                    'UPDATE usuarios SET pass = ?, reset_token = NULL, reset_expira = NULL WHERE user = ?',
+                    [nuevoHash, username],
+                    (err2) => {
+                        if (err2) return res.status(500).json({ success: false, error: 'Error al actualizar' });
+                        
+                        res.json({ success: true, message: 'Contraseña restablecida correctamente' });
+                    }
+                );
+            }
+        );
+    } catch (e) {
+        res.status(400).json({ success: false, error: 'Enlace inválido o expirado' });
+    }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);

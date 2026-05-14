@@ -125,6 +125,11 @@
                 <label class="form-label small fw-bold">Contraseña</label>
                 <input type="password" id="pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
             </div>
+            <div class="text-end mb-3">
+                <a href="#" onclick="mostrarRecuperacion()" class="text-muted small">
+                    ¿Olvidaste tu contraseña?
+                </a>
+            </div>
             <button type="submit" id="btn-login" class="btn btn-primary w-100 py-2 fw-bold">
                 <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
                 INGRESAR AL SISTEMA
@@ -541,7 +546,7 @@
 <div class="modal fade" id="modalCambiarPassword" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
+            <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title"><i class="fa-solid fa-key"></i> Cambiar Contraseña</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -552,20 +557,47 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Nueva Contraseña</label>
-                    <input type="password" id="pass-nueva" class="form-control" placeholder="Nueva contraseña">
+                    <input type="password" id="pass-nueva" class="form-control" placeholder="Mínimo 6 caracteres">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Confirmar Nueva Contraseña</label>
-                    <input type="password" id="pass-confirmar" class="form-control" placeholder="Repetir nueva contraseña">
+                    <input type="password" id="pass-confirmar" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Correo Electrónico (para recuperación)</label>
+                    <input type="email" id="email-recuperacion" class="form-control" placeholder="tucorreo@ejemplo.com">
+                    <small class="text-muted">Este correo se guardará para recuperar tu contraseña en el futuro</small>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="cambiarPassword()">Cambiar Contraseña</button>
+                <button type="button" class="btn btn-primary" onclick="cambiarPassword()">Guardar Cambios</button>
             </div>
         </div>
     </div>
 </div>
+<!-- ===================== MODAL RECUPERAR CONTRASEÑA ===================== -->
+<div class="modal fade" id="modalRecuperarPassword" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-envelope"></i> Recuperar Contraseña</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Ingresa tu correo electrónico registrado:</p>
+                <input type="email" id="email-recuperar" class="form-control" placeholder="tuemail@ejemplo.com">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="enviarRecuperacion()">
+                    Enviar Enlace
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // ============================================================
     // CONFIGURACIÓN
@@ -1726,18 +1758,25 @@ async function descargarExcel() {
         document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
     }
-    let modalGestion = null;
-    let modalAgregar = null;
+// ===================== MODALES (Inicialización) =====================
+let modalGestion = null;
+let modalAgregar = null;
+let modalPassword = null;
+let modalRecuperar = null;
 
 // Inicializar modales
 function initModales() {
-    modalGestion = new bootstrap.Modal(document.getElementById('modalGestionPersonal'));
-    modalAgregar = new bootstrap.Modal(document.getElementById('modalAgregarDocente'));
+    if (!modalGestion) modalGestion = new bootstrap.Modal(document.getElementById('modalGestionPersonal'));
+    if (!modalAgregar) modalAgregar = new bootstrap.Modal(document.getElementById('modalAgregarDocente'));
+    if (!modalPassword) modalPassword = new bootstrap.Modal(document.getElementById('modalCambiarPassword'));
+    if (!modalRecuperar) modalRecuperar = new bootstrap.Modal(document.getElementById('modalRecuperarPassword'));
 }
-
-// Abrir Gestión de Personal
+// ===================== ABRIR GESTIÓN DE PERSONAL (SOLO ADMIN) =====================
 async function abrirGestionPersonal() {
-    if (userRole !== 'admin') return;
+    if (userRole !== 'admin') {
+        alert("Solo el administrador puede acceder a esta función.");
+        return;
+    }
     initModales();
     modalGestion.show();
     await cargarDocentesGestion();
@@ -1837,17 +1876,16 @@ async function eliminarDocente(id, nombre) {
         alert('Error al eliminar');
     }
 }
-// ===================== CAMBIAR CONTRASEÑA =====================
-let modalPassword = null;
-
+// ===================== CAMBIAR CONTRASEÑA (Admin y Usuarios) =====================
 function abrirModalCambiarPassword() {
-    if (!modalPassword) {
-        modalPassword = new bootstrap.Modal(document.getElementById('modalCambiarPassword'));
-    }
+    initModales();
+    
     // Limpiar campos
     document.getElementById('pass-actual').value = '';
     document.getElementById('pass-nueva').value = '';
     document.getElementById('pass-confirmar').value = '';
+    document.getElementById('email-recuperacion').value = '';
+
     modalPassword.show();
 }
 
@@ -1855,19 +1893,18 @@ async function cambiarPassword() {
     const passActual = document.getElementById('pass-actual').value.trim();
     const passNueva = document.getElementById('pass-nueva').value.trim();
     const passConfirmar = document.getElementById('pass-confirmar').value.trim();
+    const email = document.getElementById('email-recuperacion').value.trim();
 
     if (!passActual || !passNueva || !passConfirmar) {
-        alert("Todos los campos son obligatorios");
+        alert("⚠️ Todos los campos de contraseña son obligatorios");
         return;
     }
-
     if (passNueva !== passConfirmar) {
-        alert("Las nuevas contraseñas no coinciden");
+        alert("⚠️ Las nuevas contraseñas no coinciden");
         return;
     }
-
-    if (passNueva.length < 4) {
-        alert("La nueva contraseña debe tener al menos 4 caracteres");
+    if (passNueva.length < 6) {
+        alert("⚠️ La nueva contraseña debe tener al menos 6 caracteres");
         return;
     }
 
@@ -1880,24 +1917,55 @@ async function cambiarPassword() {
             },
             body: JSON.stringify({
                 passwordActual: passActual,
-                passwordNuevo: passNueva
+                passwordNuevo: passNueva,
+                email: email || null
             })
         });
 
         const data = await res.json();
 
         if (data.success) {
-            alert("✅ Contraseña cambiada correctamente");
+            alert("✅ ¡Contraseña y correo actualizados correctamente!");
             modalPassword.hide();
-            // Opcional: cerrar sesión para que vuelva a loguearse
-            // cerrarSesion();
         } else {
-            alert(data.error || "Error al cambiar contraseña");
+            alert("❌ " + (data.error || "No se pudo actualizar"));
         }
     } catch (e) {
-        alert("Error de conexión");
+        alert("❌ Error de conexión con el servidor");
     }
 }
+
+// ===================== RECUPERAR CONTRASEÑA =====================
+function mostrarRecuperacion() {
+    initModales();
+    document.getElementById('email-recuperar').value = '';
+    modalRecuperar.show();
+}
+
+async function enviarRecuperacion() {
+    const email = document.getElementById('email-recuperar').value.trim();
+    
+    if (!email) {
+        alert("⚠️ Por favor ingresa tu correo electrónico");
+        return;
+    }
+
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/usuario/recuperar-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await res.json();
+        alert(data.message || "✅ Si el correo está registrado, recibirás un enlace.");
+        modalRecuperar.hide();
+
+    } catch (e) {
+        alert("❌ Error de conexión. Inténtalo más tarde.");
+    }
+}
+
 </script>
 
 <!-- ── FOOTER GRTECH ── -->
