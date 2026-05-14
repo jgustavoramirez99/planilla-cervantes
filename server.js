@@ -18,9 +18,6 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, './')));
 
 // ===================== CONEXIÓN A AIVEN MYSQL (TEMPORAL - SSL) =====================
-const fs = require('fs');
-const path = require('path');
-
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT) || 3306,
@@ -28,7 +25,7 @@ const db = mysql.createConnection({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ssl: {
-        rejectUnauthorized: false   // ← Temporalmente desactivamos verificación estricta
+        rejectUnauthorized: false   // Temporal - para que funcione
     }
 });
 
