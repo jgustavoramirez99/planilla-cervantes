@@ -509,64 +509,95 @@
     </div>
 </div>
 
+<!-- ===================== MODAL GESTIÓN PERSONAL ===================== -->
+<div class="modal fade" id="modalGestionPersonal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Gestionar Personal</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-success btn-sm" onclick="abrirModalAgregarDocente()">
+                        <i class="fa-solid fa-plus"></i> Agregar Docente
+                    </button>
+                </div>
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>DNI</th>
+                            <th>Código</th>
+                            <th>Sueldo Base</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-gestion"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ===================== MODAL AGREGAR DOCENTE ===================== -->
 <div class="modal fade" id="modalAgregarDocente" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
+            <div class="modal-header">
                 <h5 class="modal-title">Nuevo Docente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
                     <label>Nombre Completo</label>
-                    <input type="text" id="nuevo-nombre" class="form-control" placeholder="Ej: Juan Pérez García">
+                    <input type="text" id="nuevo-nombre" class="form-control">
                 </div>
                 <div class="mb-3">
                     <label>DNI</label>
-                    <input type="text" id="nuevo-dni" class="form-control" maxlength="8">
+                    <input type="text" id="nuevo-dni" class="form-control">
                 </div>
                 <div class="mb-3">
                     <label>Código Trabajador (opcional)</label>
                     <input type="text" id="nuevo-codigo" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label>Sueldo Base (S/)</label>
-                    <input type="number" id="nuevo-sueldo" class="form-control" value="1000">
+                    <label>Sueldo Base</label>
+                    <input type="number" id="nuevo-sueldo" class="form-control" value="1200">
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" onclick="guardarNuevoDocente()">Guardar Docente</button>
+                <button type="button" class="btn btn-primary" onclick="guardarNuevoDocente()">Guardar</button>
             </div>
         </div>
     </div>
 </div>
+
 <!-- ===================== MODAL CAMBIAR CONTRASEÑA ===================== -->
 <div class="modal fade" id="modalCambiarPassword" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="fa-solid fa-key"></i> Cambiar Contraseña</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h5 class="modal-title">Cambiar Contraseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Contraseña Actual</label>
-                    <input type="password" id="pass-actual" class="form-control" placeholder="••••••••">
+                    <label>Contraseña Actual</label>
+                    <input type="password" id="pass-actual" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Nueva Contraseña</label>
-                    <input type="password" id="pass-nueva" class="form-control" placeholder="Mínimo 6 caracteres">
+                    <label>Nueva Contraseña</label>
+                    <input type="password" id="pass-nueva" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Confirmar Nueva Contraseña</label>
+                    <label>Confirmar Nueva Contraseña</label>
                     <input type="password" id="pass-confirmar" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Correo Electrónico (para recuperación)</label>
-                    <input type="email" id="email-recuperacion" class="form-control" placeholder="tucorreo@ejemplo.com">
-                    <small class="text-muted">Este correo se guardará para recuperar tu contraseña en el futuro</small>
+                    <label>Nuevo Correo (opcional)</label>
+                    <input type="email" id="email-recuperacion" class="form-control">
                 </div>
             </div>
             <div class="modal-footer">
@@ -576,28 +607,25 @@
         </div>
     </div>
 </div>
-<!-- ===================== MODAL RECUPERAR CONTRASEÑA ===================== -->
+<!-- MODAL RECUPERAR CONTRASEÑA -->
 <div class="modal fade" id="modalRecuperarPassword" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="fa-solid fa-envelope"></i> Recuperar Contraseña</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header">
+                <h5 class="modal-title">Recuperar Contraseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">Ingresa tu correo electrónico registrado:</p>
-                <input type="email" id="email-recuperar" class="form-control" placeholder="tuemail@ejemplo.com">
+                <p>Ingresa tu correo electrónico registrado:</p>
+                <input type="email" id="email-recuperar" class="form-control" placeholder="tu@email.com">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="enviarRecuperacion()">
-                    Enviar Enlace
-                </button>
+                <button type="button" class="btn btn-primary" onclick="enviarRecuperacion()">Enviar Enlace</button>
             </div>
         </div>
     </div>
 </div>
-
 <script>
     // ============================================================
     // CONFIGURACIÓN
@@ -785,68 +813,53 @@
         }
     }
 
-function renderizarTabla(lista) {
-    const cuerpo = document.getElementById('tabla-cuerpo');
-    cuerpo.innerHTML = '';
+function renderizarTabla(data) {
+    const tbody = document.getElementById('tabla-cuerpo');
+    tbody.innerHTML = '';
 
-    if (!lista || lista.length === 0) {
-        cuerpo.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center p-4 text-muted">
-                    No se encontraron resultados
-                </td>
-            </tr>`;
+    if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">No hay datos para mostrar</td></tr>`;
         return;
     }
 
-    lista.forEach(d => {
-        const sb = Number(d.sueldo_base) || 0;
-        const totalDedReal = (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0) + 
-                             (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0) + 
-                             (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
-        
-        const totalDed = sb === 0 ? 0 : totalDedReal;
-        const neto = sb === 0 ? 0 : sb + (Number(d.bono) || 0) - totalDedReal;
+    data.forEach(docente => {
+        const neto = Number(docente.neto_a_pagar) || 
+                    (Number(docente.sueldo_base || 0) + Number(docente.bono || 0) - 
+                     Number(docente.faltas || 0) - Number(docente.tardanza || 0) - 
+                     Number(docente.adelantos || 0) - 30);
 
-        let badgeColor = 'bg-primary';
-        if (neto < 0) badgeColor = 'bg-danger';
-        else if (d._boletaEmitida) badgeColor = 'bg-success';
-
-        // Botones existentes
-        const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
-        const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
-        const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
-
-        // NUEVO: Columna de Email y Botón Guardar (Solo para Admin)
-        const colEmail = (userRole === 'admin') ? `
-            <td>
-                <div class="input-group input-group-sm">
-                    <input type="email" id="email-${d.id_docente}" value="${d.email || ''}" class="form-control" placeholder="correo@ejemplo.com">
-                    <button class="btn btn-success" onclick="guardarCorreo(${d.id_docente}, document.getElementById('email-${d.id_docente}').value)">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                    </button>
-                </div>
-            </td>` : `<td>${d.email || 'Sin correo'}</td>`;
-
-        cuerpo.innerHTML += `
-            <tr class="fila-docente">
-                <td class="ps-3">
-                    <div class="fw-bold text-dark">${d.nombre}</div>
-                    <small class="text-muted">DNI: ${d.dni || 'Sin DNI'}</small>
-                </td>
-                <td class="text-center">S/ ${sb.toFixed(2)}</td>
-                <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
-                <td class="text-center">
-                    <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
-                </td>
-                ${colEmail}
-                <td class="text-center">
-                    <div class="btn-group gap-1">
-                        ${btnPDF} ${btnWA} ${btnEdit}
-                    </div>
-                </td>
-            </tr>`;
+        const row = document.createElement('tr');
+        row.className = 'fila-docente';
+        row.innerHTML = `
+            <td class="text-start ps-3">
+                <strong>${docente.nombre || 'Sin nombre'}</strong><br>
+                <small class="text-muted">DNI: ${docente.dni || ''}</small>
+            </td>
+            <td class="text-center">S/ ${Number(docente.sueldo_base || 0).toFixed(2)}</td>
+            <td class="text-center text-danger">- S/ ${(Number(docente.faltas || 0) + Number(docente.tardanza || 0) + Number(docente.adelantos || 0) + 30).toFixed(2)}</td>
+            <td class="text-center fw-bold ${neto > 0 ? 'text-success' : 'text-danger'}">
+                S/ ${neto.toFixed(2)}
+            </td>
+            <td class="text-center">
+                <button class="btn btn-sm btn-outline-primary" onclick="editarDocente('${docente.id_docente}')">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
     });
+
+    // === CONTROL DE VISIBILIDAD SEGÚN ROL ===
+    const tablaHeader = document.getElementById('tabla-header');
+    const gestionBtn = document.querySelector('button[onclick="abrirGestionPersonal()"]');
+
+    if (userRole === 'admin') {
+        if (tablaHeader) tablaHeader.style.display = 'flex';
+        if (gestionBtn) gestionBtn.style.display = 'inline-block';
+    } else {
+        if (tablaHeader) tablaHeader.style.display = 'none';
+        if (gestionBtn) gestionBtn.style.display = 'none';
+    }
 }
     // ============================================================
     // BUSCADOR DE DOCENTES (filtra por trabajador y codigo)
