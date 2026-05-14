@@ -817,49 +817,38 @@ function renderizarTabla(data) {
     const tbody = document.getElementById('tabla-cuerpo');
     tbody.innerHTML = '';
 
-    if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">No hay datos para mostrar</td></tr>`;
-        return;
-    }
-
-    data.forEach(docente => {
-        const neto = Number(docente.neto_a_pagar) || 
-                    (Number(docente.sueldo_base || 0) + Number(docente.bono || 0) - 
-                     Number(docente.faltas || 0) - Number(docente.tardanza || 0) - 
-                     Number(docente.adelantos || 0) - 30);
-
+    data.forEach(doc => {
         const row = document.createElement('tr');
         row.className = 'fila-docente';
+        
+        const neto = Number(doc.neto_a_pagar) || 0;
+
         row.innerHTML = `
             <td class="text-start ps-3">
-                <strong>${docente.nombre || 'Sin nombre'}</strong><br>
-                <small class="text-muted">DNI: ${docente.dni || ''}</small>
+                <strong>${doc.nombre || ''}</strong><br>
+                <small>DNI: ${doc.dni || ''}</small>
             </td>
-            <td class="text-center">S/ ${Number(docente.sueldo_base || 0).toFixed(2)}</td>
-            <td class="text-center text-danger">- S/ ${(Number(docente.faltas || 0) + Number(docente.tardanza || 0) + Number(docente.adelantos || 0) + 30).toFixed(2)}</td>
-            <td class="text-center fw-bold ${neto > 0 ? 'text-success' : 'text-danger'}">
+            <td class="text-center">S/ ${Number(doc.sueldo_base || 0).toFixed(2)}</td>
+            <td class="text-center text-danger">- S/ 30.00</td>
+            <td class="text-center fw-bold ${neto >= 0 ? 'text-success' : 'text-danger'}">
                 S/ ${neto.toFixed(2)}
             </td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" onclick="editarDocente('${docente.id_docente}')">
+                ${userRole === 'admin' ? `
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editarDocente('${doc.id_docente}')">
                     <i class="fa-solid fa-pen"></i>
                 </button>
+                <button class="btn btn-sm btn-outline-success" onclick="enviarBoleta('${doc.id_docente}')">
+                    <i class="fa-solid fa-whatsapp"></i>
+                </button>` : ''}
             </td>
         `;
         tbody.appendChild(row);
     });
 
-    // === CONTROL DE VISIBILIDAD SEGÚN ROL ===
-    const tablaHeader = document.getElementById('tabla-header');
-    const gestionBtn = document.querySelector('button[onclick="abrirGestionPersonal()"]');
-
-    if (userRole === 'admin') {
-        if (tablaHeader) tablaHeader.style.display = 'flex';
-        if (gestionBtn) gestionBtn.style.display = 'inline-block';
-    } else {
-        if (tablaHeader) tablaHeader.style.display = 'none';
-        if (gestionBtn) gestionBtn.style.display = 'none';
-    }
+    // Control de botones según rol
+    const header = document.getElementById('tabla-header');
+    if (header) header.style.display = userRole === 'admin' ? 'flex' : 'none';
 }
     // ============================================================
     // BUSCADOR DE DOCENTES (filtra por trabajador y codigo)
@@ -2046,6 +2035,45 @@ async function solicitarRecuperacion() {
         }
     } catch (e) {
         alert("❌ Error de conexión con el servidor.");
+    }
+}
+// ===================== FUNCIONES DE ACCIONES =====================
+function editarDocente(id) {
+    initModales();
+    // Aquí deberías cargar los datos del docente y abrir el modal de edición
+    alert("Función de edición en desarrollo...\nID: " + id);
+    // Luego implementaremos el modalEditar completo
+}
+
+function abrirGestionPersonal() {
+    if (userRole !== 'admin') {
+        alert("Solo el administrador puede acceder.");
+        return;
+    }
+    initModales();
+    if (modalGestion) {
+        modalGestion.show();
+        cargarDocentesGestion();
+    } else {
+        alert("Error: Modal de gestión no encontrado.");
+    }
+}
+
+function abrirModalCambiarPassword() {
+    initModales();
+    if (modalPassword) {
+        modalPassword.show();
+    } else {
+        alert("Error: Modal de contraseña no encontrado.");
+    }
+}
+
+function mostrarRecuperacion() {
+    initModales();
+    if (modalRecuperar) {
+        modalRecuperar.show();
+    } else {
+        alert("Error: Modal de recuperación no encontrado.");
     }
 }
 </script>
