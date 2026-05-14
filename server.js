@@ -130,56 +130,44 @@ try {
 //      las credenciales directamente en el cliente.
 // ============================================================
 app.post('/api/login', async (req, res) => {
-    console.log('Usuarios cargados:', usuarios); // ← agrega esto
     console.log(req.body);
     const { user, pass } = req.body;
 
     if (!user || !pass) {
-
-        return res.status(400).json({
-            success: false,
-            message: 'Faltan credenciales.'
-        });
+        return res.status(400).json({ success: false, message: 'Faltan credenciales.' });
     }
 
-    const cuenta = usuarios.find(u => u.user === user);
+    // ✅ Ahora busca en la base de datos, no en el .env
+    db.query('SELECT * FROM usuarios WHERE user = ?', [user], async (err, results) => {
+        if (err || results.length === 0) {
+            return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+        }
 
-    if (!cuenta) {
-        return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
-    }
+        const cuenta = results[0];
+        const passValida = await bcrypt.compare(pass, cuenta.pass);
 
-    const passValida = await bcrypt.compare(pass, cuenta.pass);
+        if (!passValida) {
+            return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
+        }
 
-    if (!passValida) {
-        return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
-    }
+        const token = jwt.sign(
+            { user: cuenta.user, role: cuenta.role, dni: cuenta.dni },
+            JWT_SECRET,
+            { expiresIn: '8h' }
+        );
 
-    // ========================================================
-    // TOKEN JWT
-    // ========================================================
-    const token = jwt.sign(
-        {
+        res.json({
+            success: true,
+            token,
             user: cuenta.user,
             role: cuenta.role,
-            dni: cuenta.dni
-        },
-        JWT_SECRET,
-        {
-            expiresIn: '8h'
-        }
-    );
-
-    res.json({
-        success: true,
-        token,
-        user: cuenta.user,
-        role: cuenta.role,
-        nombre: cuenta.nombre,
-        dni: cuenta.dni,
-        telefono: cuenta.telefono
+            nombre: cuenta.nombre,
+            dni: cuenta.dni,
+            telefono: cuenta.telefono
+        });
     });
 });
-
+   
 // ============================================================
 // GET /api/docentes?mes=5
 // Filtra por rol usando cabeceras enviadas por el frontend
@@ -410,34 +398,34 @@ app.put('/api/usuario/cambiar-password', verificarToken, async (req, res) => {
     const { passwordActual, passwordNuevo, email } = req.body;
     const username = req.usuario.user;
 
-    try {
-        const usuariosDB = await getUsuarios();
-        const cuentaIndex = usuariosDB.findIndex(u => u.user === username);
-        if (cuentaIndex === -1) return res.status(404).json({error: 'Usuario no encontrado'});
+    if (!passwordActual || !passwordNuevo) {
+        return res.status(400).json({ error: 'Faltan campos requeridos' });
+    }
 
-        const cuenta = usuariosDB[cuentaIndex];
+    // ✅ Busca en la BD directamente
+    db.query('SELECT * FROM usuarios WHERE user = ?', [username], async (err, results) => {
+        if (err || results.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
 
+        const cuenta = results[0];
         const esValida = await bcrypt.compare(passwordActual, cuenta.pass);
-        if (!esValida) return res.status(401).json({error: 'Contraseña actual incorrecta'});
+
+        if (!esValida) {
+            return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+        }
 
         const nuevoHash = await bcrypt.hash(passwordNuevo, 10);
 
         db.query(
             'UPDATE usuarios SET pass = ?, email = ? WHERE user = ?',
             [nuevoHash, email || cuenta.email, username],
-            (err) => {
-                if (err) return res.status(500).json({error: err.message});
-                
-                cuenta.pass = nuevoHash;
-                if (email) cuenta.email = email;
-
-                res.json({success: true, message: 'Contraseña y correo actualizados correctamente'});
+            (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                res.json({ success: true, message: '✅ Contraseña y correo actualizados correctamente' });
             }
         );
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({error: 'Error del servidor'});
-    }
+    });
 });
 // ============================================================
 // INICIO DEL SERVIDOR
@@ -446,52 +434,59 @@ app.put('/api/usuario/cambiar-password', verificarToken, async (req, res) => {
 app.post('/api/usuario/recuperar-password', async (req, res) => {
     const { email } = req.body;
 
-    if (!email) return res.status(400).json({error: 'Email es requerido'});
+    if (!email) return res.status(400).json({ error: 'Email es requerido' });
 
-    try {
-        const usuariosDB = await getUsuarios();
-        const cuenta = usuariosDB.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
-        if (!cuenta) {
-            return res.json({success: true, message: 'Si el correo está registrado, recibirás un enlace.'});
+    // ✅ Busca en la BD directamente
+    db.query('SELECT * FROM usuarios WHERE email = ?', [email.toLowerCase()], async (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error del servidor' });
         }
 
-        const resetToken = jwt.sign({ user: cuenta.user }, JWT_SECRET, { expiresIn: '1h' });
+        // Respuesta genérica por seguridad (no revela si el email existe)
+        if (results.length === 0) {
+            return res.json({ success: true, message: 'Si el correo está registrado, recibirás un enlace.' });
+        }
 
-        db.query(
-            'UPDATE usuarios SET reset_token = ?, reset_expira = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE user = ?',
-            [resetToken, cuenta.user]
-        );
+        const cuenta = results[0];
 
-        const resetLink = `https://${req.get('host')}/reset-password.html?token=${resetToken}`;
+        try {
+            const resetToken = jwt.sign({ user: cuenta.user }, JWT_SECRET, { expiresIn: '1h' });
 
-        await transporter.sendMail({
-            from: `"Sistema de Planillas" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: "🔑 Restablecer Contraseña - Cervantes Planilla",
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2>Restablecer tu Contraseña</h2>
-                    <p>Hola <strong>${cuenta.nombre}</strong>,</p>
-                    <p>Has solicitado restablecer tu contraseña del Sistema de Planillas.</p>
-                    <p style="margin: 30px 0;">
-                        <a href="${resetLink}" 
-                           style="background: #3498db; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                            Restablecer Contraseña
-                        </a>
-                    </p>
-                    <p>Este enlace expirará en <strong>1 hora</strong>.</p>
-                    <small>Si no solicitaste esto, ignora este correo.</small>
-                </div>
-            `
-        });
+            db.query(
+                'UPDATE usuarios SET reset_token = ?, reset_expira = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE user = ?',
+                [resetToken, cuenta.user]
+            );
 
-        res.json({success: true, message: 'Se ha enviado un enlace de recuperación a tu correo.'});
+            const resetLink = `https://${req.get('host')}/reset-password.html?token=${resetToken}`;
 
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({error: 'Error al procesar la solicitud'});
-    }
+            await transporter.sendMail({
+                from: `"Sistema de Planillas" <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject: "🔑 Restablecer Contraseña - Cervantes Planilla",
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2>Restablecer tu Contraseña</h2>
+                        <p>Hola <strong>${cuenta.nombre}</strong>,</p>
+                        <p>Has solicitado restablecer tu contraseña del Sistema de Planillas.</p>
+                        <p style="margin: 30px 0;">
+                            <a href="${resetLink}" 
+                               style="background: #3498db; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                Restablecer Contraseña
+                            </a>
+                        </p>
+                        <p>Este enlace expirará en <strong>1 hora</strong>.</p>
+                        <small>Si no solicitaste esto, ignora este correo.</small>
+                    </div>
+                `
+            });
+
+            res.json({ success: true, message: 'Se ha enviado un enlace de recuperación a tu correo.' });
+
+        } catch (e) {
+            console.error('Error al enviar correo:', e);
+            res.status(500).json({ error: 'Error al enviar el correo. Verifica EMAIL_USER y EMAIL_PASS en el .env' });
+        }
+    });
 });
 // ===================== RESTABLECER CONTRASEÑA (desde el enlace del correo) =====================
 app.post('/api/usuario/reset-password', async (req, res) => {
