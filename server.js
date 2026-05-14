@@ -461,7 +461,24 @@ app.get('/api/whatsapp-link', (req, res) => {
     const texto     = `Hola *${nombre}*, adjunto tu boleta de pago.\n*Total Neto:* S/ ${sueldo}\n*Link:* ${urlBoleta}`;
     res.json({ link: `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(texto)}` });
 });
-
+// DELETE /api/planillas/limpiar?mes=1 — Solo admin
+app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin') {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
+    const mes = parseInt(req.query.mes);
+    if (!mes || mes < 1 || mes > 12) {
+        return res.status(400).json({ error: 'Mes inválido.' });
+    }
+    db.query(
+        'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
+        [mes],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, eliminados: result.affectedRows });
+        }
+    );
+});
 // ============================================================
 // INICIO DEL SERVIDOR
 // ============================================================

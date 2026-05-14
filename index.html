@@ -174,16 +174,19 @@
             <div class="col-md-3" id="filtro-mes-container">
                 <label class="small fw-bold text-muted">PERIODO LABORAL</label>
                 <select id="filtro-mes" class="form-select shadow-sm" onchange="cargarDatosServidor()">
-                    <option value="5">Mayo 2026</option>
-                    <option value="6">Junio 2026</option>
-                    <option value="7">Julio 2026</option>
-                    <option value="8">Agosto 2026</option>
-                    <option value="9">Septiembre 2026</option>
-                    <option value="10">Octubre 2026</option>
-                    <option value="11">Noviembre 2026</option>
-                    <option value="12">Diciembre 2026</option>
-                    <option value="13">Todos los periodos</option> 
-                </select>
+    <option value="1">Enero 2026</option>
+    <option value="2">Febrero 2026</option>
+    <option value="3">Marzo 2026</option>
+    <option value="4">Abril 2026</option>
+    <option value="5" selected>Mayo 2026</option>
+    <option value="6">Junio 2026</option>
+    <option value="7">Julio 2026</option>
+    <option value="8">Agosto 2026</option>
+    <option value="9">Septiembre 2026</option>
+    <option value="10">Octubre 2026</option>
+    <option value="11">Noviembre 2026</option>
+    <option value="12">Diciembre 2026</option>
+</select>
             </div>
             <div class="col-md-3 text-end d-flex align-items-end" id="buscador-container">
                 <div class="input-group">
@@ -255,6 +258,9 @@
                     </button>
                     <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="descargarExcel()">
                         <i class="fa-solid fa-file-excel me-1"></i> Descargar Excel
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm fw-bold shadow-sm me-2" onclick="limpiarMesPrueba()">
+                        <i class="fa-solid fa-trash me-1"></i> Limpiar Mes
                     </button>
                 </div>
             </div>
@@ -1625,6 +1631,29 @@ async function descargarExcel() {
         document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
     }
+    async function limpiarMesPrueba() {
+    const mes = document.getElementById('filtro-mes').value;
+    const meses = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril','5':'Mayo',
+                   '6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre',
+                   '10':'Octubre','11':'Noviembre','12':'Diciembre'};
+    const mesNombre = meses[mes] + ' 2026';
+
+    if (!confirm(`⚠️ ¿Seguro que quieres borrar TODOS los datos de planilla de ${mesNombre}?\n\nEsto no se puede deshacer.`)) return;
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${SERVER_BASE}/api/planillas/limpiar?mes=${mes}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        alert(`✅ Datos de ${mesNombre} eliminados correctamente.`);
+        cargarDatosServidor();
+    } else {
+        alert('❌ Error al limpiar: ' + data.error);
+    }
+}
 </script>
 
 <!-- ── FOOTER GRTECH ── -->
