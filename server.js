@@ -45,13 +45,7 @@ if (!fs.existsSync(BOLETAS_DIR)) {
     fs.mkdirSync(BOLETAS_DIR, { recursive: true });
 }
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER || 'tu_correo@gmail.com', 
-        pass: process.env.EMAIL_PASS || 'xxxx xxxx xxxx xxxx' 
-    }
-});
+
 
 // --- 4. RUTAS DE SEGURIDAD ---
 
