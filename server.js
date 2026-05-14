@@ -130,21 +130,30 @@ try {
 //      las credenciales directamente en el cliente.
 // ============================================================
 app.post('/api/login', async (req, res) => {
-    console.log(req.body);
+    console.log('📨 Body recibido:', req.body);
     const { user, pass } = req.body;
 
     if (!user || !pass) {
         return res.status(400).json({ success: false, message: 'Faltan credenciales.' });
     }
 
-    // ✅ Ahora busca en la base de datos, no en el .env
     db.query('SELECT * FROM usuarios WHERE user = ?', [user], async (err, results) => {
+        
+        console.log('🔍 Error BD:', err);
+        console.log('👤 Usuario encontrado:', results);  // ← esto es clave
+        
         if (err || results.length === 0) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
 
         const cuenta = results[0];
+        
+        console.log('🔑 Hash en BD:', cuenta.pass);
+        console.log('🔑 Pass recibida:', pass);
+        
         const passValida = await bcrypt.compare(pass, cuenta.pass);
+        
+        console.log('✅ Pass válida:', passValida); // ← si sale false aquí, el hash está mal
 
         if (!passValida) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
@@ -167,7 +176,6 @@ app.post('/api/login', async (req, res) => {
         });
     });
 });
-   
 // ============================================================
 // GET /api/docentes?mes=5
 // Filtra por rol usando cabeceras enviadas por el frontend
