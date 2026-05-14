@@ -40,6 +40,14 @@ db.connect((err) => {
 db.on('error', (err) => {
     console.error('❌ Error de BD:', err.message);
 });
+// ===================== GENERAR HASH PARA ADMIN (TEMPORAL) =====================
+bcrypt.hash('cervantes2026', 10).then(hash => {
+    console.log("========================================");
+    console.log("🔑 NUEVO HASH PARA 'cervantes2026':");
+    console.log(hash);
+    console.log("========================================");
+    console.log("Copia este hash y actualízalo en la tabla 'usuarios' para el usuario 'admin'");
+});
 
 // --- 3. CARPETAS Y NODEMAILER ---
 const BOLETAS_DIR = path.join(__dirname, 'boletas');
