@@ -842,7 +842,9 @@ async function enviarWhatsApp(id) {
         const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
         const neto          = sb + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
-        const meses         = {'5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
+        const meses = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril',
+               '5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre',
+               '10':'Octubre','11':'Noviembre','12':'Diciembre'};
         const mesNombre     = (meses[mes] || 'Mayo') + ' 2026';
 
         // ── Logo ─────────────────────────────────────────────────────────────
@@ -1443,8 +1445,9 @@ async function descargarExcel() {
     }
 
     const mes = document.getElementById('filtro-mes').value;
-    const meses = {'5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre',
-                   '10':'Octubre','11':'Noviembre','12':'Diciembre'};
+    const meses = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril',
+               '5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre',
+               '10':'Octubre','11':'Noviembre','12':'Diciembre'};
     const mesNombre = (meses[mes] || 'Mayo') + ' 2026';
 
     const wb = new ExcelJS.Workbook();
