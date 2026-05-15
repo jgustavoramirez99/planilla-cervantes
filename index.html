@@ -93,11 +93,13 @@
 }
 
 .login-card {
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(12px);
+    background: rgba(15, 23, 42, 0.92);     /* Azul oscuro elegante */
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
     padding: 2.8rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    color: white;
 }
 
 /* Responsive */
@@ -110,6 +112,28 @@
         filter: brightness(0.75);
     }
 } 
+.login-card .form-label,
+.login-card h4,
+.login-card h3,
+.login-card .text-muted {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.login-card .alert {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: rgba(220, 53, 69, 0.5);
+    color: white;
+}
+
+.login-card input.form-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.login-card input.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
     </style>
 </head>
 <body> 
