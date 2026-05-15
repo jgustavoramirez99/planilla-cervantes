@@ -235,6 +235,53 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
 .table-hover tbody tr:hover {
     background-color: #334155 !important;
 }
+/* ===================== MODAL OSCURO ===================== */
+.modal-content {
+    background-color: #1e2937 !important;
+    color: #e2e8f0;
+    border: none;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6) !important;
+}
+
+.modal-body {
+    background-color: #1e2937;
+}
+
+.form-control, .form-select {
+    background-color: #334155 !important;
+    border: 1px solid #475569 !important;
+    color: #e2e8f0 !important;
+}
+
+.form-control::placeholder {
+    color: #94a3b8;
+}
+
+.alert-light {
+    background-color: #334155;
+    color: #e2e8f0;
+    border-left-color: #60a5fa;
+}
+
+.text-muted {
+    color: #94a3b8 !important;
+}
+/* ===================== VISTA DE USUARIO ===================== */
+#grafico-usuario-container .card {
+    background-color: #1e2937;
+    color: #e2e8f0;
+}
+
+#detalle-usuario-planilla {
+    color: #e2e8f0;
+}
+
+.table-sm td {
+    color: #e2e8f0;
+}
     </style>
 </head>
 <body> 
@@ -743,35 +790,33 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
     function iniciarSistema(rol) {
     userRole = rol;
 
-    // Resetear todo primero
-    document.getElementById('tabla-header').style.display              = 'none';
-    document.getElementById('buscador-container').style.display        = 'none';
-    document.getElementById('graficos-container').style.display        = 'none';
-    document.getElementById('grafico-usuario-container').style.display = 'none';
-
-    document.getElementById('seccion-login').style.display     = 'none';
+    document.getElementById('seccion-login').style.display = 'none';
     document.getElementById('seccion-principal').style.display = 'block';
     document.getElementById('banner-bienvenida').style.display = 'block';
+
     document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
     document.getElementById('texto-bienvenida').innerText = `Bienvenido, ${userNombre}`;
 
+    // Resetear visibilidad
+    document.getElementById('tabla-header').style.display = 'none';
+    document.getElementById('buscador-container').style.display = 'none';
+    document.getElementById('graficos-container').style.display = 'none';
+    document.getElementById('grafico-usuario-container').style.display = 'none';
+
     if (rol === 'user') {
-        document.getElementById('filtro-mes-container').style.display      = 'block';
+        document.getElementById('filtro-mes-container').style.display = 'block';
         document.getElementById('grafico-usuario-container').style.display = 'block';
         document.getElementById('texto-panel').innerText = 'Mi Portal de Boletas.';
-    }
-
-    if (rol === 'admin') {
+    } else if (rol === 'admin') {
         document.getElementById('graficos-container').style.display = 'flex';
         document.getElementById('buscador-container').style.display = 'block';
-        document.getElementById('tabla-header').style.display       = 'flex';
-        document.getElementById('texto-panel').innerText            = 'Panel Administrativo.';
+        document.getElementById('tabla-header').style.display = 'flex';
+        document.getElementById('texto-panel').innerText = 'Panel Administrativo.';
     }
 
     document.getElementById('buscador').value = '';
     cargarDatosServidor();
 }
-
     // ============================================================
     // CERRAR SESIÓN limpio
     // ============================================================
@@ -802,44 +847,51 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
     // CARGAR DATOS DEL SERVIDOR PARA ADMIN Y USUARIOS
     // ============================================================
     async function cargarDatosServidor() {
-        const mesActual = document.getElementById('filtro-mes').value;
-        const token = localStorage.getItem('token'); // Obtener el token guardado
+    const mesActual = document.getElementById('filtro-mes').value;
+    const token = localStorage.getItem('token');
 
-        const headers = {
-             'Content-Type': 'application/json',
-             'Authorization': `Bearer ${token}` // <--- ESTO ES LO QUE EL SERVIDOR PIDE
-        };
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
 
-        try {
-            const response = await fetch(`${API_URL}?mes=${mesActual}`, { headers });
-            // ... resto del código
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    try {
+        const response = await fetch(`${API_URL}?mes=${mesActual}`, { headers });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                docentesData = await response.json();
+        docentesData = await response.json();
 
-            // Ordenar alfabéticamente por nombre
-            docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+        console.log('Datos recibidos del servidor:', docentesData.length, 'registros');
 
-            // Filtro extra en cliente como segunda capa de seguridad
-            if (userRole === 'user' && userDni) {
-                docentesData = docentesData.filter(d => d.dni === userDni);
-            }
+        // Ordenar alfabéticamente por nombre
+        docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
-            renderizarTabla(docentesData);
-            actualizarGraficos();
-            actualizarTotales(docentesData);
-            actualizarGraficoUsuario(docentesData);
-
-        } catch (error) {
-            console.error('Error al cargar datos:', error);
-            // Mensaje amigable en la tabla en vez de alert bloqueante
-            document.getElementById('tabla-cuerpo').innerHTML =
-                `<tr><td colspan="5" class="text-center p-4 text-danger">
-                    <i class="fa-solid fa-circle-exclamation me-2"></i>
-                    No se pudo conectar con el servidor. Verifica que Render esté activo.
-                </td></tr>`;
+        // === FILTRO PARA USUARIO (ROL USER) ===
+        if (userRole === 'user' && userDni) {
+            const dniOriginal = userDni;
+            docentesData = docentesData.filter(d => 
+                d.dni === dniOriginal || 
+                d.dni === String(dniOriginal) ||
+                String(d.dni).trim() === String(dniOriginal).trim()
+            );
+            console.log('Filtro USER aplicado - DNI:', userDni, '→ Resultados:', docentesData.length);
         }
+
+        renderizarTabla(docentesData);
+        actualizarGraficos();
+        actualizarTotales(docentesData);
+        actualizarGraficoUsuario(docentesData);
+
+    } catch (error) {
+        console.error('Error al cargar datos:', error);
+        document.getElementById('tabla-cuerpo').innerHTML = 
+            `<tr><td colspan="5" class="text-center text-danger py-4">
+                <i class="fa-solid fa-triangle-exclamation"></i><br>
+                Error al cargar datos. Intenta nuevamente.
+            </td></tr>`;
     }
+}
 
 function renderizarTabla(lista) {
     const cuerpo = document.getElementById('tabla-cuerpo');
