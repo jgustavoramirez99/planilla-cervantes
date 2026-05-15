@@ -282,6 +282,36 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
 .table-sm td {
     color: #e2e8f0;
 }
+/* ===================== MODAL EDICIÓN OSCURO ===================== */
+.modal-content {
+    background-color: #1e2937 !important;
+    color: #f1f5f9;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6) !important;
+    color: white;
+}
+
+.modal-body, .alert-light {
+    background-color: #1e2937 !important;
+    color: #e2e8f0;
+}
+
+.form-control, .form-select {
+    background-color: #334155 !important;
+    color: #e2e8f0 !important;
+    border: 1px solid #475569;
+}
+
+#resumen-neto {
+    background-color: #334155 !important;
+    color: #e2e8f0;
+}
+
+#resumen-neto strong {
+    color: #60a5fa;
+}
     </style>
 </head>
 <body> 
@@ -860,22 +890,27 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
         
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        docentesData = await response.json();
+        let data = await response.json();
+        console.log('Datos recibidos del servidor:', data.length, 'registros');
 
-        console.log('Datos recibidos del servidor:', docentesData.length, 'registros');
+        docentesData = data;
 
-        // Ordenar alfabéticamente por nombre
+        // Ordenar
         docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
-        // === FILTRO PARA USUARIO (ROL USER) ===
+        // FILTRO PARA USUARIO - Versión más flexible
         if (userRole === 'user' && userDni) {
-            const dniOriginal = userDni;
-            docentesData = docentesData.filter(d => 
-                d.dni === dniOriginal || 
-                d.dni === String(dniOriginal) ||
-                String(d.dni).trim() === String(dniOriginal).trim()
-            );
-            console.log('Filtro USER aplicado - DNI:', userDni, '→ Resultados:', docentesData.length);
+            const dniBuscado = String(userDni).trim();
+            docentesData = docentesData.filter(d => {
+                const dniDocente = String(d.dni || d.DNI || '').trim();
+                return dniDocente === dniBuscado;
+            });
+            
+            console.log(`Filtro USER - DNI buscado: ${dniBuscado} | Resultados: ${docentesData.length}`);
+        }
+
+        if (docentesData.length === 0 && userRole === 'user') {
+            console.warn("⚠️ No se encontraron datos para el usuario con DNI:", userDni);
         }
 
         renderizarTabla(docentesData);
@@ -885,10 +920,10 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
 
     } catch (error) {
         console.error('Error al cargar datos:', error);
-        document.getElementById('tabla-cuerpo').innerHTML = 
-            `<tr><td colspan="5" class="text-center text-danger py-4">
-                <i class="fa-solid fa-triangle-exclamation"></i><br>
-                Error al cargar datos. Intenta nuevamente.
+        document.getElementById('tabla-cuerpo').innerHTML = `
+            <tr><td colspan="5" class="text-center py-5 text-danger">
+                <i class="fa-solid fa-triangle-exclamation fa-2x mb-3"></i><br>
+                No se pudieron cargar los datos
             </td></tr>`;
     }
 }
