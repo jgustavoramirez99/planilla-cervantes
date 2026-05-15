@@ -536,18 +536,12 @@
             const data = await res.json();
 
             if (res.ok && data.success) {
-
-                // ====================================================
-                // NUEVO: guardar token y usuario
-                // ====================================================
+                console.log('DATA DEL LOGIN:', data); // ← temporal para ver qué llega
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('usuario', data.user || u);
-
-                userNombre = data.nombre;
-                userDni    = data.dni || '';
-
+                     userNombre = data.nombre;
+                     userDni    = data.dni || '';  // ← fix aquí también
                 iniciarSistema(data.role);
-
             } else {
                 alerta.classList.remove('d-none');
             }
