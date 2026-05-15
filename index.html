@@ -643,7 +643,7 @@
 
             // Filtro extra en cliente como segunda capa de seguridad
             if (userRole === 'user' && userDni) {
-                docentesData = docentesData.filter(d => d.codigo_trabajador === userDni);
+                docentesData = docentesData.filter(d => d.dni === userDni);
             }
 
             renderizarTabla(docentesData);
