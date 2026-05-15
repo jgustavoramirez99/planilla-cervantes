@@ -60,79 +60,103 @@
             margin: 0 auto 1rem;
         }
 
-        #seccion-login {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-        }
-        .login-card { width: 100%; max-width: 400px; padding: 2.5rem; border-radius: 20px; background: rgba(255,255,255,0.97); }
-        .welcome-banner { background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745; margin-bottom: 20px; display: none; }
-        .fila-docente { cursor: pointer; transition: 0.2s; }
-        .fila-docente:hover { background-color: #f8f9fa !important; }
-        .badge-neto { font-size: 1rem; padding: 8px 12px; border-radius: 8px; }
-        .chart-container { position: relative; height: 250px; width: 100%; }
+         /* ===================== LOGIN + SLIDESHOW ===================== */
+#seccion-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    background: #0f172a;
+}
 
-        /* Spinner para WhatsApp */
-        .btn-loading { pointer-events: none; opacity: 0.7; } 
+.background-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 1.5s ease-in-out;
+    z-index: 1;
+    filter: brightness(0.85);
+}
+
+.login-container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 440px;
+    margin-left: 8%;
+    padding: 20px;
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 2.8rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .login-container {
+        margin-left: 0;
+        padding: 15px;
+    }
+    .background-slideshow {
+        filter: brightness(0.75);
+    }
+} 
     </style>
 </head>
 <body> 
-<!-- ===================== LOGIN ===================== -->
+<!-- ===================== LOGIN MEJORADO ===================== -->
 <div id="seccion-login">
-    <div class="card login-card shadow-lg text-center">
-
-        <!-- LOGO con doble fallback: primero prueba logo.png, si falla muestra ícono -->
-        <div id="logo-container" class="mb-3">
-            <img id="logo-login"
-                 src="logo.png"
-                 alt="Logo Cervantes School"
-                 class="logo-img mx-auto d-block"
-                 onload="this.style.display='block'"
-                 onerror="mostrarLogoFallback()">
-        </div>
-
-        <h4 class="text-muted mb-1"> Cervantes Educa SAC</h4>
-        <h3 class="fw-bold text-primary mb-4">Sistema de Planillas</h3>
-        <div class="text-center mb-3">
-            <span style="font-size:0.7rem;color:#aaa;letter-spacing:1px;"> Powered by </span><br>
-            <span style="
-                display:inline-flex;align-items:center;gap:6px;
-                background:linear-gradient(135deg,#2c3e50,#3498db);
-                color:white;border-radius:20px;padding:4px 14px;
-                font-size:0.78rem;font-weight:600;letter-spacing:0.5px;margin-top:4px;">
-                <svg width="18" height="18" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="17" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
-                    <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">GR</text>
-                </svg>
-                R&R Tech Solutions 
-            </span>
-        </div>
-
-        <!-- Alerta de error de login -->
-        <div id="alerta-login" class="alert alert-danger d-none py-2 small" role="alert">
-            <i class="fa-solid fa-triangle-exclamation me-1"></i>
-            Usuario o contraseña incorrectos.
-        </div>
-
-        <form id="form-login" class="text-start">
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Usuario</label>
-                <input type="text" id="user" class="form-control" placeholder="Ingrese usuario" required autocomplete="username">
+    <div class="background-slideshow"></div>
+    
+    <!-- Panel izquierdo con login -->
+    <div class="login-container">
+        <div class="card login-card shadow-lg">
+            <!-- Logo -->
+            <div id="logo-container" class="mb-3 text-center">
+                <img id="logo-login" src="logo.png" alt="Logo Cervantes" 
+                     class="logo-img mx-auto d-block"
+                     onerror="mostrarLogoFallback()">
             </div>
-            <div class="mb-3">
-                <label class="form-label small fw-bold">Contraseña</label>
-                <input type="password" id="pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+
+            <h4 class="text-muted mb-1 text-center">Cervantes Educa SAC</h4>
+            <h3 class="fw-bold text-primary mb-4 text-center">Sistema de Planillas</h3>
+
+            <div class="text-center mb-4">
+                <span style="font-size:0.75rem;color:#aaa;">Powered by R&R Tech Solutions</span>
             </div>
-            <button type="submit" id="btn-login" class="btn btn-primary w-100 py-2 fw-bold">
-                <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
-                INGRESAR AL SISTEMA
-            </button>
-        </form>
+
+            <!-- Alerta -->
+            <div id="alerta-login" class="alert alert-danger d-none py-2 small" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                Usuario o contraseña incorrectos.
+            </div>
+
+            <form id="form-login" class="text-start">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Usuario</label>
+                    <input type="text" id="user" class="form-control" placeholder="Ingrese usuario" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Contraseña</label>
+                    <input type="password" id="pass" class="form-control" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="btn-login" class="btn btn-primary w-100 py-3 fw-bold">
+                    <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
+                    INGRESAR AL SISTEMA
+                </button>
+            </form>
+        </div>
     </div>
 </div>
-
 <!-- ===================== DASHBOARD ===================== -->
 <div id="seccion-principal" style="display: none;">
     <div class="header-colegio shadow">
@@ -480,6 +504,36 @@
 </div>
 
 <script>
+    // ===================== SLIDESHOW DE FONDO =====================
+    const backgrounds = [
+        'fondo1.png',
+        'fondo2.png'
+    ];
+
+    let currentBg = 0;
+    const slideshowDiv = document.querySelector('.background-slideshow');
+
+    function changeBackground() {
+        currentBg = (currentBg + 1) % backgrounds.length;
+        const nextImage = backgrounds[currentBg];
+
+        const img = new Image();
+        img.src = nextImage;
+
+        img.onload = () => {
+            slideshowDiv.style.opacity = '0';
+            setTimeout(() => {
+                slideshowDiv.style.backgroundImage = `url('${nextImage}')`;
+                slideshowDiv.style.opacity = '1';
+            }, 800);
+        };
+    }
+
+    // Iniciar slideshow
+    if (slideshowDiv) {
+        slideshowDiv.style.backgroundImage = `url('${backgrounds[0]}')`;
+        setInterval(changeBackground, 3500); // Cambia cada 3.5 segundos
+    }
     // ============================================================
     // CONFIGURACIÓN
     // ============================================================
