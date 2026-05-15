@@ -248,7 +248,7 @@
         <div class="card shadow-lg">
             <div class="card-body p-0">
                 <!-- Cabecera de tabla con botón Excel (solo admin) -->
-                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" id="tabla-header" style="display:none;">
+                <div class="justify-content-between align-items-center px-3 py-2 border-bottom" id="tabla-header" style="display:none;"></div>
                     <span class="small text-muted fw-bold">
                         <i class="fa-solid fa-list me-1"></i> Listado de Docentes
                     </span>
@@ -542,7 +542,7 @@
                 localStorage.setItem('usuario', data.user || u);
 
                 userNombre = data.nombre;
-                userDni    = data.codigo_trabajador || '';
+                userDni    = data.dni || '';
 
                 iniciarSistema(data.role);
 
@@ -566,34 +566,36 @@
     // INICIAR SISTEMA
     // ============================================================
     function iniciarSistema(rol) {
-        userRole = rol;
-        document.getElementById('seccion-login').style.display     = 'none';
-        document.getElementById('seccion-principal').style.display = 'block';
-        document.getElementById('banner-bienvenida').style.display = 'block';
-        document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
-        document.getElementById('texto-bienvenida').innerText = `Bienvenido, ${userNombre}`;
+    userRole = rol;
 
-        if (rol === 'user') {
-            // Ocultar elementos solo de admin
-            document.getElementById('buscador-container').style.display   = 'none';
-            document.getElementById('graficos-container').style.display   = 'none';
-            document.getElementById('tabla-header').style.display         = 'none';
-            // Mostrar selector de mes para ver boletas de otros meses
-            document.getElementById('filtro-mes-container').style.display = 'block';
-            // Mostrar gráfico personal
-            document.getElementById('grafico-usuario-container').style.display = 'block';
-            // Cambiar texto del banner
-            document.getElementById('texto-panel').innerText = 'Mi Portal de Boletas.';
-        }
+    // Resetear todo primero
+    document.getElementById('tabla-header').style.display              = 'none';
+    document.getElementById('buscador-container').style.display        = 'none';
+    document.getElementById('graficos-container').style.display        = 'none';
+    document.getElementById('grafico-usuario-container').style.display = 'none';
 
-        document.getElementById('buscador').value = '';
-        if (rol === 'admin') {
-            document.getElementById('grafico-usuario-container').style.display = 'none';
-            document.getElementById('tabla-header').style.display              = 'flex';
-            document.getElementById('texto-panel').innerText                   = 'Panel Administrativo.';
-        }
-        cargarDatosServidor();
+    document.getElementById('seccion-login').style.display     = 'none';
+    document.getElementById('seccion-principal').style.display = 'block';
+    document.getElementById('banner-bienvenida').style.display = 'block';
+    document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
+    document.getElementById('texto-bienvenida').innerText = `Bienvenido, ${userNombre}`;
+
+    if (rol === 'user') {
+        document.getElementById('filtro-mes-container').style.display      = 'block';
+        document.getElementById('grafico-usuario-container').style.display = 'block';
+        document.getElementById('texto-panel').innerText = 'Mi Portal de Boletas.';
     }
+
+    if (rol === 'admin') {
+        document.getElementById('graficos-container').style.display = 'block';
+        document.getElementById('buscador-container').style.display = 'block';
+        document.getElementById('tabla-header').style.display       = 'flex';
+        document.getElementById('texto-panel').innerText            = 'Panel Administrativo.';
+    }
+
+    document.getElementById('buscador').value = '';
+    cargarDatosServidor();
+}
 
     // ============================================================
     // CERRAR SESIÓN limpio
