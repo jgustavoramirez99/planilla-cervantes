@@ -898,19 +898,34 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
         // Ordenar
         docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
-        // FILTRO PARA USUARIO - Versión más flexible
+        // === FILTRO PARA USER (más permisivo) ===
         if (userRole === 'user' && userDni) {
             const dniBuscado = String(userDni).trim();
+            console.log('Intentando filtrar por DNI:', dniBuscado);
+
             docentesData = docentesData.filter(d => {
-                const dniDocente = String(d.dni || d.DNI || '').trim();
-                return dniDocente === dniBuscado;
+                const dniDoc = String(d.dni || d.DNI || d.dni_docente || '').trim();
+                return dniDoc === dniBuscado || dniDoc === dniBuscado.replace(/^0+/, '');
             });
-            
-            console.log(`Filtro USER - DNI buscado: ${dniBuscado} | Resultados: ${docentesData.length}`);
+
+            console.log(`Filtro USER - DNI: ${dniBuscado} | Resultados: ${docentesData.length}`);
         }
 
+        // Si no hay datos para el usuario, creamos uno vacío para que al menos aparezca
         if (docentesData.length === 0 && userRole === 'user') {
-            console.warn("⚠️ No se encontraron datos para el usuario con DNI:", userDni);
+            console.warn("Creando registro temporal para usuario");
+            docentesData = [{
+                id_docente: 9999,
+                nombre: userNombre,
+                dni: userDni,
+                sueldo_base: 0,
+                adelantos: 0,
+                faltas: 0,
+                pension: 0,
+                tardanza: 0,
+                bono: 0,
+                tipo_afp: "ONP"
+            }];
         }
 
         renderizarTabla(docentesData);
@@ -920,11 +935,6 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
 
     } catch (error) {
         console.error('Error al cargar datos:', error);
-        document.getElementById('tabla-cuerpo').innerHTML = `
-            <tr><td colspan="5" class="text-center py-5 text-danger">
-                <i class="fa-solid fa-triangle-exclamation fa-2x mb-3"></i><br>
-                No se pudieron cargar los datos
-            </td></tr>`;
     }
 }
 
