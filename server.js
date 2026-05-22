@@ -368,8 +368,10 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
         desmrito_nivel, desmrito_monto
     } = req.body;
 
-    const esalud      = (Number(sueldo_base) || 0) * 0.09;
-    const consolidado = (Number(pagado) || 0) + esalud + (Number(bono) || 0);
+    const esalud      = parseFloat(((Number(sueldo_base) || 0) * 0.09).toFixed(2));
+    const afpMonto    = parseFloat(((Number(sueldo_base) || 0) * 0.13).toFixed(2));
+    // NETO/CONSOLIDADO: PAGADO + ESSALUD (aporte empleador) + BONO
+    const consolidado = parseFloat(((Number(pagado) || 0) + esalud + (Number(bono) || 0)).toFixed(2));
 
     db.query(
         'UPDATE docentes SET sueldo_base = ?, pagado = ?, afp = ? WHERE id_docente = ?',

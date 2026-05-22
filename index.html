@@ -31,7 +31,7 @@
     </script>
     <style>
         body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
-        .header-colegio {background: #0f172a;border-bottom: 5px solid #3b82f6,}
+        .header-colegio { background: #2c3e50; color: white; padding: 20px; border-bottom: 5px solid #e74c3c; }
         .card { border: none; border-radius: 15px; }
         .stats-card { background: #ffffff; border-left: 5px solid #3498db; transition: transform 0.3s; }
         .stats-card:hover { transform: translateY(-5px); }
@@ -60,357 +60,79 @@
             margin: 0 auto 1rem;
         }
 
-         /* ===================== LOGIN + SLIDESHOW ===================== */
-#seccion-login {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-    background: #0f172a;
-}
+        #seccion-login {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        }
+        .login-card { width: 100%; max-width: 400px; padding: 2.5rem; border-radius: 20px; background: rgba(255,255,255,0.97); }
+        .welcome-banner { background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745; margin-bottom: 20px; display: none; }
+        .fila-docente { cursor: pointer; transition: 0.2s; }
+        .fila-docente:hover { background-color: #f8f9fa !important; }
+        .badge-neto { font-size: 1rem; padding: 8px 12px; border-radius: 8px; }
+        .chart-container { position: relative; height: 250px; width: 100%; }
 
-.background-slideshow {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    transition: opacity 1.5s ease-in-out;
-    z-index: 1;
-    filter: brightness(0.85);
-}
-
-.login-container {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    max-width: 440px;
-    margin-left: 8%;
-    padding: 20px;
-}
-
-.login-card {
-    background: rgba(15, 23, 42, 0.92);     /* Azul oscuro elegante */
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
-    padding: 2.8rem;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
-    color: white;
-}
-
-/* Responsive */
-@media (max-width: 992px) {
-    .login-container {
-        margin-left: 0;
-        padding: 15px;
-    }
-    .background-slideshow {
-        filter: brightness(0.75);
-    }
-} 
-.login-card .form-label,
-.login-card h4,
-.login-card h3,
-.login-card .text-muted {
-    color: rgba(255, 255, 255, 0.9) !important;
-}
-
-.login-card .alert {
-    background: rgba(220, 53, 69, 0.2);
-    border-color: rgba(220, 53, 69, 0.5);
-    color: white;
-}
-
-.login-card input.form-control {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-}
-
-.login-card input.form-control::placeholder {
-    color: rgba(255, 255, 255, 0.6);
-}
-/* ===================== FONDO OSCURO PARA TODO EL SISTEMA ===================== */
-body {
-    background-color: #0f172a;
-    color: #e2e8f0;
-}
-
-#seccion-principal {
-    background-color: #0f172a;
-}
-
-.container {
-    background-color: #0f172a;
-}
-
-.card {
-    background-color: #1e2937;
-    border: none;
-    color: #e2e8f0;
-}
-
-.table {
-    --bs-table-bg: #1e2937;
-    --bs-table-color: #e2e8f0;
-    --bs-table-hover-bg: #334155;
-}
-
-.table thead.table-dark {
-    background-color: #0f172a !important;
-}
-
-.stats-card {
-    background: #1e2937;
-    border-left: 5px solid #3b82f6;
-    color: #e2e8f0;
-}
-
-.welcome-banner {
-    background: #1e40af;
-    color: white;
-    border-left-color: #60a5fa;
-}
-/* ===================== AJUSTES PARA FONDO OSCURO ===================== */
-body, #seccion-principal {
-    background-color: #0f172a;
-    color: #e2e8f0;
-}
-
-.card, .stats-card {
-    background-color: #1e2937 !important;
-    color: #e2e8f0;
-    border: none;
-}
-
-.table {
-    --bs-table-bg: #1e2937;
-    --bs-table-color: #e2e8f0;
-    --bs-table-hover-bg: #334155;
-}
-
-.table td, .table th {
-    color: #e2e8f0 !important;
-}
-
-.text-muted {
-    color: #94a3b8 !important;
-}
-
-/* Textos importantes en claro */
-h2, h3, h4, h5, h6, strong, .fw-bold {
-    color: #f1f5f9 !important;
-}
-
-.stats-card .h3, .stats-card div {
-    color: #f1f5f9 !important;
-}
-
-/* Labels y textos del dashboard */
-.small.fw-bold, .text-muted.small.fw-bold {
-    color: #cbd5e1 !important;
-}
-
-/* Botones y badges */
-.btn-primary, .badge {
-    color: white !important;
-}
-
-/* Ajuste específico para las cards de estadísticas */
-#stat-total-personal,
-#stat-planilla-total {
-    color: #60a5fa !important;
-}
-
-/* Tabla */
-.table thead th {
-    background-color: #0f172a !important;
-    color: #e2e8f0 !important;
-}
-
-.table-hover tbody tr:hover {
-    background-color: #334155 !important;
-}
-/* ===================== MODAL OSCURO ===================== */
-.modal-content {
-    background-color: #1e2937 !important;
-    color: #e2e8f0;
-    border: none;
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #1e40af, #3b82f6) !important;
-}
-
-.modal-body {
-    background-color: #1e2937;
-}
-
-.form-control, .form-select {
-    background-color: #334155 !important;
-    border: 1px solid #475569 !important;
-    color: #e2e8f0 !important;
-}
-
-.form-control::placeholder {
-    color: #94a3b8;
-}
-
-.alert-light {
-    background-color: #334155;
-    color: #e2e8f0;
-    border-left-color: #60a5fa;
-}
-
-.text-muted {
-    color: #94a3b8 !important;
-}
-/* ===================== VISTA DE USUARIO ===================== */
-#grafico-usuario-container .card {
-    background-color: #1e2937;
-    color: #e2e8f0;
-}
-
-#detalle-usuario-planilla {
-    color: #e2e8f0;
-}
-
-.table-sm td {
-    color: #e2e8f0;
-}
-/* ===================== MODAL EDICIÓN OSCURO ===================== */
-.modal-content {
-    background-color: #1e2937 !important;
-    color: #f1f5f9;
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #1e40af, #3b82f6) !important;
-    color: white;
-}
-
-.modal-body, .alert-light {
-    background-color: #1e2937 !important;
-    color: #e2e8f0;
-}
-
-.form-control, .form-select {
-    background-color: #334155 !important;
-    color: #e2e8f0 !important;
-    border: 1px solid #475569;
-}
-
-#resumen-neto {
-    background-color: #334155 !important;
-    color: #e2e8f0;
-}
-
-#resumen-neto strong {
-    color: #60a5fa;
-}
-/* ===================== DETALLE DE MI PLANILLA (Usuario) ===================== */
-#detalle-usuario-planilla {
-    color: #e2e8f0 !important;
-}
-
-#detalle-usuario-planilla table {
-    color: #e2e8f0;
-}
-
-#detalle-usuario-planilla td {
-    color: #e2e8f0 !important;
-}
-
-#detalle-usuario-planilla .table-success {
-    background-color: #1e40af !important;
-    color: white !important;
-}
-
-#detalle-usuario-planilla tr.border-top {
-    border-top: 2px solid #475569 !important;
-}
-
-/* Resumen Neto */
-#resumen-neto {
-    background-color: #1e2937 !important;
-    border: 1px solid #475569;
-    color: #e2e8f0;
-}
-
-#resumen-neto h5, 
-#resumen-neto strong {
-    color: #60a5fa !important;
-}
-
-#resumen-neto-final {
-    color: #34d399 !important;
-}
-/* ===================== FIX NETO A COBRAR ===================== */
-#detalle-usuario-planilla .table-success {
-    background-color: #166534 !important;   /* Verde oscuro bonito */
-    color: white !important;
-}
-
-#detalle-usuario-planilla .table-success td {
-    color: white !important;
-    font-weight: bold;
-}
-
-#resumen-neto-final {
-    color: #34d399 !important;   /* Verde brillante */
-    font-size: 1.35rem;
-}
+        /* Spinner para WhatsApp */
+        .btn-loading { pointer-events: none; opacity: 0.7; } 
     </style>
 </head>
 <body> 
-<!-- ===================== LOGIN MEJORADO ===================== -->
+<!-- ===================== LOGIN ===================== -->
 <div id="seccion-login">
-    <div class="background-slideshow"></div>
-    
-    <!-- Panel izquierdo con login -->
-    <div class="login-container">
-        <div class="card login-card shadow-lg">
-            <!-- Logo -->
-            <div id="logo-container" class="mb-3 text-center">
-                <img id="logo-login" src="logo.png" alt="Logo Cervantes" 
-                     class="logo-img mx-auto d-block"
-                     onerror="mostrarLogoFallback()">
-            </div>
+    <div class="card login-card shadow-lg text-center">
 
-            <h4 class="text-muted mb-1 text-center">Cervantes Educa SAC</h4>
-            <h3 class="fw-bold text-primary mb-4 text-center">Sistema de Planillas</h3>
-
-            <div class="text-center mb-4">
-                <span style="font-size:0.75rem;color:#aaa;">Powered by R&R Tech Solutions</span>
-            </div>
-
-            <!-- Alerta -->
-            <div id="alerta-login" class="alert alert-danger d-none py-2 small" role="alert">
-                <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                Usuario o contraseña incorrectos.
-            </div>
-
-            <form id="form-login" class="text-start">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Usuario</label>
-                    <input type="text" id="user" class="form-control" placeholder="Ingrese usuario" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Contraseña</label>
-                    <input type="password" id="pass" class="form-control" placeholder="••••••••" required>
-                </div>
-                <button type="submit" id="btn-login" class="btn btn-primary w-100 py-3 fw-bold">
-                    <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
-                    INGRESAR AL SISTEMA
-                </button>
-            </form>
+        <!-- LOGO con doble fallback: primero prueba logo.png, si falla muestra ícono -->
+        <div id="logo-container" class="mb-3">
+            <img id="logo-login"
+                 src="logo.png"
+                 alt="Logo Cervantes School"
+                 class="logo-img mx-auto d-block"
+                 onload="this.style.display='block'"
+                 onerror="mostrarLogoFallback()">
         </div>
+
+        <h4 class="text-muted mb-1"> Cervantes Educa SAC</h4>
+        <h3 class="fw-bold text-primary mb-4">Sistema de Planillas</h3>
+        <div class="text-center mb-3">
+            <span style="font-size:0.7rem;color:#aaa;letter-spacing:1px;"> Powered by </span><br>
+            <span style="
+                display:inline-flex;align-items:center;gap:6px;
+                background:linear-gradient(135deg,#2c3e50,#3498db);
+                color:white;border-radius:20px;padding:4px 14px;
+                font-size:0.78rem;font-weight:600;letter-spacing:0.5px;margin-top:4px;">
+                <svg width="18" height="18" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="17" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
+                    <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">GR</text>
+                </svg>
+                R&R Tech Solutions 
+            </span>
+        </div>
+
+        <!-- Alerta de error de login -->
+        <div id="alerta-login" class="alert alert-danger d-none py-2 small" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+            Usuario o contraseña incorrectos.
+        </div>
+
+        <form id="form-login" class="text-start">
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Usuario</label>
+                <input type="text" id="user" class="form-control" placeholder="Ingrese usuario" required autocomplete="username">
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Contraseña</label>
+                <input type="password" id="pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+            </div>
+            <button type="submit" id="btn-login" class="btn btn-primary w-100 py-2 fw-bold">
+                <span id="login-spinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
+                INGRESAR AL SISTEMA
+            </button>
+        </form>
     </div>
 </div>
+
 <!-- ===================== DASHBOARD ===================== -->
 <div id="seccion-principal" style="display: none;">
     <div class="header-colegio shadow">
@@ -428,8 +150,7 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
             </div>
         </div>
     </div>
-</body>
-</html>
+
     <div class="container mt-4 mb-5">
         <div id="banner-bienvenida" class="welcome-banner shadow-sm">
             <i class="fa-solid fa-user-tie me-2"></i>
@@ -625,7 +346,7 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-danger">Tipo de Seguro Salud</label>
                             <select id="edit-tipo-salud" class="form-select form-select-sm" onchange="actualizarLabelSalud()">
-                                <option value="ESSALUD">ESSALUD (9% a cargo empleador)</option>
+                                <option value="ESSALUD">ESSALUD (9% s/ sueldo base — descuenta del pagado)</option>
                                 <option value="SIS">SIS (sin descuento al trabajador)</option>
                             </select>
                             <div class="text-muted small mt-1" id="label-calculo-salud"></div>
@@ -733,18 +454,23 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
                 <div class="alert alert-info border-2 mt-4" id="resumen-neto">
                     <h6 class="fw-bold mb-2">📊 Resumen de Planilla</h6>
                     <div class="row text-center">
-                        <div class="col-6">
-                            <small class="text-muted">Sueldo Base</small><br>
+                        <div class="col-4">
+                            <small class="text-muted">Sueldo Base (Ref.)</small><br>
                             <strong id="resumen-sb">S/ 0.00</strong>
                         </div>
-                        <div class="col-6">
+                        <div class="col-4">
                             <small class="text-muted">Total Descuentos</small><br>
                             <strong id="resumen-descuentos" class="text-danger">S/ 0.00</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted text-success">AFP + ESSALUD de:</small><br>
+                            <strong id="resumen-sb-ref" class="text-primary">S/ 0.00</strong>
                         </div>
                     </div>
                     <hr>
                     <div class="text-center">
                         <h5>NETO A PAGAR: <strong id="resumen-neto-final" class="text-success">S/ 0.00</strong></h5>
+                        <small class="text-muted">= Pagado + Bono − AFP − ESSALUD − demás descuentos</small>
                     </div>
                 </div>
             </div>
@@ -759,36 +485,6 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
 </div>
 
 <script>
-    // ===================== SLIDESHOW DE FONDO =====================
-    const backgrounds = [
-        'fondo1.png',
-        'fondo2.png'
-    ];
-
-    let currentBg = 0;
-    const slideshowDiv = document.querySelector('.background-slideshow');
-
-    function changeBackground() {
-        currentBg = (currentBg + 1) % backgrounds.length;
-        const nextImage = backgrounds[currentBg];
-
-        const img = new Image();
-        img.src = nextImage;
-
-        img.onload = () => {
-            slideshowDiv.style.opacity = '0';
-            setTimeout(() => {
-                slideshowDiv.style.backgroundImage = `url('${nextImage}')`;
-                slideshowDiv.style.opacity = '1';
-            }, 800);
-        };
-    }
-
-    // Iniciar slideshow
-    if (slideshowDiv) {
-        slideshowDiv.style.backgroundImage = `url('${backgrounds[0]}')`;
-        setInterval(changeBackground, 3500); // Cambia cada 3.5 segundos
-    }
     // ============================================================
     // CONFIGURACIÓN
     // ============================================================
@@ -873,33 +569,35 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
     function iniciarSistema(rol) {
     userRole = rol;
 
-    document.getElementById('seccion-login').style.display = 'none';
+    // Resetear todo primero
+    document.getElementById('tabla-header').style.display              = 'none';
+    document.getElementById('buscador-container').style.display        = 'none';
+    document.getElementById('graficos-container').style.display        = 'none';
+    document.getElementById('grafico-usuario-container').style.display = 'none';
+
+    document.getElementById('seccion-login').style.display     = 'none';
     document.getElementById('seccion-principal').style.display = 'block';
     document.getElementById('banner-bienvenida').style.display = 'block';
-
     document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
     document.getElementById('texto-bienvenida').innerText = `Bienvenido, ${userNombre}`;
 
-    // Resetear visibilidad
-    document.getElementById('tabla-header').style.display = 'none';
-    document.getElementById('buscador-container').style.display = 'none';
-    document.getElementById('graficos-container').style.display = 'none';
-    document.getElementById('grafico-usuario-container').style.display = 'none';
-
     if (rol === 'user') {
-        document.getElementById('filtro-mes-container').style.display = 'block';
+        document.getElementById('filtro-mes-container').style.display      = 'block';
         document.getElementById('grafico-usuario-container').style.display = 'block';
         document.getElementById('texto-panel').innerText = 'Mi Portal de Boletas.';
-    } else if (rol === 'admin') {
+    }
+
+    if (rol === 'admin') {
         document.getElementById('graficos-container').style.display = 'flex';
         document.getElementById('buscador-container').style.display = 'block';
-        document.getElementById('tabla-header').style.display = 'flex';
-        document.getElementById('texto-panel').innerText = 'Panel Administrativo.';
+        document.getElementById('tabla-header').style.display       = 'flex';
+        document.getElementById('texto-panel').innerText            = 'Panel Administrativo.';
     }
 
     document.getElementById('buscador').value = '';
     cargarDatosServidor();
 }
+
     // ============================================================
     // CERRAR SESIÓN limpio
     // ============================================================
@@ -930,66 +628,44 @@ h2, h3, h4, h5, h6, strong, .fw-bold {
     // CARGAR DATOS DEL SERVIDOR PARA ADMIN Y USUARIOS
     // ============================================================
     async function cargarDatosServidor() {
-    const mesActual = document.getElementById('filtro-mes').value;
-    const token = localStorage.getItem('token');
+        const mesActual = document.getElementById('filtro-mes').value;
+        const token = localStorage.getItem('token'); // Obtener el token guardado
 
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-    };
+        const headers = {
+             'Content-Type': 'application/json',
+             'Authorization': `Bearer ${token}` // <--- ESTO ES LO QUE EL SERVIDOR PIDE
+        };
 
-    try {
-        const response = await fetch(`${API_URL}?mes=${mesActual}`, { headers });
-        
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        try {
+            const response = await fetch(`${API_URL}?mes=${mesActual}`, { headers });
+            // ... resto del código
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        let data = await response.json();
-        console.log('Datos recibidos del servidor:', data.length, 'registros');
+                docentesData = await response.json();
 
-        docentesData = data;
+            // Ordenar alfabéticamente por nombre
+            docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
-        // Ordenar
-        docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+            // Filtro extra en cliente como segunda capa de seguridad
+            if (userRole === 'user' && userDni) {
+                docentesData = docentesData.filter(d => d.dni === userDni);
+            }
 
-        // === FILTRO PARA USER (más permisivo) ===
-        if (userRole === 'user' && userDni) {
-            const dniBuscado = String(userDni).trim();
-            console.log('Intentando filtrar por DNI:', dniBuscado);
+            renderizarTabla(docentesData);
+            actualizarGraficos();
+            actualizarTotales(docentesData);
+            actualizarGraficoUsuario(docentesData);
 
-            docentesData = docentesData.filter(d => {
-                const dniDoc = String(d.dni || d.DNI || d.dni_docente || '').trim();
-                return dniDoc === dniBuscado || dniDoc === dniBuscado.replace(/^0+/, '');
-            });
-
-            console.log(`Filtro USER - DNI: ${dniBuscado} | Resultados: ${docentesData.length}`);
+        } catch (error) {
+            console.error('Error al cargar datos:', error);
+            // Mensaje amigable en la tabla en vez de alert bloqueante
+            document.getElementById('tabla-cuerpo').innerHTML =
+                `<tr><td colspan="5" class="text-center p-4 text-danger">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i>
+                    No se pudo conectar con el servidor. Verifica que Render esté activo.
+                </td></tr>`;
         }
-
-        // Si no hay datos para el usuario, creamos uno vacío para que al menos aparezca
-        if (docentesData.length === 0 && userRole === 'user') {
-            console.warn("Creando registro temporal para usuario");
-            docentesData = [{
-                id_docente: 9999,
-                nombre: userNombre,
-                dni: userDni,
-                sueldo_base: 0,
-                adelantos: 0,
-                faltas: 0,
-                pension: 0,
-                tardanza: 0,
-                bono: 0,
-                tipo_afp: "ONP"
-            }];
-        }
-
-        renderizarTabla(docentesData);
-        actualizarGraficos();
-        actualizarTotales(docentesData);
-        actualizarGraficoUsuario(docentesData);
-
-    } catch (error) {
-        console.error('Error al cargar datos:', error);
     }
-}
 
 function renderizarTabla(lista) {
     const cuerpo = document.getElementById('tabla-cuerpo');
@@ -1007,12 +683,17 @@ function renderizarTabla(lista) {
 
     lista.forEach(d => {
         const sb = Number(d.sueldo_base) || 0;
-        const totalDedReal = (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0) + 
-                             (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0) + 
-                             (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
-        
-        const totalDed = sb === 0 ? 0 : totalDedReal;
-        const neto = sb === 0 ? 0 : sb + (Number(d.bono) || 0) - totalDedReal;
+        const pagado = Number(d.pagado) || 0;
+        const tipoAfpRow = d.tipo_afp || 'AFP';
+        const descAfpRow = (tipoAfpRow !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
+        const esaludRow  = parseFloat((sb * 0.09).toFixed(2));
+        const totalDedReal = descAfpRow + esaludRow
+                             + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
+                             + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
+                             + (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
+
+        const totalDed = pagado === 0 ? 0 : totalDedReal;
+        const neto = pagado === 0 ? 0 : pagado + (Number(d.bono) || 0) - totalDedReal;
 
         let badgeColor = 'bg-primary';
         if (neto < 0) badgeColor = 'bg-danger';
@@ -1127,16 +808,21 @@ async function enviarWhatsApp(id) {
     const GASTO_EVENTOS = 30; // Gastos para Eventos Especiales — fijo mensual
 
     function calcularNeto(d) {
-        const sb = Number(d.sueldo_base) || 0;
-        if (sb === 0) return 0;
+        const sb      = Number(d.sueldo_base) || 0;
+        const pagado  = Number(d.pagado)      || 0;
+        if (pagado === 0) return 0;
         const bono        = Number(d.bono)           || 0;
         const tipoAfp     = d.tipo_afp || 'AFP';
-        const descPension = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+        // AFP y ESSALUD se calculan sobre el sueldo base (solo referencial)
+        const descAfp     = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
+        const esalud      = parseFloat((sb * 0.09).toFixed(2));
         const creditos    = Number(d.creditos)        || 0;
         const prestamos   = Number(d.prestamos)       || 0;
         const desmrito    = Number(d.desmrito_monto)  || 0;
-        return sb + bono
-            - descPension
+        // La base del neto es PAGADO, no sueldo_base
+        return pagado + bono
+            - descAfp
+            - esalud
             - (Number(d.adelantos) || 0)
             - (Number(d.faltas)    || 0)
             - (Number(d.pension)   || 0)
@@ -1164,10 +850,14 @@ async function enviarWhatsApp(id) {
         const tipoAfp       = d.tipo_afp    || 'AFP';
         const tipoSalud     = d.tipo_salud  || 'ESSALUD';
         const desmritoNivel = d.desmrito_nivel || '';
+        const pagado        = Number(d.pagado)          || 0;
         const gastosEventos = 30;
-        const descAfp       = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
-        const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
-        const neto          = sb + bono - totalDed;
+        // AFP y ESSALUD se calculan sobre el sueldo base (referencial)
+        const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
+        const esalud        = parseFloat((sb * 0.09).toFixed(2));
+        const totalDed      = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
+        // El neto se calcula sobre PAGADO, no sobre sueldo_base
+        const neto          = pagado + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
         const meses = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril',
                '5':'Mayo','6':'Junio','7':'Julio','8':'Agosto','9':'Septiembre',
@@ -1246,11 +936,13 @@ async function enviarWhatsApp(id) {
         };
 
         // INGRESOS
-        fila(`Sueldo Básico Mensual`, `S/ ${sb.toFixed(2)}`, '');
+        fila(`Sueldo Base (Referencial)`, `S/ ${sb.toFixed(2)}`, '');
+        fila(`Monto Pagado`, `S/ ${pagado.toFixed(2)}`, '');
         if (bono > 0) fila(`Bono Especial`, `S/ ${bono.toFixed(2)}`, '');
 
-        // DESCUENTOS OFICIALES
-        if (descAfp > 0) fila(`${tipoAfp} (13%)`, '', `S/ ${descAfp.toFixed(2)}`);
+        // DESCUENTOS OFICIALES (calculados sobre sueldo base)
+        if (descAfp > 0) fila(`${tipoAfp} (13% s/ S.Base)`, '', `S/ ${descAfp.toFixed(2)}`);
+        fila(`ESSALUD (9% s/ S.Base)`, '', `S/ ${esalud.toFixed(2)}`);
 
         // DESCUENTOS PERSONALES
         if (adelantos > 0) fila(`Adelantos`, '', `S/ ${adelantos.toFixed(2)}`);
@@ -1407,13 +1099,17 @@ async function enviarWhatsApp(id) {
         if (userRole !== 'user' || !data.length) return;
         const d         = data[0];
         const sb        = Number(d.sueldo_base) || 0;
+        const pagado    = Number(d.pagado)      || 0;
         const bono      = Number(d.bono)        || 0;
         const adelantos = Number(d.adelantos)   || 0;
         const faltas    = Number(d.faltas)      || 0;
         const pension   = Number(d.pension)     || 0;
         const tardanza  = Number(d.tardanza)    || 0;
         const otrosDesc = Number(d.otros_descuentos) || 0;
-        const afp       = sb * 0.13;
+        // AFP y ESSALUD se calculan sobre sueldo base (referencial)
+        const tipoAfpG  = d.tipo_afp || 'AFP';
+        const afp       = (tipoAfpG !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
+        const esaludG   = parseFloat((sb * 0.09).toFixed(2));
         const gastosEvt = 30;
         const neto      = calcularNeto(d);
 
@@ -1422,6 +1118,7 @@ async function enviarWhatsApp(id) {
         const colores = [];
 
         if (afp > 0)       { labels.push('AFP 13%');                      valores.push(parseFloat(afp.toFixed(2)));       colores.push('#e74c3c'); }
+                             labels.push('ESSALUD 9%');                    valores.push(esaludG);                          colores.push('#e91e8c');
         if (adelantos > 0) { labels.push('Adelantos');                    valores.push(adelantos);                        colores.push('#e67e22'); }
         if (faltas > 0)    { labels.push('Faltas');                       valores.push(faltas);                           colores.push('#c0392b'); }
         if (pension > 0)   { labels.push('Pensión');                      valores.push(pension);                          colores.push('#8e44ad'); }
@@ -1456,14 +1153,16 @@ async function enviarWhatsApp(id) {
         });
 
         // Detalle textual
-        const totalDed = afp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
-        const pct = sb > 0 ? ((totalDed / sb) * 100).toFixed(1) : 0;
+        const totalDed = afp + esaludG + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
+        const pct = pagado > 0 ? ((totalDed / pagado) * 100).toFixed(1) : 0;
         document.getElementById('detalle-usuario-planilla').innerHTML = `
             <table class="table table-sm table-borderless mb-0">
                 <tbody>
-                    <tr><td class="text-muted">Sueldo Base</td><td class="fw-bold text-end">S/ ${sb.toFixed(2)}</td></tr>
+                    <tr><td class="text-muted">Sueldo Base (Referencial)</td><td class="fw-bold text-end">S/ ${sb.toFixed(2)}</td></tr>
+                    <tr><td class="text-muted">Monto Pagado</td><td class="fw-bold text-end">S/ ${pagado.toFixed(2)}</td></tr>
                     ${bono > 0 ? `<tr><td class="text-success">Bono Especial</td><td class="fw-bold text-success text-end">+ S/ ${bono.toFixed(2)}</td></tr>` : ''}
-                    <tr><td class="text-danger">AFP (13%)</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
+                    <tr><td class="text-danger">AFP (13% s/ S.Base)</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
+                    <tr><td class="text-danger">ESSALUD (9% s/ S.Base)</td><td class="text-danger text-end">- S/ ${esaludG.toFixed(2)}</td></tr>
                     ${adelantos > 0 ? `<tr><td class="text-warning">Adelantos</td><td class="text-warning text-end">- S/ ${adelantos.toFixed(2)}</td></tr>` : ''}
                     ${faltas > 0    ? `<tr><td class="text-danger">Faltas</td><td class="text-danger text-end">- S/ ${faltas.toFixed(2)}</td></tr>` : ''}
                     ${pension > 0   ? `<tr><td class="text-muted">Pensión</td><td class="text-muted text-end">- S/ ${pension.toFixed(2)}</td></tr>` : ''}
@@ -1625,7 +1324,7 @@ function abrirModal(id) {
         const tipo = document.getElementById('edit-tipo-salud').value;
         const sb   = Number(document.getElementById('edit-sb').value) || 0;
         if (tipo === 'ESSALUD') {
-            document.getElementById('label-calculo-salud').innerText = `Aporte empleador: S/ ${(sb*0.09).toFixed(2)} (9%) — no descuenta al trabajador`;
+            document.getElementById('label-calculo-salud').innerText = `ESSALUD: S/ ${(sb*0.09).toFixed(2)} (9% s/ sueldo base) — se descuenta del pagado`;
         } else {
             document.getElementById('label-calculo-salud').innerText = 'SIS: sin descuento al trabajador';
         }
@@ -1883,7 +1582,8 @@ async function descargarExcel() {
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = 30;
         const desmr = Number(d.desmrito_monto) || 0;
-        const neto = parseFloat((sb + bono - afpMonto - adel - cred - pen - tard - activ - desmr).toFixed(2));
+        // NETO = PAGADO + BONO - AFP - ESSALUD - todos los descuentos
+        const neto = parseFloat((pagado + bono - afpMonto - esalud - adel - cred - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
 
         ws.getCell(row, 1).value = row - 5;
@@ -1963,7 +1663,7 @@ for (let col = 1; col <= 17; col++) {
         // Actualizar resumen de Neto en el modal
     function actualizarResumenNeto() {
         const sb = Number(document.getElementById('edit-sb').value) || 0;
-        const pagado = Number(document.getElementById('edit-pagado') ? document.getElementById('edit-pagado').value : 0) || 0; // solo referencia
+        const pagado = Number(document.getElementById('edit-pagado') ? document.getElementById('edit-pagado').value : 0) || 0;
         const bono = Number(document.getElementById('edit-bono').value) || 0;
         const adelantos = Number(document.getElementById('edit-al').value) || 0;
         const faltas = Number(document.getElementById('edit-fl').value) || 0;
@@ -1974,12 +1674,16 @@ for (let col = 1; col <= 17; col++) {
         const desmrito = Number(document.getElementById('edit-desmrito-monto').value) || 0;
 
         const tipoAfp = document.getElementById('edit-tipo-afp').value;
-        const descAfp = (tipoAfp !== 'NINGUNO') ? sb * 0.13 : 0;
+        // AFP y ESSALUD solo se calculan sobre el sueldo base (referencial)
+        const descAfp  = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
+        const esalud   = parseFloat((sb * 0.09).toFixed(2));
 
-        const totalDescuentos = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + 30;
-        const neto = sb + bono - totalDescuentos;
+        // La base del neto es PAGADO; AFP y ESSALUD se descuentan del pagado
+        const totalDescuentos = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + 30;
+        const neto = pagado + bono - totalDescuentos;
 
         document.getElementById('resumen-sb').textContent = `S/ ${sb.toFixed(2)}`;
+        document.getElementById('resumen-sb-ref').textContent = `AFP: S/${descAfp.toFixed(2)} + ESSALUD: S/${esalud.toFixed(2)}`;
         document.getElementById('resumen-descuentos').textContent = `S/ ${totalDescuentos.toFixed(2)}`;
         document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
@@ -2011,6 +1715,7 @@ function abrirGestionPersonal() {
     alert('🚧 Módulo de Gestión de Personal próximamente.');
 }
 </script>
+
 <!-- ── FOOTER GRTECH ── -->
 <footer style="background:#2c3e50;color:#aaa;text-align:center;padding:12px 20px;font-size:0.75rem;margin-top:30px;">
     <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
