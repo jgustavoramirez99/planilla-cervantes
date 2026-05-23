@@ -182,6 +182,12 @@
         <div class="login-bg-slide"        style="background-image:url('./fondo2.png');"></div>
         <div class="login-bg-overlay"></div>
     </div>
+    </div>
+    <div class="login-bg-area">
+        <div class="login-bg-slide active" style="background-image:url('./fondo1.png');"></div>
+        <div class="login-bg-slide"        style="background-image:url('./fondo2.png');"></div>
+        <div class="login-bg-overlay"></div>
+    </div>
 </div>
 
 <!-- ===================== DASHBOARD ===================== -->
@@ -1537,11 +1543,29 @@ async function descargarExcel() {
         alignment: { horizontal: 'center', vertical: 'middle' },
         border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
     };
+    // Celeste alternado (fila par) — blanco puro
+    const celesteStyleAlt = {
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+    };
 
     const amarilloStyle = {
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } },
         alignment: { horizontal: 'center', vertical: 'middle' },
         border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+    };
+    // Amarillo alternado (fila par) — blanco puro
+    const amarilloStyleAlt = {
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+    };
+    const monedaStyleAlt = {
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+        alignment: { horizontal: 'center', vertical: 'middle' },
+        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
+        numFmt: '"S/ "#,##0.00'
     };
 
     const monedaStyle = {
@@ -1642,12 +1666,17 @@ async function descargarExcel() {
         ws.getCell(row, 16).value = consolidado;
         ws.getCell(row, 17).value = d.tipo_afp === 'NINGUNO' ? '—' : '13%';
 
+        const esPar = (row % 2 === 0);
         for (let col = 1; col <= 17; col++) {
             const cell = ws.getCell(row, col);
-            if (col <= 3) cell.style = celesteStyle;
-            else if (colsMoneda.includes(col)) cell.style = monedaStyle;
-            else cell.style = amarilloStyle;
-    }
+            if (col <= 3) {
+                cell.style = esPar ? celesteStyleAlt : celesteStyle;
+            } else if (colsMoneda.includes(col)) {
+                cell.style = esPar ? monedaStyleAlt : monedaStyle;
+            } else {
+                cell.style = esPar ? amarilloStyleAlt : amarilloStyle;
+            }
+        }
 
         totales.pagado += pagado; totales.sb += sb; totales.esalud += esalud;
         totales.adel += adel; totales.cred += cred; totales.pen += pen;
@@ -1764,6 +1793,19 @@ function abrirGestionPersonal() {
         © 2026 Todos los derechos reservados
     </span>
 </footer>
+
+    <script>
+    (function() {
+        const slides = document.querySelectorAll('.login-bg-slide');
+        if (slides.length < 2) return;
+        let cur = 0;
+        setInterval(function() {
+            slides[cur].classList.remove('active');
+            cur = (cur + 1) % slides.length;
+            slides[cur].classList.add('active');
+        }, 2500);
+    })();
+    </script>
 
     <script>
     (function() {
