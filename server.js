@@ -39,26 +39,19 @@ app.use(express.static(path.join(__dirname, './')));
 // ============================================================
 // CONEXIÓN A LA BASE DE DATOS — Una sola vez, sin doble connect
 // ============================================================
-const db = mysql.createConnection({
-    host    : process.env.DB_HOST,
-    port    : parseInt(process.env.DB_PORT) || 25060,   // Aiven usa 25060 por defecto
-    user    : process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl     : { rejectUnauthorized: false }
+const db = mysql.createPool({
+    host              : process.env.DB_HOST,
+    port              : parseInt(process.env.DB_PORT) || 25060,   // Aiven usa 25060 por defecto
+    user              : process.env.DB_USER,
+    password          : process.env.DB_PASSWORD,
+    database          : process.env.DB_NAME,
+    ssl               : { rejectUnauthorized: false },
+    waitForConnections: true,
+    connectionLimit   : 10,
+    queueLimit        : 0
 });
 
-db.connect(err => {
-    if (err) {
-        console.error('❌ Error al conectar con la base de datos:', err.message);
-    } else {
-        console.log('✅ Conectado a MySQL (Aiven) correctamente.');
-    }
-});
-
-db.on('error', err => {
-    console.error('❌ Error de BD en tiempo de ejecución:', err.message);
-});
+console.log('✅ Pool de conexiones MySQL (Aiven) configurado correctamente.');
 
 // ============================================================
 // CARPETAS Y NODEMAILER
