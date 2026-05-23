@@ -587,7 +587,7 @@
             const data = await res.json();
 
             if (res.ok && data.success) {
-                console.log('DATA DEL LOGIN:', data); // ← temporal para ver qué llega
+
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('usuario', data.user || u);
                      userNombre = data.nombre;
@@ -976,11 +976,13 @@ async function enviarWhatsApp(id) {
         };
 
         // INGRESOS
+        fila(`Sueldo Base (Referencial)`, `S/ ${sb.toFixed(2)}`, '');
         fila(`Monto Pagado`, `S/ ${pagado.toFixed(2)}`, '');
         if (bono > 0) fila(`Bono Especial`, `S/ ${bono.toFixed(2)}`, '');
 
-        // DESCUENTOS (AFP calculado sobre sueldo base)
-        if (descAfp > 0) fila(`${tipoAfp} (13%)`, '', `S/ ${descAfp.toFixed(2)}`);
+        // DESCUENTOS (AFP y ESSALUD sobre sueldo base)
+        if (descAfp > 0) fila(`${tipoAfp} (13% s/ S.Base)`, '', `S/ ${descAfp.toFixed(2)}`);
+        fila(`ESSALUD (9% s/ S.Base)`, '', `S/ ${esalud.toFixed(2)}`);
 
         // DESCUENTOS PERSONALES
         if (adelantos > 0) fila(`Adelantos`, '', `S/ ${adelantos.toFixed(2)}`);
