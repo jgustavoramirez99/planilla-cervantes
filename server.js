@@ -10,12 +10,29 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app        = express();
-const JWT_SECRET = process.env.JWT_SECRET || 'cervantes_secret_2026';
+const rateLimit  = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 10,                   // máximo 10 intentos por IP
+    message: { success: false, message: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('❌ FATAL: JWT_SECRET no está definido en las variables de entorno.');
+    process.exit(1);
+}
 
 // ============================================================
 // MIDDLEWARES
 // ============================================================
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'https://planilla-cervantes.onrender.com',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, './')));
 
@@ -79,7 +96,7 @@ function verificarToken(req, res, next) {
 // ============================================================
 // POST /api/login — Valida contra la BD
 // ============================================================
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
     const { user, pass } = req.body;
 
     if (!user || !pass) {
@@ -358,6 +375,9 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 // PUT /api/docentes/:id
 // ============================================================
 app.put('/api/docentes/:id', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin') {
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    }
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
@@ -430,7 +450,7 @@ app.put('/api/docentes/:id/email', verificarToken, (req, res) => {
 // ============================================================
 // POST /api/guardar-boleta
 // ============================================================
-app.post('/api/guardar-boleta', (req, res) => {
+app.post('/api/guardar-boleta', verificarToken, (req, res) => {
     const { filename, base64 } = req.body;
     if (!filename || !base64) {
         return res.status(400).json({ error: 'Faltan datos: filename o base64.' });
