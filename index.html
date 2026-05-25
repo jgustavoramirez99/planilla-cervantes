@@ -731,8 +731,10 @@ function renderizarTabla(lista) {
         const sb = Number(d.sueldo_base) || 0;
         const pagado = Number(d.pagado) || 0;
         const tipoAfpRow = d.tipo_afp || 'AFP';
-        const descAfpRow = (tipoAfpRow !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
-        const esaludRow  = parseFloat((sb * 0.09).toFixed(2));
+        const pctAfpRow  = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
+        const descAfpRow = (tipoAfpRow !== 'NINGUNO') ? parseFloat((sb * (pctAfpRow[tipoAfpRow] || 0.13)).toFixed(2)) : 0;
+        const tipoSaludRow = d.tipo_salud || 'ESSALUD';
+        const esaludRow  = (tipoSaludRow === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         const totalDedReal = descAfpRow + esaludRow
                            + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
                            + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
@@ -858,13 +860,15 @@ async function enviarWhatsApp(id) {
         if (pagado === 0) return 0;
         const bono      = Number(d.bono)          || 0;
         const tipoAfp   = d.tipo_afp || 'AFP';
-        const descAfp   = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
-        const esalud    = parseFloat((sb * 0.09).toFixed(2));
+        const pctAfp    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
+        const descAfp   = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfp[tipoAfp] || 0.13)).toFixed(2)) : 0;
+        const tipoSalud = d.tipo_salud || 'ESSALUD';
+        const descSalud = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         const creditos  = Number(d.creditos)       || 0;
         const prestamos = Number(d.prestamos)      || 0;
         const desmrito  = Number(d.desmrito_monto) || 0;
         return pagado + bono
-            - descAfp - esalud
+            - descAfp - descSalud
             - (Number(d.adelantos) || 0)
             - (Number(d.faltas)    || 0)
             - (Number(d.pension)   || 0)
@@ -894,8 +898,9 @@ async function enviarWhatsApp(id) {
         const desmritoNivel = d.desmrito_nivel || '';
         const pagado        = Number(d.pagado) || 0;
         const gastosEventos = 30;
-        const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
-        const esalud        = parseFloat((sb * 0.09).toFixed(2));
+        const pctAfpPdf    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
+        const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfpPdf[tipoAfp] || 0.13)).toFixed(2)) : 0;
+        const esalud        = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         const totalDed      = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
         const neto          = pagado + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
@@ -979,8 +984,9 @@ async function enviarWhatsApp(id) {
         fila(`Monto Pagado`, `S/ ${pagado.toFixed(2)}`, '');
         if (bono > 0) fila(`Bono Especial`, `S/ ${bono.toFixed(2)}`, '');
 
-        // DESCUENTOS (AFP sobre sueldo base — ESSALUD a cargo del empleador, no aparece en boleta)
-        if (descAfp > 0) fila(`${tipoAfp} (13% s/ S.Base)`, '', `S/ ${descAfp.toFixed(2)}`);
+        // DESCUENTOS (AFP sobre sueldo base — ESSALUD/SIS a cargo del empleador o fijo, no aparece en boleta del trabajador)
+        const pctLabelsAfp = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
+        if (descAfp > 0) fila(`${tipoAfp} (${pctLabelsAfp[tipoAfp]||'13%'} s/ S.Base)`, '', `S/ ${descAfp.toFixed(2)}`);
 
         // DESCUENTOS PERSONALES
         if (adelantos > 0) fila(`Adelantos`, '', `S/ ${adelantos.toFixed(2)}`);
@@ -1145,8 +1151,9 @@ async function enviarWhatsApp(id) {
         const tardanza  = Number(d.tardanza)    || 0;
         const otrosDesc = Number(d.otros_descuentos) || 0;
         const tipoAfpG  = d.tipo_afp || 'AFP';
-        const afp       = (tipoAfpG !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
-        const esaludG   = parseFloat((sb * 0.09).toFixed(2));
+        const pctAfpG   = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
+        const afp       = (tipoAfpG !== 'NINGUNO') ? parseFloat((sb * (pctAfpG[tipoAfpG] || 0.13)).toFixed(2)) : 0;
+        // ESSALUD/SIS: solo visible para admin — NO se muestra en panel usuario
         const gastosEvt = 30;
         const neto      = calcularNeto(d);
 
@@ -1154,8 +1161,7 @@ async function enviarWhatsApp(id) {
         const valores = [];
         const colores = [];
 
-        if (afp > 0)       { labels.push('AFP 13%');                      valores.push(parseFloat(afp.toFixed(2)));       colores.push('#e74c3c'); }
-                             labels.push('ESSALUD 9%');                   valores.push(esaludG);                          colores.push('#e91e8c');
+        if (afp > 0)       { labels.push('AFP');                             valores.push(parseFloat(afp.toFixed(2)));       colores.push('#e74c3c'); }
         if (adelantos > 0) { labels.push('Adelantos');                    valores.push(adelantos);                        colores.push('#e67e22'); }
         if (faltas > 0)    { labels.push('Faltas');                       valores.push(faltas);                           colores.push('#c0392b'); }
         if (pension > 0)   { labels.push('Pensión');                      valores.push(pension);                          colores.push('#8e44ad'); }
@@ -1190,7 +1196,7 @@ async function enviarWhatsApp(id) {
         });
 
         // Detalle textual
-        const totalDed = afp + esaludG + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
+        const totalDed = afp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
         const pct = pagadoG > 0 ? ((totalDed / pagadoG) * 100).toFixed(1) : 0;
         document.getElementById('detalle-usuario-planilla').innerHTML = `
             <table class="table table-sm table-borderless mb-0">
@@ -1198,8 +1204,7 @@ async function enviarWhatsApp(id) {
                     <tr><td class="text-muted">Sueldo Base (Ref.)</td><td class="fw-bold text-end">S/ ${sb.toFixed(2)}</td></tr>
                     <tr><td class="text-muted">Monto Pagado</td><td class="fw-bold text-end">S/ ${pagadoG.toFixed(2)}</td></tr>
                     ${bono > 0 ? `<tr><td class="text-success">Bono Especial</td><td class="fw-bold text-success text-end">+ S/ ${bono.toFixed(2)}</td></tr>` : ''}
-                    <tr><td class="text-danger">AFP (13% s/ S.Base)</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
-                    <tr><td class="text-danger">ESSALUD (9% s/ S.Base)</td><td class="text-danger text-end">- S/ ${esaludG.toFixed(2)}</td></tr>
+                    <tr><td class="text-danger">AFP (s/ S.Base)</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
                     ${adelantos > 0 ? `<tr><td class="text-warning">Adelantos</td><td class="text-warning text-end">- S/ ${adelantos.toFixed(2)}</td></tr>` : ''}
                     ${faltas > 0    ? `<tr><td class="text-danger">Faltas</td><td class="text-danger text-end">- S/ ${faltas.toFixed(2)}</td></tr>` : ''}
                     ${pension > 0   ? `<tr><td class="text-muted">Pensión</td><td class="text-muted text-end">- S/ ${pension.toFixed(2)}</td></tr>` : ''}
@@ -1312,16 +1317,16 @@ function abrirModal(id) {
                 nombreAFP = 'ONP';
                 break;
             case 'Profuturo':
-                porcentaje = 0.13;     // puedes ajustar si quieres valores más reales
+                porcentaje = 0.1306;   // 10% + 1.37% + 1.69% = 13.06%
                 break;
             case 'Integra':
-                porcentaje = 0.129;    // ejemplo: Integra suele ser un poco más baja
+                porcentaje = 0.1292;   // 10% + 1.37% + 1.55% = 12.92%
                 break;
             case 'Habitat':
-                porcentaje = 0.131;
+                porcentaje = 0.1284;   // 10% + 1.37% + 1.47% = 12.84%
                 break;
             case 'Prima':
-                porcentaje = 0.132;
+                porcentaje = 0.1297;   // 10% + 1.37% + 1.60% = 12.97%
                 break;
             case 'NINGUNO':
                 porcentaje = 0;
@@ -1333,13 +1338,19 @@ function abrirModal(id) {
 
         const monto = sb * porcentaje;
 
+        const pctLabels = {
+            ONP: '13%', Habitat: '12.84%', Integra: '12.92%',
+            Prima: '12.97%', Profuturo: '13.06%', NINGUNO: ''
+        };
+        const pctLabel = pctLabels[tipo] || '13%';
+
         let texto = '';
         if (tipo === 'NINGUNO') {
         document.getElementById('label-calculo-afp').innerText = 'Sin descuento por pensión';
         } else if (tipo === 'ONP') {
-        document.getElementById('label-calculo-afp').innerText = `ONP: S/ ${(sb*0.13).toFixed(2)} (13%)`;
+        document.getElementById('label-calculo-afp').innerText = `ONP: S/ ${monto.toFixed(2)} (13%)`;
         } else {
-        document.getElementById('label-calculo-afp').innerText = `${tipo}: S/ ${(sb*0.13).toFixed(2)} (13%)`;
+        document.getElementById('label-calculo-afp').innerText = `${tipo}: S/ ${monto.toFixed(2)} (${pctLabel})`;
        }
       actualizarResumenNeto();
     }
@@ -1363,7 +1374,7 @@ function abrirModal(id) {
         if (tipo === 'ESSALUD') {
             document.getElementById('label-calculo-salud').innerText = `Aporte empleador: S/ ${(sb*0.09).toFixed(2)} (9%) — no descuenta al trabajador`;
         } else {
-            document.getElementById('label-calculo-salud').innerText = 'SIS: sin descuento al trabajador';
+            document.getElementById('label-calculo-salud').innerText = 'SIS: descuento fijo S/ 25.00 al trabajador';
         }
     }
 
@@ -1557,7 +1568,7 @@ async function descargarExcel() {
     };
 
     // ==================== TÍTULOS + LOGO ====================
-    ws.mergeCells('A1:Q1');
+    ws.mergeCells('A1:S1');
     const titulo = ws.getCell('A1');
     titulo.value = "CERVANTES EDUCA SAC";
     titulo.style = { ...headerStyle, font: { bold: true, size: 16, color: { argb: 'FFFFFFFF' } } };
@@ -1580,7 +1591,7 @@ async function descargarExcel() {
         console.log("Logo no encontrado, se omite.");
     }
 
-    ws.mergeCells('A2:Q2');
+    ws.mergeCells('A2:S2');
     ws.getCell('A2').value = `PLANILLA DE REMUNERACIONES - ${mesNombre} 2026`;
     ws.getCell('A2').style = headerStyle;
 
@@ -1590,12 +1601,26 @@ async function descargarExcel() {
     // ==================== ENCABEZADOS (fila 5 más alta) ====================
     const headers = ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
                     "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PENSIÓN", "TARDANZAS + FALTAS", 
-                    "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO", "AFP %"];
+                    "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO", "AFP %",
+                    "", "DESCUENTOS"];
 
     headers.forEach((header, index) => {
         const cell = ws.getCell(5, index + 1);
         cell.value = header;
-        cell.style = headerStyle;
+        if (index === 18) {
+            // Columna DESCUENTOS — color rojo/naranja para destacar
+            cell.style = {
+                font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'C0392B' } },
+                alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+                border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
+            };
+        } else if (index === 17) {
+            // Columna separadora vacía — sin bordes ni color
+            cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
+        } else {
+            cell.style = headerStyle;
+        }
     });
 
     // Hacer fila 5 más alta
@@ -1603,7 +1628,7 @@ async function descargarExcel() {
 
     // ==================== DATOS ====================
     let row = 6;
-    let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0 };
+    let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
     const colsMoneda = [4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
     docentesData.forEach(d => {
@@ -1611,8 +1636,11 @@ async function descargarExcel() {
         const sb = Number(d.sueldo_base) || 0;
         const pagado = Number(d.pagado) || 0;
         const bono = Number(d.bono) || 0;
-        const afpMonto = (d.tipo_afp === 'NINGUNO' || !d.tipo_afp) ? 0 : parseFloat((sb * 0.13).toFixed(2));
-        const esalud = parseFloat((sb * 0.09).toFixed(2));
+        const pctAfpExcel = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
+        const tipoAfpEx = d.tipo_afp || 'ONP';
+        const afpMonto = (tipoAfpEx === 'NINGUNO') ? 0 : parseFloat((sb * (pctAfpExcel[tipoAfpEx] || 0.13)).toFixed(2));
+        const tipoSaludEx = d.tipo_salud || 'ESSALUD';
+        const esalud = (tipoSaludEx === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         const adel = Number(d.adelantos) || 0;
         const cred = Number(d.creditos) || 0;
         const pen = Number(d.pension) || 0;
@@ -1621,6 +1649,8 @@ async function descargarExcel() {
         const desmr = Number(d.desmrito_monto) || 0;
         const neto = parseFloat((pagado + bono - afpMonto - esalud - adel - cred - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
+        // Descuentos totales retenidos por la empresa (lo que la empresa retiene del trabajador)
+        const descuentosTotal = parseFloat((afpMonto + esalud + adel + cred + pen + tard + activ + desmr).toFixed(2));
 
         ws.getCell(row, 1).value = row - 5;
         ws.getCell(row, 2).value = d.nombre || '';
@@ -1638,12 +1668,25 @@ async function descargarExcel() {
         ws.getCell(row, 14).value = bono;
         ws.getCell(row, 15).value = neto;
         ws.getCell(row, 16).value = consolidado;
-        ws.getCell(row, 17).value = d.tipo_afp === 'NINGUNO' ? '—' : '13%';
+        ws.getCell(row, 17).value = d.tipo_afp === 'NINGUNO' ? '—' : (pctAfpExcel[tipoAfpEx] ? (pctAfpExcel[tipoAfpEx]*100).toFixed(2)+'%' : '13%');
+        ws.getCell(row, 18).value = ''; // columna separadora vacía
+        ws.getCell(row, 19).value = descuentosTotal;
 
         const isOddRow = (row - 5) % 2 === 1; // fila impar = color, par = blanco
-        for (let col = 1; col <= 17; col++) {
+        for (let col = 1; col <= 19; col++) {
             const cell = ws.getCell(row, col);
-            if (col <= 3) {
+            if (col === 18) {
+                // separador vacío — sin estilo
+                cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
+            } else if (col === 19) {
+                // columna Descuentos — siempre rojo claro con formato moneda
+                cell.style = {
+                    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'FADBD8' : 'FFFFFFFF' } },
+                    alignment: { horizontal: 'center', vertical: 'middle' },
+                    border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
+                    numFmt: '"S/ "#,##0.00'
+                };
+            } else if (col <= 3) {
                 // N°, Apellidos y Nombres, DNI → celeste / blanco
                 if (isOddRow) {
                     cell.style = celesteStyle;
@@ -1684,6 +1727,7 @@ async function descargarExcel() {
         totales.adel += adel; totales.cred += cred; totales.pen += pen;
         totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
         totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
+        totales.descuentos += descuentosTotal;
 
         row++;
     });
@@ -1703,6 +1747,8 @@ async function descargarExcel() {
     ws.getCell(totalRow, 14).value = totales.bono;
     ws.getCell(totalRow, 15).value = totales.neto;
     ws.getCell(totalRow, 16).value = totales.consolidado;
+    ws.getCell(totalRow, 18).value = '';
+    ws.getCell(totalRow, 19).value = totales.descuentos;
 
     const totalMonedaStyle = {
     font: { bold: true, color: { argb: 'FFFFFFFF' } },
@@ -1711,14 +1757,20 @@ async function descargarExcel() {
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
     numFmt: '"S/ "#,##0.00'
 };
-for (let col = 1; col <= 17; col++) {
+for (let col = 1; col <= 19; col++) {
     const cell = ws.getCell(totalRow, col);
-    cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
+    if (col === 18) {
+        cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
+    } else if (col === 19) {
+        cell.style = { ...totalMonedaStyle, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '922B21' } } };
+    } else {
+        cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
+    }
 }
 
     // Ancho de columnas
     ws.columns.forEach((column, i) => {
-        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10][i] || 12;
+        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10, 4, 16][i] || 12;
     });
 
     // Descargar
@@ -1742,9 +1794,12 @@ for (let col = 1; col <= 17; col++) {
         const prestamos = Number(document.getElementById('edit-prestamos').value) || 0;
         const desmrito  = Number(document.getElementById('edit-desmrito-monto').value) || 0;
         const tipoAfp   = document.getElementById('edit-tipo-afp').value;
-        // AFP y ESSALUD sobre sueldo_base (referencial)
-        const descAfp = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * 0.13).toFixed(2)) : 0;
-        const esalud  = parseFloat((sb * 0.09).toFixed(2));
+        // AFP sobre sueldo_base con porcentajes exactos
+        const pctAfp = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
+        const descAfp = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfp[tipoAfp] || 0.13)).toFixed(2)) : 0;
+        // ESSALUD 9% o SIS S/25 sobre sueldo_base — solo admin ve esto
+        const tipoSalud = document.getElementById('edit-tipo-salud').value;
+        const esalud  = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         // Neto parte desde PAGADO
         const totalDescuentos = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + 30;
         const neto = pagado + bono - totalDescuentos;
