@@ -689,6 +689,12 @@
 
                 docentesData = await response.json();
 
+            // Marcar como emitida si tiene sueldo pagado registrado
+            docentesData = docentesData.map(d => ({
+                ...d,
+                _boletaEmitida: (Number(d.pagado) || 0) > 0
+            }));
+
             // Ordenar alfabéticamente por nombre
             docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
@@ -1668,7 +1674,8 @@ async function descargarExcel() {
         ws.getCell(row, 14).value = bono;
         ws.getCell(row, 15).value = neto;
         ws.getCell(row, 16).value = consolidado;
-        ws.getCell(row, 17).value = d.tipo_afp === 'NINGUNO' ? '—' : (pctAfpExcel[tipoAfpEx] ? (pctAfpExcel[tipoAfpEx]*100).toFixed(2)+'%' : '13%');
+        const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
+        ws.getCell(row, 17).value = tipoAfpEx === 'NINGUNO' ? '—' : `S/ ${afpMonto.toFixed(2)} (${afpPctLabels[tipoAfpEx] || '13%'})`;
         ws.getCell(row, 18).value = ''; // columna separadora vacía
         ws.getCell(row, 19).value = descuentosTotal;
 
