@@ -1606,22 +1606,22 @@ async function descargarExcel() {
 
     // ==================== ENCABEZADOS (fila 5 más alta) ====================
     const headers = ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
-                    "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PENSIÓN", "TARDANZAS + FALTAS", 
+                    "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PRÉSTAMOS", "PENSIÓN", "TARDANZAS + FALTAS", 
                     "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO", "AFP %",
                     "", "DESCUENTOS"];
 
     headers.forEach((header, index) => {
         const cell = ws.getCell(5, index + 1);
         cell.value = header;
-        if (index === 18) {
-            // Columna DESCUENTOS — color rojo/naranja para destacar
+        if (index === 19) {
+            // Columna DESCUENTOS — color verde para destacar
             cell.style = {
                 font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
-                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'C0392B' } },
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E8449' } },
                 alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
                 border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
             };
-        } else if (index === 17) {
+        } else if (index === 18) {
             // Columna separadora vacía — sin bordes ni color
             cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
         } else {
@@ -1634,9 +1634,9 @@ async function descargarExcel() {
 
     // ==================== DATOS ====================
     let row = 6;
-    let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
+    let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
-    const colsMoneda = [4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+    const colsMoneda = [4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     docentesData.forEach(d => {
         // ... (mismo cálculo de datos que antes)
         const sb = Number(d.sueldo_base) || 0;
@@ -1649,14 +1649,15 @@ async function descargarExcel() {
         const esalud = (tipoSaludEx === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         const adel = Number(d.adelantos) || 0;
         const cred = Number(d.creditos) || 0;
+        const prest = Number(d.prestamos) || 0;
         const pen = Number(d.pension) || 0;
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = 30;
         const desmr = Number(d.desmrito_monto) || 0;
-        const neto = parseFloat((pagado + bono - afpMonto - esalud - adel - cred - pen - tard - activ - desmr).toFixed(2));
+        const neto = parseFloat((pagado + bono - afpMonto - esalud - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
-        // Descuentos personales del trabajador (adelantos + créditos + pensión + tardanzas/faltas + desmérito)
-        const descuentosTotal = parseFloat((adel + cred + pen + tard + desmr).toFixed(2));
+        // Descuentos personales del trabajador (adelantos + créditos + préstamos + pensión + tardanzas/faltas + desmérito)
+        const descuentosTotal = parseFloat((adel + cred + prest + pen + tard + desmr).toFixed(2));
 
         ws.getCell(row, 1).value = row - 5;
         ws.getCell(row, 2).value = d.nombre || '';
@@ -1667,26 +1668,27 @@ async function descargarExcel() {
         ws.getCell(row, 7).value = esalud;
         ws.getCell(row, 8).value = adel;
         ws.getCell(row, 9).value = cred;
-        ws.getCell(row, 10).value = pen;
-        ws.getCell(row, 11).value = tard;
-        ws.getCell(row, 12).value = activ;
-        ws.getCell(row, 13).value = desmr;
-        ws.getCell(row, 14).value = bono;
-        ws.getCell(row, 15).value = neto;
-        ws.getCell(row, 16).value = consolidado;
+        ws.getCell(row, 10).value = prest;
+        ws.getCell(row, 11).value = pen;
+        ws.getCell(row, 12).value = tard;
+        ws.getCell(row, 13).value = activ;
+        ws.getCell(row, 14).value = desmr;
+        ws.getCell(row, 15).value = bono;
+        ws.getCell(row, 16).value = neto;
+        ws.getCell(row, 17).value = consolidado;
         const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
-        ws.getCell(row, 17).value = tipoAfpEx === 'NINGUNO' ? '—' : `S/ ${afpMonto.toFixed(2)} (${afpPctLabels[tipoAfpEx] || '13%'})`;
-        ws.getCell(row, 18).value = ''; // columna separadora vacía
-        ws.getCell(row, 19).value = descuentosTotal;
+        ws.getCell(row, 18).value = tipoAfpEx === 'NINGUNO' ? '—' : `S/ ${afpMonto.toFixed(2)} (${afpPctLabels[tipoAfpEx] || '13%'})`;
+        ws.getCell(row, 19).value = ''; // columna separadora vacía
+        ws.getCell(row, 20).value = descuentosTotal;
 
         const isOddRow = (row - 5) % 2 === 1; // fila impar = color, par = blanco
-        for (let col = 1; col <= 19; col++) {
+        for (let col = 1; col <= 20; col++) {
             const cell = ws.getCell(row, col);
-            if (col === 18) {
+            if (col === 19) {
                 // separador vacío — sin estilo
                 cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-            } else if (col === 19) {
-                // columna Descuentos — siempre rojo claro con formato moneda
+            } else if (col === 20) {
+                // columna Descuentos — verde claro con formato moneda
                 cell.style = {
                     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
                     alignment: { horizontal: 'center', vertical: 'middle' },
@@ -1731,7 +1733,7 @@ async function descargarExcel() {
         }
 
         totales.pagado += pagado; totales.sb += sb; totales.esalud += esalud;
-        totales.adel += adel; totales.cred += cred; totales.pen += pen;
+        totales.adel += adel; totales.cred += cred; totales.prest += prest; totales.pen += pen;
         totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
         totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
         totales.descuentos += descuentosTotal;
@@ -1747,15 +1749,16 @@ async function descargarExcel() {
     ws.getCell(totalRow, 7).value = totales.esalud;
     ws.getCell(totalRow, 8).value = totales.adel;
     ws.getCell(totalRow, 9).value = totales.cred;
-    ws.getCell(totalRow, 10).value = totales.pen;
-    ws.getCell(totalRow, 11).value = totales.tard;
-    ws.getCell(totalRow, 12).value = totales.activ;
-    ws.getCell(totalRow, 13).value = totales.desmr;
-    ws.getCell(totalRow, 14).value = totales.bono;
-    ws.getCell(totalRow, 15).value = totales.neto;
-    ws.getCell(totalRow, 16).value = totales.consolidado;
-    ws.getCell(totalRow, 18).value = '';
-    ws.getCell(totalRow, 19).value = totales.descuentos;
+    ws.getCell(totalRow, 10).value = totales.prest;
+    ws.getCell(totalRow, 11).value = totales.pen;
+    ws.getCell(totalRow, 12).value = totales.tard;
+    ws.getCell(totalRow, 13).value = totales.activ;
+    ws.getCell(totalRow, 14).value = totales.desmr;
+    ws.getCell(totalRow, 15).value = totales.bono;
+    ws.getCell(totalRow, 16).value = totales.neto;
+    ws.getCell(totalRow, 17).value = totales.consolidado;
+    ws.getCell(totalRow, 19).value = '';
+    ws.getCell(totalRow, 20).value = totales.descuentos;
 
     const totalMonedaStyle = {
     font: { bold: true, color: { argb: 'FFFFFFFF' } },
@@ -1764,12 +1767,12 @@ async function descargarExcel() {
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
     numFmt: '"S/ "#,##0.00'
 };
-for (let col = 1; col <= 19; col++) {
+for (let col = 1; col <= 20; col++) {
     const cell = ws.getCell(totalRow, col);
-    if (col === 18) {
+    if (col === 19) {
         cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-    } else if (col === 19) {
-        cell.style = { ...totalMonedaStyle, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '922B21' } } };
+    } else if (col === 20) {
+        cell.style = { ...totalMonedaStyle, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E8449' } } };
     } else {
         cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
     }
@@ -1777,7 +1780,7 @@ for (let col = 1; col <= 19; col++) {
 
     // Ancho de columnas
     ws.columns.forEach((column, i) => {
-        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10, 4, 16][i] || 12;
+        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10, 4, 16][i] || 12;
     });
 
     // Descargar
