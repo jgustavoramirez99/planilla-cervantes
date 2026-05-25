@@ -1649,8 +1649,8 @@ async function descargarExcel() {
         const desmr = Number(d.desmrito_monto) || 0;
         const neto = parseFloat((pagado + bono - afpMonto - esalud - adel - cred - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
-        // Descuentos totales retenidos por la empresa (lo que la empresa retiene del trabajador)
-        const descuentosTotal = parseFloat((afpMonto + esalud + adel + cred + pen + tard + activ + desmr).toFixed(2));
+        // Descuentos personales del trabajador (adelantos + créditos + pensión + tardanzas/faltas + desmérito)
+        const descuentosTotal = parseFloat((adel + cred + pen + tard + desmr).toFixed(2));
 
         ws.getCell(row, 1).value = row - 5;
         ws.getCell(row, 2).value = d.nombre || '';
@@ -1681,7 +1681,7 @@ async function descargarExcel() {
             } else if (col === 19) {
                 // columna Descuentos — siempre rojo claro con formato moneda
                 cell.style = {
-                    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'FADBD8' : 'FFFFFFFF' } },
+                    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
                     alignment: { horizontal: 'center', vertical: 'middle' },
                     border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
                     numFmt: '"S/ "#,##0.00'
