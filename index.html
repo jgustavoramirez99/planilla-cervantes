@@ -1314,6 +1314,7 @@ function abrirModal(id) {
         const tipo = document.getElementById('edit-tipo-afp').value;
         const sb   = Number(document.getElementById('edit-sb').value) || 0;
         
+        // Interfaz del usuario: mostrar claramente el porcentaje aplicado y el monto.
         let porcentaje = 0.13;   // valor por defecto
         let nombreAFP = tipo;
 
@@ -1323,7 +1324,7 @@ function abrirModal(id) {
                 nombreAFP = 'ONP';
                 break;
             case 'Profuturo':
-                porcentaje = 0.1306;   // 10% + 1.37% + 1.69% = 13.06%
+                porcentaje = 0.1306;   // 10% + 1.37% + 1.69% = 13.06% (Exacto)
                 break;
             case 'Integra':
                 porcentaje = 0.1292;   // 10% + 1.37% + 1.55% = 12.92%
@@ -1636,7 +1637,7 @@ async function descargarExcel() {
     let row = 6;
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
-    const colsMoneda = [4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+    const colsMoneda = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     docentesData.forEach(d => {
         // ... (mismo cálculo de datos que antes)
         const sb = Number(d.sueldo_base) || 0;
@@ -1646,7 +1647,8 @@ async function descargarExcel() {
         const tipoAfpEx = d.tipo_afp || 'ONP';
         const afpMonto = (tipoAfpEx === 'NINGUNO') ? 0 : parseFloat((sb * (pctAfpExcel[tipoAfpEx] || 0.13)).toFixed(2));
         const tipoSaludEx = d.tipo_salud || 'ESSALUD';
-        const esalud = (tipoSaludEx === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+        const esaludEmpleador = (tipoSaludEx === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+        const esaludTrabajador = 0; // SIS o ESSALUD: nunca se descuenta al trabajador
         const adel = Number(d.adelantos) || 0;
         const cred = Number(d.creditos) || 0;
         const prest = Number(d.prestamos) || 0;
@@ -1654,8 +1656,8 @@ async function descargarExcel() {
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = 30;
         const desmr = Number(d.desmrito_monto) || 0;
-        const neto = parseFloat((pagado + bono - afpMonto - esalud - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
-        const consolidado = parseFloat((pagado + esalud + bono).toFixed(2));
+        const neto = parseFloat((pagado + bono - afpMonto - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
+        const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
         // Descuentos personales del trabajador (adelantos + créditos + préstamos + pensión + tardanzas/faltas + desmérito)
         const descuentosTotal = parseFloat((adel + cred + prest + pen + tard + desmr).toFixed(2));
 
@@ -1664,8 +1666,8 @@ async function descargarExcel() {
         ws.getCell(row, 3).value = d.dni || '';
         ws.getCell(row, 4).value = pagado;
         ws.getCell(row, 5).value = sb;
-        ws.getCell(row, 6).value = d.afp || d.tipo_afp || 'ONP';
-        ws.getCell(row, 7).value = esalud;
+        ws.getCell(row, 6).value = tipoAfpEx === 'NINGUNO' ? 0 : afpMonto;
+        ws.getCell(row, 7).value = esaludEmpleador;
         ws.getCell(row, 8).value = adel;
         ws.getCell(row, 9).value = cred;
         ws.getCell(row, 10).value = prest;
@@ -1677,7 +1679,7 @@ async function descargarExcel() {
         ws.getCell(row, 16).value = neto;
         ws.getCell(row, 17).value = consolidado;
         const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
-        ws.getCell(row, 18).value = tipoAfpEx === 'NINGUNO' ? '—' : `S/ ${afpMonto.toFixed(2)} (${afpPctLabels[tipoAfpEx] || '13%'})`;
+        ws.getCell(row, 18).value = tipoAfpEx === 'NINGUNO' ? '—' : (afpPctLabels[tipoAfpEx] || '13%');
         ws.getCell(row, 19).value = ''; // columna separadora vacía
         ws.getCell(row, 20).value = descuentosTotal;
 
