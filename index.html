@@ -1667,7 +1667,12 @@ async function descargarExcel() {
         ws.getCell(row, 4).value = pagado;
         ws.getCell(row, 5).value = sb;
         ws.getCell(row, 6).value = tipoAfpEx === 'NINGUNO' ? 0 : afpMonto;
-        ws.getCell(row, 7).value = esaludEmpleador;
+        // Solo mostrar en columna ESALUD si es ESSALUD
+        if (tipoSaludEx === 'ESSALUD') {
+            ws.getCell(row, 7).value = esaludEmpleador;
+        } else {
+            ws.getCell(row, 7).value = '';        // o '' si prefieres vacío
+        }
         ws.getCell(row, 8).value = adel;
         ws.getCell(row, 9).value = cred;
         ws.getCell(row, 10).value = prest;
@@ -1734,7 +1739,11 @@ async function descargarExcel() {
             }
         }
 
-        totales.pagado += pagado; totales.sb += sb; totales.esalud += esaludEmpleador;   // ← CORRECTO;
+        totales.pagado += pagado; totales.sb += sb; 
+        // ✅ SOLO sumar a ESALUD si es ESSALUD (no incluir los S/25 de SIS)
+        if (tipoSaludEx === 'ESSALUD') {
+            totales.esalud += esaludEmpleador;
+        };   // ← CORRECTO;
         totales.adel += adel; totales.cred += cred; totales.prest += prest; totales.pen += pen;
         totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
         totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
