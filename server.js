@@ -322,6 +322,8 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 
     let sql = `
         SELECT d.*,
+               IFNULL(p.pagado,             0)    AS pagado,
+               IFNULL(p.afp,                NULL) AS afp,
                IFNULL(p.adelantos,           0)   AS adelantos,
                IFNULL(p.faltas,              0)   AS faltas,
                IFNULL(p.pension,             0)   AS pension,
@@ -391,18 +393,21 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     // NETO/CONSOLIDADO: PAGADO + ESSALUD (aporte empleador) + BONO
     const consolidado = parseFloat(((Number(pagado) || 0) + esalud + (Number(bono) || 0)).toFixed(2));
 
+    // pagado y afp ahora se guardan en planillas (por mes), no en docentes
     db.query(
-        'UPDATE docentes SET sueldo_base = ?, pagado = ?, afp = ? WHERE id_docente = ?',
-        [sueldo_base, pagado || 0, afp || null, id],
+        'UPDATE docentes SET sueldo_base = ? WHERE id_docente = ?',
+        [sueldo_base, id],
         (err) => { if (err) console.error('Error actualizando docentes:', err); }
     );
 
     const sqlUpsert = `
         INSERT INTO planillas
-            (id_docente, mes, anio, adelantos, faltas, pension, tardanza, bono,
+            (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
              tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp)
-        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
+            pagado          = VALUES(pagado),
+            afp             = VALUES(afp),
             adelantos       = VALUES(adelantos),
             faltas          = VALUES(faltas),
             pension         = VALUES(pension),
@@ -417,7 +422,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
 
     db.query(
         sqlUpsert,
-        [id, mes, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
+        [id, mes, pagado||0, afp||null, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
          tipo_salud||'ESSALUD', creditos||0, prestamos||0,
          desmrito_nivel||'', desmrito_monto||0, consolidado],
         (err) => {
@@ -490,38 +495,14 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
     if (!mes || mes < 1 || mes > 12) {
         return res.status(400).json({ error: 'Mes inválido.' });
     }
-    // Primero obtener los id_docente que tienen planilla en ese mes
+    // Borrar solo las planillas del mes seleccionado
+    // pagado y afp ya viven en planillas, asi que con borrar la fila es suficiente
     db.query(
-        'SELECT id_docente FROM planillas WHERE mes = ? AND anio = 2026',
+        'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
         [mes],
-        (err, docentesDelMes) => {
+        (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-
-            // Borrar las planillas del mes
-            db.query(
-                'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
-                [mes],
-                (err2, result) => {
-                    if (err2) return res.status(500).json({ error: err2.message });
-
-                    // Si no habia docentes con planilla en ese mes, terminar
-                    if (docentesDelMes.length === 0) {
-                        return res.json({ success: true, eliminados: 0 });
-                    }
-
-                    // Resetear pagado y afp SOLO de los docentes que tenian planilla en ese mes
-                    const ids = docentesDelMes.map(d => d.id_docente);
-                    const placeholders = ids.map(() => '?').join(',');
-                    db.query(
-                        'UPDATE docentes SET pagado = 0, afp = NULL WHERE id_docente IN (' + placeholders + ')',
-                        ids,
-                        (err3) => {
-                            if (err3) return res.status(500).json({ error: err3.message });
-                            res.json({ success: true, eliminados: result.affectedRows });
-                        }
-                    );
-                }
-            );
+            res.json({ success: true, eliminados: result.affectedRows });
         }
     );
 });
