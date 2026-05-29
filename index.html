@@ -743,6 +743,10 @@ function renderizarTabla(lista) {
         const descAfpRow = (tipoAfpRow !== 'NINGUNO') ? parseFloat((sb * (pctAfpRow[tipoAfpRow] || 0.13)).toFixed(2)) : 0;
         const tipoSaludRow = d.tipo_salud || 'ESSALUD';
         const esaludRow  = (tipoSaludRow === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+
+        // === CORRECCIÓN AQUÍ ===
+        const actividades = Number(d.actividades) || 0;
+        
         const totalDedReal = descAfpRow + esaludRow
                            + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
                            + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
