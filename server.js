@@ -490,19 +490,36 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
     if (!mes || mes < 1 || mes > 12) {
         return res.status(400).json({ error: 'Mes inválido.' });
     }
-    // Primero borrar las planillas del mes
+    // Primero obtener los id_docente que tienen planilla en ese mes
     db.query(
-        'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
+        'SELECT id_docente FROM planillas WHERE mes = ? AND anio = 2026',
         [mes],
-        (err, result) => {
+        (err, docentesDelMes) => {
             if (err) return res.status(500).json({ error: err.message });
-            // Luego resetear pagado y afp en la tabla docentes
+
+            // Borrar las planillas del mes
             db.query(
-                'UPDATE docentes SET pagado = 0, afp = NULL WHERE 1=1',
-                [],
-                (err2) => {
+                'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
+                [mes],
+                (err2, result) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    res.json({ success: true, eliminados: result.affectedRows });
+
+                    // Si no habia docentes con planilla en ese mes, terminar
+                    if (docentesDelMes.length === 0) {
+                        return res.json({ success: true, eliminados: 0 });
+                    }
+
+                    // Resetear pagado y afp SOLO de los docentes que tenian planilla en ese mes
+                    const ids = docentesDelMes.map(d => d.id_docente);
+                    const placeholders = ids.map(() => '?').join(',');
+                    db.query(
+                        'UPDATE docentes SET pagado = 0, afp = NULL WHERE id_docente IN (' + placeholders + ')',
+                        ids,
+                        (err3) => {
+                            if (err3) return res.status(500).json({ error: err3.message });
+                            res.json({ success: true, eliminados: result.affectedRows });
+                        }
+                    );
                 }
             );
         }
