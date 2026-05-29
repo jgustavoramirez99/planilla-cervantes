@@ -746,8 +746,8 @@ function renderizarTabla(lista) {
                            + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
                            + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
                            + (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
-        // Columna "Deducciones" muestra SOLO tardanzas + faltas + desmérito
-        const dedTabla = (Number(d.tardanza) || 0) + (Number(d.faltas) || 0) + (Number(d.desmrito_monto) || 0);
+        // Columna "Deducciones" muestra TODOS los descuentos que se le hacen al trabajador
+        const dedTabla = totalDedReal;
         const totalDed = pagado === 0 ? 0 : totalDedReal;
         const neto = pagado === 0 ? 0 : pagado + (Number(d.bono) || 0) - totalDedReal;
 
@@ -1669,10 +1669,10 @@ async function descargarExcel() {
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = 30;
         const desmr = Number(d.desmrito_monto) || 0;
-        const neto = parseFloat((pagado + bono - afpMonto - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
+        const neto = parseFloat((pagado + bono - afpMonto - esaludEmpleador - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
-        // Descuentos personales del trabajador (adelantos + créditos + préstamos + pensión + tardanzas/faltas + desmérito)
-        const descuentosTotal = parseFloat((adel + cred + prest + pen + tard + desmr).toFixed(2));
+        // Columna DESCUENTOS: SOLO tardanzas + faltas + desmérito
+        const descuentosTotal = parseFloat(((Number(d.tardanza)||0) + (Number(d.faltas)||0) + desmr).toFixed(2));
 
         ws.getCell(row, 1).value = row - 5;
         ws.getCell(row, 2).value = d.nombre || '';
