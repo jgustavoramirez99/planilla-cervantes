@@ -162,9 +162,15 @@
 
         <form id="form-login" class="text-start">
             <div class="mb-3">
-                <label class="form-label small fw-bold">Usuario</label>
-                <input type="text" id="user" class="form-control" placeholder="Ingrese usuario" required autocomplete="username">
-            </div>
+    <label class="form-label">Actividades (S/)</label>
+    <input type="number" 
+           id="edit-actividades" 
+           class="form-control" 
+           value="30" 
+           step="0.01"
+           min="0">
+    <small class="text-muted">Ingrese el monto por actividades este mes</small>
+</div>
             <div class="mb-3">
                 <label class="form-label small fw-bold">Contraseña</label>
                 <input type="password" id="pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
@@ -1488,7 +1494,7 @@ function abrirModal(id) {
         prestamos:          Number(document.getElementById('edit-prestamos').value) || 0,
         desmrito_nivel:     document.querySelector('input[name="desmrito"]:checked')?.value || '',
         desmrito_monto:     Number(document.getElementById('edit-desmrito-monto').value) || 0,
-        actividades:        Number(document.getElementById('edit-actividades').value) || 0,   // ← NUEVO
+        actividades:        Number(document.getElementById('edit-actividades').value) || 30,   // ← NUEVO
         tipo_salud:         document.getElementById('edit-tipo-salud').value,
         mes:                mes
     };
