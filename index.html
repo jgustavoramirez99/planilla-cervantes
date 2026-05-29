@@ -481,12 +481,17 @@
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-danger">Monto Descuento (S/)</label>
                                 <input type="number" id="edit-desmrito-monto" class="form-control form-control-sm" min="0" placeholder="0.00">
+                                
                             </div>
                             <div class="col-md-8">
                                 <div class="alert alert-warning py-1 px-2 mb-0 small mt-3" id="desmrito-descripcion"></div>
                             </div>
                         </div>
                     </div>
+                    <div class="mb-3">
+                                <label class="form-label">Actividades</label>
+                                <input type="number" id="edit-actividades" class="form-control" value="30" step="0.01">
+                            </div>
                 </div>
 
                 <!-- ══ BONIFICACIÓN ══ -->
@@ -1288,6 +1293,9 @@ function abrirModal(id) {
     document.getElementById('edit-creditos').value      = d.creditos    || 0;
     document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
     document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
+    // Actividades:
+    // ←←← NUEVO CAMPO: ACTIVIDADES (editable)
+    document.getElementById('edit-actividades').value   = d.actividades  || 0;
 
     // AFP - Permanente
     const afpGuardada = d.afp || d.tipo_afp || 'ONP';
@@ -1480,6 +1488,7 @@ function abrirModal(id) {
         prestamos:          Number(document.getElementById('edit-prestamos').value) || 0,
         desmrito_nivel:     document.querySelector('input[name="desmrito"]:checked')?.value || '',
         desmrito_monto:     Number(document.getElementById('edit-desmrito-monto').value) || 0,
+        actividades:        Number(document.getElementById('edit-actividades').value) || 0,   // ← NUEVO
         tipo_salud:         document.getElementById('edit-tipo-salud').value,
         mes:                mes
     };
@@ -1514,6 +1523,7 @@ function abrirModal(id) {
                 docente.prestamos = payload.prestamos;
                 docente.desmrito_nivel = payload.desmrito_nivel;
                 docente.desmrito_monto = payload.desmrito_monto;
+                docente.actividades = payload.actividades;        // ← NUEVO
                 docente.tipo_salud = payload.tipo_salud;
             }
 
@@ -1667,7 +1677,7 @@ async function descargarExcel() {
         const prest = Number(d.prestamos) || 0;
         const pen = Number(d.pension) || 0;
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
-        const activ = 30;
+        const activ = Number(d.actividades) || 0;
         const desmr = Number(d.desmrito_monto) || 0;
         const neto = parseFloat((pagado + bono - afpMonto - esaludEmpleador - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
@@ -1844,6 +1854,7 @@ for (let col = 1; col <= 20; col++) {
         const creditos  = Number(document.getElementById('edit-creditos').value) || 0;
         const prestamos = Number(document.getElementById('edit-prestamos').value) || 0;
         const desmrito  = Number(document.getElementById('edit-desmrito-monto').value) || 0;
+        const actividades = Number(document.getElementById('edit-actividades').value) || 0;
         const tipoAfp   = document.getElementById('edit-tipo-afp').value;
         // AFP sobre sueldo_base con porcentajes exactos
         const pctAfp = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
@@ -1852,7 +1863,7 @@ for (let col = 1; col <= 20; col++) {
         const tipoSalud = document.getElementById('edit-tipo-salud').value;
         const esalud  = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
         // Neto parte desde PAGADO
-        const totalDescuentos = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + 30;
+        const totalDescuentos = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades;
         const neto = pagado + bono - totalDescuentos;
         document.getElementById('resumen-sb').textContent = `S/ ${sb.toFixed(2)}`;
         document.getElementById('resumen-descuentos').textContent = `S/ ${totalDescuentos.toFixed(2)}`;
