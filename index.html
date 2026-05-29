@@ -480,7 +480,7 @@
                         <div class="row g-2 align-items-center">
                             <div class="col-md-4">
                                 <label class="form-label small fw-bold text-danger">Monto Descuento (S/)</label>
-                                <input type="number" id="edit-desmrito-monto" class="form-control form-control-sm" min="0" placeholder="0.00">
+                                <input type="number" id="edit-desmrito-monto" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                                 
                             </div>
                             <div class="col-md-8">
@@ -742,7 +742,7 @@ function renderizarTabla(lista) {
         const pctAfpRow  = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfpRow = (tipoAfpRow !== 'NINGUNO') ? parseFloat((sb * (pctAfpRow[tipoAfpRow] || 0.13)).toFixed(2)) : 0;
         const tipoSaludRow = d.tipo_salud || 'ESSALUD';
-        const esaludRow  = (tipoSaludRow === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+        const esaludRow  = (tipoSaludRow === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
 
         // === CORRECCIÓN AQUÍ === Se modifico para que no sume actividades y el campo pase a null de forma autonomo como debe ser.
         const actividades = Number(d.actividades) || 0;
@@ -878,7 +878,7 @@ async function enviarWhatsApp(id) {
         const pctAfp    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfp   = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfp[tipoAfp] || 0.13)).toFixed(2)) : 0;
         const tipoSalud = d.tipo_salud || 'ESSALUD';
-        const descSalud = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+        const descSalud = (tipoSalud === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
         const creditos  = Number(d.creditos)       || 0;
         const prestamos = Number(d.prestamos)      || 0;
         const desmrito  = Number(d.desmrito_monto) || 0;
@@ -915,7 +915,7 @@ async function enviarWhatsApp(id) {
         const gastosEventos = 30;
         const pctAfpPdf    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfpPdf[tipoAfp] || 0.13)).toFixed(2)) : 0;
-        const esalud        = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+        const esalud        = (tipoSalud === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
         const totalDed      = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
         const neto          = pagado + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
@@ -1393,7 +1393,7 @@ function abrirModal(id) {
         if (tipo === 'ESSALUD') {
             document.getElementById('label-calculo-salud').innerText = `Aporte empleador: S/ ${(sb*0.09).toFixed(2)} (9%) — no descuenta al trabajador`;
         } else {
-            document.getElementById('label-calculo-salud').innerText = 'SIS: descuento fijo S/ 25.00 al trabajador';
+            document.getElementById('label-calculo-salud').innerText = 'SIS: S/ 25.00 a cargo del empleador — no se descuenta al trabajador';
         }
     }
 
@@ -1864,7 +1864,7 @@ for (let col = 1; col <= 20; col++) {
         const descAfp = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfp[tipoAfp] || 0.13)).toFixed(2)) : 0;
         // ESSALUD 9% o SIS S/25 sobre sueldo_base — solo admin ve esto
         const tipoSalud = document.getElementById('edit-tipo-salud').value;
-        const esalud  = (tipoSalud === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
+        const esalud  = (tipoSalud === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
         // Neto parte desde PAGADO
         const totalDescuentos = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades;
         const neto = pagado + bono - totalDescuentos;
