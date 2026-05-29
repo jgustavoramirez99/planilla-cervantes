@@ -360,7 +360,7 @@
                         </div>
                         <div class="col-md-5">
                             <label class="form-label small fw-bold mb-1">Sueldo Base (S/)</label>
-                            <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                     </div>
 
@@ -414,19 +414,19 @@
                     <div class="row g-2">
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Adelantos (S/)</label>
-                            <input type="number" id="edit-al" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-al" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Créditos (S/)</label>
-                            <input type="number" id="edit-creditos" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-creditos" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Préstamos (S/)</label>
-                            <input type="number" id="edit-prestamos" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-prestamos" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Pensión por Hijo (S/)</label>
-                            <input type="number" id="edit-pen" class="form-control form-control-sm" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-pen" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                         <div class="mb-3">
     <label class="form-label">Actividades (S/)</label>
@@ -444,11 +444,11 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-danger">Monto Faltas (S/)</label>
-                            <input type="number" id="edit-fl" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-fl" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01"oninput="actualizarResumenNeto()">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-warning">Monto Tardanzas (S/)</label>
-                            <input type="number" id="edit-tar" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01">
+                            <input type="number" id="edit-tar" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01" oninput="actualizarResumenNeto()">
                         </div>
                     </div>
                 </div>
@@ -460,19 +460,19 @@
                     </div>
                     <div class="d-flex gap-3 mb-2">
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="desmrito" id="desmrito-ninguno" value="" checked onchange="toggleDesmrito()">
+                            <input class="form-check-input" type="radio" name="desmrito" id="desmrito-ninguno" value="" checked oninput="toggleDesmrito()">
                             <label class="form-check-label small" for="desmrito-ninguno">Sin desmérito</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input border-warning" type="radio" name="desmrito" id="desmrito-leve" value="LEVE" onchange="toggleDesmrito()">
+                            <input class="form-check-input border-warning" type="radio" name="desmrito" id="desmrito-leve" value="LEVE" oninput="actualizarResumenNeto()">
                             <label class="form-check-label small text-warning fw-bold" for="desmrito-leve">⚠ Leve</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input border-danger" type="radio" name="desmrito" id="desmrito-grave" value="GRAVE" onchange="toggleDesmrito()">
+                            <input class="form-check-input border-danger" type="radio" name="desmrito" id="desmrito-grave" value="GRAVE" oninput="actualizarResumenNeto()">
                             <label class="form-check-label small text-danger fw-bold" for="desmrito-grave">🔴 Grave</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input border-danger" type="radio" name="desmrito" id="desmrito-muy-grave" value="MUY_GRAVE" onchange="toggleDesmrito()">
+                            <input class="form-check-input border-danger" type="radio" name="desmrito" id="desmrito-muy-grave" value="MUY_GRAVE" oninput="actualizarResumenNeto()">
                             <label class="form-check-label small text-danger fw-bold" for="desmrito-muy-grave">🚨 Muy Grave</label>
                         </div>
                     </div>
@@ -499,7 +499,7 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-success">Bono Especial Jul-Dic (S/)</label>
-                            <input type="number" id="edit-bono" class="form-control form-control-sm border-success" min="0" placeholder="0.00" onchange="actualizarResumenNeto()">
+                            <input type="number" id="edit-bono" class="form-control form-control-sm border-success" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                     </div>
                 </div>
@@ -744,9 +744,9 @@ function renderizarTabla(lista) {
         const tipoSaludRow = d.tipo_salud || 'ESSALUD';
         const esaludRow  = (tipoSaludRow === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
 
-        // === CORRECCIÓN AQUÍ ===
+        // === CORRECCIÓN AQUÍ === Se modifico para que no sume actividades y el campo pase a null de forma autonomo como debe ser.
         const actividades = Number(d.actividades) || 0;
-        
+
         const totalDedReal = descAfpRow + esaludRow
                            + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
                            + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
@@ -1559,19 +1559,19 @@ async function descargarExcel() {
         font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
         alignment: { horizontal: 'center', vertical: 'middle' },
-        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+        border: { left:{style:'thin'}, right:{style:'thin'} }
     };
 
     const celesteStyle = {
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'BDD7EE' } },
         alignment: { horizontal: 'center', vertical: 'middle' },
-        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+        border: { left:{style:'thin'}, right:{style:'thin'} }
     };
 
     const amarilloStyle = {
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } },
         alignment: { horizontal: 'center', vertical: 'middle' },
-        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+        border: { left:{style:'thin'}, right:{style:'thin'} }
     };
 
     const monedaStyle = {
@@ -1585,7 +1585,7 @@ async function descargarExcel() {
         font: { bold: true, color: { argb: 'FFFFFFFF' } },
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
         alignment: { horizontal: 'center', vertical: 'middle' },
-        border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} }
+        border: { left:{style:'thin'}, right:{style:'thin'} }
     };
 
     // ==================== TÍTULOS + LOGO ====================
@@ -1639,13 +1639,13 @@ async function descargarExcel() {
         } else if (index === 18) {
             // Columna separadora vacía — sin bordes ni color
             cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-        } else if ([3, 15, 16].includes(index)) {
-            // PAGADO (índice 3), NETO A PAGAR (índice 15), CONSOLIDADO (índice 16) — verde claro
+        } else if ([3, 14, 15, 16].includes(index)) {
+    // PAGADO (índice 3), BONO (índice 14), NETO A PAGAR (índice 15), CONSOLIDADO (índice 16) — verde claro
             cell.style = {
                 font: { bold: true, color: { argb: 'FF1A5276' }, size: 12 },
                 fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A9DFBF' } },
                 alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
-                border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
+                border: { left:{style:'thin'}, right:{style:'thin'} }
             };
         } else {
             cell.style = headerStyle;
@@ -1660,7 +1660,7 @@ async function descargarExcel() {
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
     const colsMoneda = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-    const colsVerdeClaro = [4, 16, 17]; // PAGADO, NETO A PAGAR, CONSOLIDADO
+    const colsVerdeClaro = [4, 15,16, 17]; // PAGADO, NETO A PAGAR, CONSOLIDADO
     docentesData.forEach(d => {
         // ... (mismo cálculo de datos que antes)
         const sb = Number(d.sueldo_base) || 0;
@@ -1822,7 +1822,7 @@ for (let col = 1; col <= 20; col++) {
         cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
     } else if (col === 20) {
         cell.style = { ...totalMonedaStyle, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E8449' } } };
-    } else if ([4, 16, 17].includes(col)) {
+    } else if ([4, 15, 16, 17].includes(col)) {
         cell.style = totalVerdeSyle;
     } else {
         cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
