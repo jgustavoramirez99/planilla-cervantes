@@ -323,6 +323,7 @@
                             <tr>
                                 <th class="text-start ps-3">Docente / DNI</th>
                                 <th>Sueldo Base</th>
+                                <th>Pagado</th>
                                 <th>Deducciones</th>
                                 <th>Neto a Pagar</th>
                                 <th>Acciones</th>
@@ -745,6 +746,8 @@ function renderizarTabla(lista) {
                            + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
                            + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
                            + (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + 30;
+        // Columna "Deducciones" muestra SOLO tardanzas + faltas + desmérito
+        const dedTabla = (Number(d.tardanza) || 0) + (Number(d.faltas) || 0) + (Number(d.desmrito_monto) || 0);
         const totalDed = pagado === 0 ? 0 : totalDedReal;
         const neto = pagado === 0 ? 0 : pagado + (Number(d.bono) || 0) - totalDedReal;
 
@@ -775,7 +778,8 @@ function renderizarTabla(lista) {
                     <small class="text-muted">DNI: ${d.dni || 'Sin DNI'}</small>
                 </td>
                 <td class="text-center">S/ ${sb.toFixed(2)}</td>
-                <td class="text-center text-danger small">- S/ ${totalDed.toFixed(2)}</td>
+                <td class="text-center fw-bold text-success">S/ ${pagado.toFixed(2)}</td>
+                <td class="text-center text-danger small">- S/ ${dedTabla.toFixed(2)}</td>
                 <td class="text-center">
                     <span class="badge ${badgeColor} badge-neto">S/ ${neto.toFixed(2)}</span>
                 </td>
@@ -1625,6 +1629,14 @@ async function descargarExcel() {
         } else if (index === 18) {
             // Columna separadora vacía — sin bordes ni color
             cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
+        } else if ([3, 15, 16].includes(index)) {
+            // PAGADO (índice 3), NETO A PAGAR (índice 15), CONSOLIDADO (índice 16) — verde claro
+            cell.style = {
+                font: { bold: true, color: { argb: 'FF1A5276' }, size: 12 },
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A9DFBF' } },
+                alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+                border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
+            };
         } else {
             cell.style = headerStyle;
         }
@@ -1638,6 +1650,7 @@ async function descargarExcel() {
     let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
     const colsMoneda = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+    const colsVerdeClaro = [4, 16, 17]; // PAGADO, NETO A PAGAR, CONSOLIDADO
     docentesData.forEach(d => {
         // ... (mismo cálculo de datos que antes)
         const sb = Number(d.sueldo_base) || 0;
@@ -1698,6 +1711,14 @@ async function descargarExcel() {
                 // columna Descuentos — verde claro con formato moneda
                 cell.style = {
                     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
+                    alignment: { horizontal: 'center', vertical: 'middle' },
+                    border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
+                    numFmt: '"S/ "#,##0.00'
+                };
+            } else if (colsVerdeClaro.includes(col)) {
+                // PAGADO (4), NETO A PAGAR (16), CONSOLIDADO (17) — verde claro intercalado
+                cell.style = {
+                    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'EAFAF1' } },
                     alignment: { horizontal: 'center', vertical: 'middle' },
                     border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
                     numFmt: '"S/ "#,##0.00'
@@ -1778,12 +1799,21 @@ async function descargarExcel() {
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
     numFmt: '"S/ "#,##0.00'
 };
+const totalVerdeSyle = {
+    font: { bold: true, color: { argb: 'FF145A32' } },
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A9DFBF' } },
+    alignment: { horizontal: 'center', vertical: 'middle' },
+    border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
+    numFmt: '"S/ "#,##0.00'
+};
 for (let col = 1; col <= 20; col++) {
     const cell = ws.getCell(totalRow, col);
     if (col === 19) {
         cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
     } else if (col === 20) {
         cell.style = { ...totalMonedaStyle, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E8449' } } };
+    } else if ([4, 16, 17].includes(col)) {
+        cell.style = totalVerdeSyle;
     } else {
         cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
     }

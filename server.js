@@ -490,12 +490,21 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
     if (!mes || mes < 1 || mes > 12) {
         return res.status(400).json({ error: 'Mes inválido.' });
     }
+    // Primero borrar las planillas del mes
     db.query(
         'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
         [mes],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true, eliminados: result.affectedRows });
+            // Luego resetear pagado y afp en la tabla docentes
+            db.query(
+                'UPDATE docentes SET pagado = 0, afp = NULL WHERE 1=1',
+                [],
+                (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ success: true, eliminados: result.affectedRows });
+                }
+            );
         }
     );
 });
