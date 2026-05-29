@@ -160,7 +160,11 @@
             Usuario o contraseña incorrectos.
         </div>
 
-        <form id="form-login" class="text-start">
+                <form id="form-login" class="text-start">
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Usuario / DNI</label>
+                <input type="text" id="user" class="form-control" placeholder="Ingrese usuario o DNI" required>
+            </div>
             <div class="mb-3">
                 <label class="form-label small fw-bold">Contraseña</label>
                 <input type="password" id="pass" class="form-control" placeholder="••••••••" required autocomplete="current-password">
