@@ -364,11 +364,6 @@
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link fw-bold" onclick="mostrarTabGestion('editar')">
-                            <i class="fa-solid fa-user-pen me-1"></i> Editar Docente
-                        </button>
-                    </li>
-                    <li class="nav-item">
                         <button class="nav-link fw-bold" onclick="mostrarTabGestion('inactivos')">
                             <i class="fa-solid fa-user-slash me-1"></i> Docentes Inactivos
                         </button>
@@ -509,11 +504,7 @@
                             <label class="form-label small fw-bold mb-1">Sueldo Planilla (S/)</label>
                             <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
-                    </div>
-
-                    <!-- NUEVO CAMPO PAGADO - Opción A -->
-                    <div class="row mt-3">
-                        <div class="col-md-6">
+                        <div class="col-md-5 ms-2">
                             <label class="form-label small fw-bold mb-1 text-success">SUELDO BRUTO</label>
                             <div id="pagado-container">
                                 <!-- Se llenará con JS -->
@@ -2002,7 +1993,7 @@ for (let col = 1; col <= 20; col++) {
 
     // Título
     ws2.mergeCells('A1:B1');
-    ws2.getCell('A1').value = `RESUMEN ESTADÍSTICO — ${mesNombreEx}`;
+    ws2.getCell('A1').value = `RESUMEN ESTADÍSTICO — ${mesNombre}`;
     ws2.getCell('A1').style = {
         font: { bold: true, size: 14, color: { argb: 'FFFFFFFF' } },
         fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
