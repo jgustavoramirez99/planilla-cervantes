@@ -2074,7 +2074,74 @@ for (let col = 1; col <= 20; col++) {
             alignment: { vertical: 'middle' }
         };
     });
-    
+    // ══════════════════════════════════════════════
+    // GRÁFICO DE BARRAS — canvas temporal con datos completos
+    // ══════════════════════════════════════════════
+    try {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width  = 900;
+        tempCanvas.height = 450;
+        document.body.appendChild(tempCanvas);
+
+        await new Promise(resolve => {
+            const tempChart = new Chart(tempCanvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: statsData.map(d => d.concepto.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim()),
+                    datasets: [{
+                        label: `Resumen ${mesNombre}`,
+                        data: statsData.map(d => d.monto),
+                        backgroundColor: [
+                            '#4CAF50','#2196F3','#FF9800','#E91E63',
+                            '#9C27B0','#9C27B0','#9C27B0','#9C27B0',
+                            '#F44336','#F44336','#F44336',
+                            '#8BC34A','#1B5E20','#0D47A1'
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    animation: { duration: 0 },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: `Resumen Financiero — ${mesNombre}`,
+                            font: { size: 16, weight: 'bold' },
+                            color: '#1F3864'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: v => 'S/ ' + v.toLocaleString()
+                            }
+                        },
+                        x: {
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+            // Esperar a que Chart.js termine de dibujar
+            setTimeout(() => {
+                const imgData = tempCanvas.toDataURL('image/png').split(',')[1];
+                const imageId = wb.addImage({ base64: imgData, extension: 'png' });
+                ws2.addImage(imageId, {
+                    tl:  { col: 0, row: statsData.length + 5 },
+                    ext: { width: 700, height: 350 }
+                });
+                tempChart.destroy();
+                document.body.removeChild(tempCanvas);
+                resolve();
+            }, 300);
+        });
+    } catch(e) {
+        console.warn('No se pudo insertar gráfico:', e);
+    }
     // Pie de página hoja 2
     const lastRow = statsData.length + 4;
     ws2.mergeCells(`A${lastRow}:C${lastRow}`);
