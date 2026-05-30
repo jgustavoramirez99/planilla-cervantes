@@ -500,11 +500,11 @@
                             <div class="fw-bold text-primary" id="edit-nombre-display">—</div>
                             <small class="text-muted" id="edit-codigo-display">DNI: —</small>
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-md-6">
                             <label class="form-label small fw-bold mb-1">Sueldo Planilla (S/)</label>
                             <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
-                        <div class="col-md-5 ms-2">
+                        <div class="col-md-6">
                             <label class="form-label small fw-bold mb-1 text-success">SUELDO BRUTO</label>
                             <div id="pagado-container">
                                 <!-- Se llenará con JS -->
@@ -1137,12 +1137,12 @@ async function enviarWhatsApp(id) {
         };
 
         // INGRESOS
-        fila(`Monto Pagado`, `S/ ${pagado.toFixed(2)}`, '');
+        fila(`SUELDO BRUTO`, `S/ ${pagado.toFixed(2)}`, '');
         if (bono > 0) fila(`Bono Especial`, `S/ ${bono.toFixed(2)}`, '');
 
         // DESCUENTOS (AFP sobre sueldo base — ESSALUD/SIS a cargo del empleador o fijo, no aparece en boleta del trabajador)
         const pctLabelsAfp = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
-        if (descAfp > 0) fila(`${tipoAfp} (${pctLabelsAfp[tipoAfp]||'13%'} s/ S.Base)`, '', `S/ ${descAfp.toFixed(2)}`);
+        if (descAfp > 0) fila(`AFP`, '', `S/ ${descAfp.toFixed(2)}`);
 
         // DESCUENTOS PERSONALES
         if (adelantos > 0) fila(`Adelantos`, '', `S/ ${adelantos.toFixed(2)}`);
@@ -1359,9 +1359,9 @@ chartPrincipal = new Chart(
             <table class="table table-sm table-borderless mb-0">
                 <tbody>
                     <tr><td class="text-muted">Sueldo Base (Ref.)</td><td class="fw-bold text-end">S/ ${sb.toFixed(2)}</td></tr>
-                    <tr><td class="text-muted">Monto Pagado</td><td class="fw-bold text-end">S/ ${pagadoG.toFixed(2)}</td></tr>
+                    <tr><td class=\"text-muted\">SUELDO BRUTO</td><td class="fw-bold text-end">S/ ${pagadoG.toFixed(2)}</td></tr>
                     ${bono > 0 ? `<tr><td class="text-success">Bono Especial</td><td class="fw-bold text-success text-end">+ S/ ${bono.toFixed(2)}</td></tr>` : ''}
-                    <tr><td class="text-danger">AFP (s/ S.Base)</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
+                    <tr><td class=\"text-danger\">AFP</td><td class="text-danger text-end">- S/ ${afp.toFixed(2)}</td></tr>
                     ${adelantos > 0 ? `<tr><td class="text-warning">Adelantos</td><td class="text-warning text-end">- S/ ${adelantos.toFixed(2)}</td></tr>` : ''}
                     ${faltas > 0    ? `<tr><td class="text-danger">Faltas</td><td class="text-danger text-end">- S/ ${faltas.toFixed(2)}</td></tr>` : ''}
                     ${pension > 0   ? `<tr><td class="text-muted">Pensión</td><td class="text-muted text-end">- S/ ${pension.toFixed(2)}</td></tr>` : ''}
