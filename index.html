@@ -778,12 +778,12 @@ function renderizarTabla(lista) {
         const pctAfpRow  = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfpRow = (tipoAfpRow !== 'NINGUNO') ? parseFloat((sb * (pctAfpRow[tipoAfpRow] || 0.13)).toFixed(2)) : 0;
         const tipoSaludRow = d.tipo_salud || 'ESSALUD';
-        const esaludRow  = (tipoSaludRow === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
+        const esaludRow  = 0; // ESSALUD y SIS: nunca se descuenta al trabajador
 
         // === CORRECCIÓN AQUÍ === Se modifico para que no sume actividades y el campo pase a null de forma autonomo como debe ser.
         const actividades = Number(d.actividades) || 0;
 
-        const totalDedReal = descAfpRow + esaludRow
+        const totalDedReal = descAfpRow
                            + (Number(d.adelantos) || 0) + (Number(d.faltas) || 0) + (Number(d.pension) || 0)
                            + (Number(d.tardanza) || 0) + (Number(d.otros_descuentos) || 0) + (Number(d.creditos) || 0)
                            + (Number(d.prestamos) || 0) + (Number(d.desmrito_monto) || 0) + actividades;
@@ -792,14 +792,16 @@ function renderizarTabla(lista) {
         const totalDed = pagado === 0 ? 0 : totalDedReal;
         const neto = pagado === 0 ? 0 : pagado + (Number(d.bono) || 0) - totalDedReal;
 
-        let badgeColor = 'bg-primary';
+        const colorPagoBadge = d.pago_color || 'azul';
+        let badgeColor = colorPagobadge === 'verde' ? 'bg-success' : 'bg-primary';
         if (neto < 0) badgeColor = 'bg-danger';
-        else if (d._boletaEmitida) badgeColor = 'bg-success';
 
         // Botones existentes
         const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
         const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
         const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
+        const colorPago = d.pago_color || 'azul';
+        const btnPago = (userRole === 'admin') ? `<button class="btn btn-sm ${colorPago === 'verde' ? 'btn-success' : 'btn-primary'}" title="${colorPago === 'verde' ? 'Pagado ✓' : 'Marcar como pagado'}" onclick="togglePagoColor(${d.id_docente}, '${colorPago}')"><i class="fa-solid fa-${colorPago === 'verde' ? 'check' : 'money-bill-wave'}"></i></button>` : '';
 
         // NUEVO: Columna de Email y Botón Guardar (Solo para Admin)
         const colEmail = (userRole === 'admin') ? `
@@ -827,7 +829,7 @@ function renderizarTabla(lista) {
                 ${colEmail}
                 <td class="text-center">
                     <div class="btn-group gap-1">
-                        ${btnPDF} ${btnWA} ${btnEdit}
+                        ${btnPDF} ${btnWA} ${btnEdit} ${btnPago}
                     </div>
                 </td>
             </tr>`;
@@ -951,8 +953,8 @@ async function enviarWhatsApp(id) {
         const gastosEventos = 30;
         const pctAfpPdf    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfpPdf[tipoAfp] || 0.13)).toFixed(2)) : 0;
-        const esalud        = (tipoSalud === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
-        const totalDed      = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
+        const esalud        = 0; // ESSALUD y SIS: nunca se descuenta al trabajador
+        const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
         const neto          = pagado + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
         const meses = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril',
@@ -1721,8 +1723,7 @@ async function descargarExcel() {
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = Number(d.actividades) || 0;
         const desmr = Number(d.desmrito_monto) || 0;
-        const esaludDescuento = (tipoSaludEx === 'SIS') ? 0 : esaludEmpleador;
-        const neto = parseFloat((pagado + bono - afpMonto - esaludDescuento - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
+        const neto = parseFloat((pagado + bono - afpMonto - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
         // Columna DESCUENTOS: SOLO tardanzas + faltas + desmérito
         const descuentosTotal = parseFloat(((Number(d.tardanza)||0) + (Number(d.faltas)||0) + desmr).toFixed(2));
@@ -1814,10 +1815,8 @@ if (tipoSaludEx === 'ESSALUD') {
 }
 
         totales.pagado += pagado; totales.sb += sb; 
-        // ✅ SOLO sumar a ESALUD si es ESSALUD (no incluir los S/25 de SIS)
-        if (tipoSaludEx === 'ESSALUD') {
-            totales.esalud += esaludEmpleador;
-        };   // ← CORRECTO;
+        // Sumar siempre: ESSALUD (9% sb) o SIS (S/25 fijo)
+        totales.esalud += esaludEmpleador;
         totales.adel += adel; totales.cred += cred; totales.prest += prest; totales.pen += pen;
         totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
         totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
@@ -1904,9 +1903,9 @@ for (let col = 1; col <= 20; col++) {
         const descAfp = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfp[tipoAfp] || 0.13)).toFixed(2)) : 0;
         // ESSALUD 9% o SIS S/25 sobre sueldo_base — solo admin ve esto
         const tipoSalud = document.getElementById('edit-tipo-salud').value;
-        const esalud  = (tipoSalud === 'SIS') ? 0 : parseFloat((sb * 0.09).toFixed(2));
+        const esalud  = 0; // ESSALUD y SIS: nunca se descuenta al trabajador
         // Neto parte desde PAGADO
-        const totalDescuentos = descAfp + esalud + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades;
+        const totalDescuentos = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades;
         const neto = pagado + bono - totalDescuentos;
         document.getElementById('resumen-sb').textContent = `S/ ${sb.toFixed(2)}`;
         document.getElementById('resumen-descuentos').textContent = `S/ ${totalDescuentos.toFixed(2)}`;
@@ -1934,6 +1933,26 @@ for (let col = 1; col <= 20; col++) {
         cargarDatosServidor();
     } else {
         alert('❌ Error al limpiar: ' + data.error);
+    }
+}
+async function togglePagoColor(idDocente, colorActual) {
+    const nuevoColor = colorActual === 'verde' ? 'azul' : 'verde';
+    const mes = document.getElementById('filtro-mes').value;
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${SERVER_BASE}/api/docentes/${idDocente}/pago-color`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ color: nuevoColor, mes })
+    });
+    const data = await res.json();
+    if (data.success) {
+        // Actualizar localmente sin recargar todo
+        const d = docentesData.find(x => x.id_docente === idDocente);
+        if (d) d.pago_color = nuevoColor;
+        renderizarTabla(docentesData);
     }
 }
 function abrirGestionPersonal() {

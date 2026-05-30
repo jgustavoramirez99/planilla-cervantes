@@ -434,7 +434,21 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
         }
     );
 });
-
+// PUT /api/docentes/:id/pago-color — Marcar como pagado (azul/verde)
+app.put('/api/docentes/:id/pago-color', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    const { id } = req.params;
+    const { color, mes } = req.body;
+    db.query(
+        'UPDATE planillas SET pago_color = ? WHERE id_docente = ? AND mes = ? AND anio = 2026',
+        [color, id, mes],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
 // ============================================================
 // PUT /api/docentes/:id/email — Guardar correo del docente
 // ============================================================
