@@ -793,7 +793,7 @@ function renderizarTabla(lista) {
         const neto = pagado === 0 ? 0 : pagado + (Number(d.bono) || 0) - totalDedReal;
 
         const colorPagoBadge = d.pago_color || 'azul';
-        let badgeColor = colorPagobadge === 'verde' ? 'bg-success' : 'bg-primary';
+        let badgeColor = colorPagoBadge === 'verde' ? 'bg-success' : 'bg-primary';
         if (neto < 0) badgeColor = 'bg-danger';
 
         // Botones existentes
