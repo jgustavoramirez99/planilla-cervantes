@@ -502,9 +502,16 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold mb-1 text-success">SUELDO BRUTO</label>
-                            <div id="pagado-container">
-                                <!-- Se llenará con JS -->
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="number" id="edit-pagado" class="form-control form-control-sm border-success"
+                                       min="0" placeholder="0.00"
+                                       oninput="actualizarResumenNeto()"
+                                       readonly style="background:#f0fff4;">
+                                <button type="button" class="btn btn-sm btn-outline-warning"
+                                        onclick="habilitarSueldoBruto()"
+                                        title="Editar Sueldo Bruto">✏️</button>
                             </div>
+                            <small class="text-muted">Se mantiene mes a mes</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold mb-1">Sueldo Planilla (S/)</label>
@@ -2543,6 +2550,13 @@ async function cambiarPassword() {
         msg.textContent = '❌ No se pudo conectar con el servidor.';
     }
 }
+    function habilitarSueldoBruto() {
+        const input = document.getElementById('edit-pagado');
+        input.removeAttribute('readonly');
+        input.style.background = '';
+        input.focus();
+    }
+
 </script>
 
 <!-- ── FOOTER GRTECH ── -->

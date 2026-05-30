@@ -396,8 +396,8 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
 
     // pagado y afp ahora se guardan en planillas (por mes), no en docentes
     db.query(
-        'UPDATE docentes SET sueldo_base = ? WHERE id_docente = ?',
-        [sueldo_base, id],
+        'UPDATE docentes SET sueldo_base = ? , pagado_fijo = ? WHERE id_docente = ?',
+        [sueldo_base, pagado, id],
         (err) => { if (err) console.error('Error actualizando docentes:', err); }
     );
 
@@ -601,7 +601,8 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
             if (err) return res.status(500).json({ error: err.message });
             // También resetear sueldo_base y actividades en docentes
             db.query(
-                'UPDATE docentes SET sueldo_base = 0, actividades = 0 WHERE activo = 1',
+                // DESPUÉS:
+                'UPDATE docentes SET sueldo_base = 0 WHERE activo = 1',
                 [],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
