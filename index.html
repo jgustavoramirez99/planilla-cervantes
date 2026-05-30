@@ -1682,7 +1682,8 @@ async function descargarExcel() {
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = Number(d.actividades) || 0;
         const desmr = Number(d.desmrito_monto) || 0;
-        const neto = parseFloat((pagado + bono - afpMonto - esaludEmpleador - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
+        const esaludDescuento = (tipoSaludEx === 'SIS') ? 0 : esaludEmpleador;
+        const neto = parseFloat((pagado + bono - afpMonto - esaludDescuento - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
         const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
         // Columna DESCUENTOS: SOLO tardanzas + faltas + desmérito
         const descuentosTotal = parseFloat(((Number(d.tardanza)||0) + (Number(d.faltas)||0) + desmr).toFixed(2));
@@ -1716,62 +1717,62 @@ if (tipoSaludEx === 'ESSALUD') {
 
         const isOddRow = (row - 5) % 2 === 1; // fila impar = color, par = blanco
         for (let col = 1; col <= 20; col++) {
-            const cell = ws.getCell(row, col);
-            if (col === 19) {
-                // separador vacío — sin estilo
-                cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-            } else if (col === 20) {
-                // columna Descuentos — verde claro con formato moneda
-                cell.style = {
-                    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
-                    alignment: { horizontal: 'center', vertical: 'middle' },
-                    border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
-                    numFmt: '"S/ "#,##0.00'
-                };
-            } else if (colsVerdeClaro.includes(col)) {
-                // PAGADO (4), NETO A PAGAR (16), CONSOLIDADO (17) — verde claro intercalado
-                cell.style = {
-                    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'EAFAF1' } },
-                    alignment: { horizontal: 'center', vertical: 'middle' },
-                    border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
-                    numFmt: '"S/ "#,##0.00'
-                };
-            } else if (col <= 3) {
-                // N°, Apellidos y Nombres, DNI → celeste / blanco
-                if (isOddRow) {
-                    cell.style = celesteStyle;
-                } else {
-                    cell.style = {
-                        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
-                        alignment: { horizontal: 'center', vertical: 'middle' },
-                        border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
-                    };
-                }
-            } else if (colsMoneda.includes(col)) {
-                // columnas de moneda → amarillo / blanco con formato moneda
-                if (isOddRow) {
-                    cell.style = monedaStyle;
-                } else {
-                    cell.style = {
-                        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
-                        alignment: { horizontal: 'center', vertical: 'middle' },
-                        border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} },
-                        numFmt: '"S/ "#,##0.00'
-                    };
-                }
-            } else {
-                // otras columnas → amarillo / blanco
-                if (isOddRow) {
-                    cell.style = amarilloStyle;
-                } else {
-                    cell.style = {
-                        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
-                        alignment: { horizontal: 'center', vertical: 'middle' },
-                        border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
-                    };
-                }
-            }
+    const cell = ws.getCell(row, col);
+    if (col === 19) {
+        // separador vacío — sin estilo
+        cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
+    } else if (col === 20) {
+        // columna Descuentos — verde claro con formato moneda
+        cell.style = {
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            border: { left:{style:'thin'}, right:{style:'thin'} },
+            numFmt: '"S/ "#,##0.00'
+        };
+    } else if (colsVerdeClaro.includes(col)) {
+        // PAGADO (4), NETO A PAGAR (16), CONSOLIDADO (17) — verde claro intercalado
+        cell.style = {
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'EAFAF1' } },
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            border: { left:{style:'thin'}, right:{style:'thin'} },
+            numFmt: '"S/ "#,##0.00'
+        };
+    } else if (col <= 3) {
+        // N°, Apellidos y Nombres, DNI → celeste / blanco
+        if (isOddRow) {
+            cell.style = celesteStyle;
+        } else {
+            cell.style = {
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+                alignment: { horizontal: 'center', vertical: 'middle' },
+                border: { left:{style:'thin'}, right:{style:'thin'} }
+            };
         }
+    } else if (colsMoneda.includes(col)) {
+        // columnas de moneda → amarillo / blanco con formato moneda
+        if (isOddRow) {
+            cell.style = monedaStyle;
+        } else {
+            cell.style = {
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+                alignment: { horizontal: 'center', vertical: 'middle' },
+                border: { left:{style:'thin'}, right:{style:'thin'} },
+                numFmt: '"S/ "#,##0.00'
+            };
+        }
+    } else {
+        // otras columnas → amarillo / blanco
+        if (isOddRow) {
+            cell.style = amarilloStyle;
+        } else {
+            cell.style = {
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
+                alignment: { horizontal: 'center', vertical: 'middle' },
+                border: { left:{style:'thin'}, right:{style:'thin'} }
+            };
+        }
+    }
+}
 
         totales.pagado += pagado; totales.sb += sb; 
         // ✅ SOLO sumar a ESALUD si es ESSALUD (no incluir los S/25 de SIS)
