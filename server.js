@@ -516,7 +516,15 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
         [mes],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true, eliminados: result.affectedRows });
+            // También resetear sueldo_base y actividades en docentes
+            db.query(
+                'UPDATE docentes SET sueldo_base = 0, actividades = 0 WHERE activo = 1',
+                [],
+                (err2) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({ success: true, eliminados: result.affectedRows });
+                }
+            );
         }
     );
 });

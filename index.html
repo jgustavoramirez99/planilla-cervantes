@@ -798,13 +798,13 @@ function renderizarTabla(lista) {
 
         // Botones existentes
         const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
-        const btnWA = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
-        const btnEdit = (userRole === 'admin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
+        const btnWA = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
+        const btnEdit = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
         const colorPago = d.pago_color || 'azul';
-        const btnPago = (userRole === 'admin') ? `<button class="btn btn-sm ${colorPago === 'verde' ? 'btn-success' : 'btn-primary'}" title="${colorPago === 'verde' ? 'Pagado ✓' : 'Marcar como pagado'}" onclick="togglePagoColor(${d.id_docente}, '${colorPago}')"><i class="fa-solid fa-${colorPago === 'verde' ? 'check' : 'money-bill-wave'}"></i></button>` : '';
+        const btnPago = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm ${colorPago === 'verde' ? 'btn-success' : 'btn-primary'}" title="${colorPago === 'verde' ? 'Pagado ✓' : 'Marcar como pagado'}" onclick="togglePagoColor(${d.id_docente}, '${colorPago}')"><i class="fa-solid fa-${colorPago === 'verde' ? 'check' : 'money-bill-wave'}"></i></button>` : '';
 
         // NUEVO: Columna de Email y Botón Guardar (Solo para Admin)
-        const colEmail = (userRole === 'admin') ? `
+        const colEmail = (userRole === 'admin' || userRole === 'superadmin') ? `
             <td>
                 <div class="input-group input-group-sm">
                     <input type="email" id="email-${d.id_docente}" value="${d.email || ''}" class="form-control" placeholder="correo@ejemplo.com">
@@ -853,7 +853,7 @@ function renderizarTabla(lista) {
 // WHATSAPP — Usa el teléfono real de la BD
 // ============================================================
 async function enviarWhatsApp(id) {
-    if (userRole !== 'admin') return;
+    if (userRole !== 'admin' && userRole !== 'superadmin') return;
 
     const d = docentesData.find(doc => doc.id_docente == id);
     if (!d) return;
@@ -1288,7 +1288,7 @@ chartPrincipal = new Chart(
 // MODAL EDICIÓN 
 // ============================================================
 function abrirModal(id) {
-    if (userRole !== 'admin') return;
+    if (userRole !== 'admin' && userRole !== 'superadmin') return;
     const d = docentesData.find(doc => doc.id_docente == id);
     if (!d) return;
 
@@ -1498,7 +1498,7 @@ function abrirModal(id) {
     }
 
     async function guardarCambiosModal() {
-    if (userRole !== 'admin') return;
+    if (userRole !== 'admin' && userRole !== 'superadmin') return;
 
     const id  = document.getElementById('edit-id').value;
     const mes = document.getElementById('filtro-mes').value;
@@ -1579,7 +1579,7 @@ function abrirModal(id) {
     }
 }
 async function descargarExcel() {
-    if (userRole !== 'admin') return;
+    if (userRole !== 'admin' && userRole !== 'superadmin') return;
     if (!docentesData.length) { 
         alert('No hay datos para exportar.'); 
         return; 
@@ -1700,7 +1700,7 @@ async function descargarExcel() {
 
     // ==================== DATOS ====================
     let row = 6;
-    let totales = { pagado:0, sb:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
+    let totales = { pagado:0, sb:0, afp:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
     const colsMoneda = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     const colsVerdeClaro = [4, 15,16, 17]; // PAGADO, NETO A PAGAR, CONSOLIDADO
@@ -1813,7 +1813,7 @@ if (tipoSaludEx === 'ESSALUD') {
     }
 }
 
-        totales.pagado += pagado; totales.sb += sb; 
+        totales.pagado += pagado; totales.sb += sb; totales.afp += afpMonto;
         // Sumar siempre: ESSALUD (9% sb) o SIS (S/25 fijo)
         totales.esalud += esaludEmpleador;
         totales.adel += adel; totales.cred += cred; totales.prest += prest; totales.pen += pen;
@@ -1829,6 +1829,7 @@ if (tipoSaludEx === 'ESSALUD') {
     ws.getCell(totalRow, 2).value = "TOTAL GENERAL";
     ws.getCell(totalRow, 4).value = totales.pagado;
     ws.getCell(totalRow, 5).value = totales.sb;
+    ws.getCell(totalRow, 6).value = totales.afp;
     ws.getCell(totalRow, 7).value = totales.esalud;
     ws.getCell(totalRow, 8).value = totales.adel;
     ws.getCell(totalRow, 9).value = totales.cred;
