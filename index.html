@@ -1414,23 +1414,13 @@ function abrirModal(id) {
     // Sueldo Base
     document.getElementById('edit-sb').value = d.sueldo_base || 0;
 
-    // PAGADO - Opción A (ya lo tienes bien)
-    const pagadoContainer = document.getElementById('pagado-container');
+    // PAGADO - llenar el input directo (ya no hay pagado-container)
     const pagadoValor = Number(d.pagado) || 0;
-
-    if (pagadoValor > 0) {
-        pagadoContainer.innerHTML = `
-            <div class="alert alert-success py-2">
-                <strong>S/ ${pagadoValor.toFixed(2)}</strong> 
-                <small class="text-muted">(Ya registrado - No editable)</small>
-            </div>
-            <input type="hidden" id="edit-pagado" value="${pagadoValor}">
-        `;
-    } else {
-        pagadoContainer.innerHTML = `
-            <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00" value="0">
-            <small class="text-muted">Ingrese el SUELDO BRUTO</small>
-        `;
+    const inputPagado = document.getElementById('edit-pagado');
+    if (inputPagado) {
+        inputPagado.value = pagadoValor;
+        inputPagado.setAttribute('readonly', true);
+        inputPagado.style.background = '#f0fff4';
     }
 
     // Resto de campos mensuales
