@@ -195,9 +195,12 @@
             <div class="text-end text-white">
                 <span id="badge-rol" class="badge bg-danger mb-1 d-block"></span>
     
-                <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">
-                <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
-            </button>
+                <button class="btn btn-outline-warning btn-sm me-2" onclick="abrirModalCambiarPass()">
+    <i class="fa-solid fa-key me-1"></i> Cambiar Contraseña
+</button>
+<button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">
+    <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
+</button>
             </div>
         </div>
     </div>
@@ -336,7 +339,40 @@
         </div>
     </div>
 </div>
-
+<!-- ===================== MODAL CAMBIAR CONTRASEÑA ===================== -->
+<div class="modal fade" id="modalCambiarPass" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#2c3e50,#3498db);">
+                <h5 class="modal-title fw-bold mb-0">
+                    <i class="fa-solid fa-key me-2"></i>Cambiar Contraseña
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Contraseña actual</label>
+                    <input type="password" id="pass-actual" class="form-control" placeholder="••••••••">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nueva contraseña</label>
+                    <input type="password" id="pass-nueva" class="form-control" placeholder="••••••••">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Confirmar nueva contraseña</label>
+                    <input type="password" id="pass-confirmar" class="form-control" placeholder="••••••••">
+                </div>
+                <div id="msg-cambio-pass" class="alert d-none py-2 small mb-0"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary btn-sm fw-bold" onclick="cambiarPassword()">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Guardar cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- ===================== MODAL EDICIÓN ===================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -635,7 +671,7 @@
         document.getElementById('texto-panel').innerText = 'Mi Portal de Boletas.';
     }
 
-    if (rol === 'admin') {
+    if (rol === 'admin' || userRole === 'superadmin') {
         document.getElementById('graficos-container').style.display = 'flex';
         document.getElementById('buscador-container').style.display = 'block';
         document.getElementById('tabla-header').style.display       = 'flex';
@@ -1899,6 +1935,68 @@ for (let col = 1; col <= 20; col++) {
 }
 function abrirGestionPersonal() {
     alert('🚧 Módulo de Gestión de Personal próximamente.');
+}
+
+function abrirModalCambiarPass() {
+    document.getElementById('pass-actual').value    = '';
+    document.getElementById('pass-nueva').value     = '';
+    document.getElementById('pass-confirmar').value = '';
+    const msg = document.getElementById('msg-cambio-pass');
+    msg.className   = 'alert d-none py-2 small mb-0';
+    msg.textContent = '';
+    new bootstrap.Modal(document.getElementById('modalCambiarPass')).show();
+}
+
+async function cambiarPassword() {
+    const actual    = document.getElementById('pass-actual').value.trim();
+    const nueva     = document.getElementById('pass-nueva').value.trim();
+    const confirmar = document.getElementById('pass-confirmar').value.trim();
+    const msg       = document.getElementById('msg-cambio-pass');
+
+    if (!actual || !nueva || !confirmar) {
+        msg.className   = 'alert alert-danger py-2 small mb-0';
+        msg.textContent = '❌ Completa todos los campos.';
+        return;
+    }
+    if (nueva !== confirmar) {
+        msg.className   = 'alert alert-danger py-2 small mb-0';
+        msg.textContent = '❌ Las contraseñas nuevas no coinciden.';
+        return;
+    }
+    if (nueva.length < 6) {
+        msg.className   = 'alert alert-danger py-2 small mb-0';
+        msg.textContent = '❌ La contraseña debe tener al menos 6 caracteres.';
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch(`${SERVER_BASE}/api/usuario/cambiar-password`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ passwordActual: actual, passwordNuevo: nueva })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            msg.className   = 'alert alert-success py-2 small mb-0';
+            msg.textContent = '✅ Contraseña cambiada correctamente.';
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(
+                    document.getElementById('modalCambiarPass')
+                ).hide();
+            }, 1800);
+        } else {
+            msg.className   = 'alert alert-danger py-2 small mb-0';
+            msg.textContent = '❌ ' + (data.error || 'Error al cambiar la contraseña.');
+        }
+    } catch (e) {
+        msg.className   = 'alert alert-danger py-2 small mb-0';
+        msg.textContent = '❌ No se pudo conectar con el servidor.';
+    }
 }
 </script>
 

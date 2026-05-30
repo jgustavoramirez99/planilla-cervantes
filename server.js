@@ -271,7 +271,7 @@ app.post('/api/usuario/reset-password', async (req, res) => {
 // Para el botón "Gestión de Personal"
 // ============================================================
 app.get('/api/personal', verificarToken, (req, res) => {
-    if (req.usuario.role !== 'admin') {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
 
@@ -288,7 +288,7 @@ app.get('/api/personal', verificarToken, (req, res) => {
 // PUT /api/personal/:id — Editar usuario (solo admin)
 // ============================================================
 app.put('/api/personal/:id', verificarToken, async (req, res) => {
-    if (req.usuario.role !== 'admin') {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
 
@@ -370,7 +370,7 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 // PUT /api/docentes/:id
 // ============================================================
 app.put('/api/docentes/:id', verificarToken, (req, res) => {
-    if (req.usuario.role !== 'admin') {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
     const id  = parseInt(req.params.id);
@@ -439,7 +439,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
 // PUT /api/docentes/:id/email — Guardar correo del docente
 // ============================================================
 app.put('/api/docentes/:id/email', verificarToken, (req, res) => {
-    if (req.usuario.role !== 'admin') return res.status(403).json({ error: 'Acceso denegado.' });
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') return res.status(403).json({ error: 'Acceso denegado.' });
 
     const id    = parseInt(req.params.id);
     const email = req.body.email || '';
@@ -488,7 +488,7 @@ app.get('/api/whatsapp-link', (req, res) => {
 });
 // DELETE /api/planillas/limpiar?mes=1 — Solo admin
 app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
-    if (req.usuario.role !== 'admin') {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
     const mes = parseInt(req.query.mes);
