@@ -343,13 +343,14 @@ app.get('/api/docentes', verificarToken, (req, res) => {
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
               AND p.mes  = ?
-              AND p.anio = 2026`;
+              AND p.anio = 2026
+        WHERE d.activo = 1`;
 
     const params = [mes];
 
     const dniUsuario = req.usuario.dni || '';
     if (role === 'user' && dniUsuario) {
-        sql += ' WHERE d.dni = ?';
+        sql += ' AND d.dni = ?';
         params.push(dniUsuario);
     }
 
@@ -499,6 +500,71 @@ app.get('/api/whatsapp-link', (req, res) => {
     const urlBoleta = `${protocolo}://${req.get('host')}/boletas/${filename}`;
     const texto     = `Hola *${nombre}*, adjunto tu boleta de pago.\n*Total Neto:* S/ ${sueldo}\n*Link:* ${urlBoleta}`;
     res.json({ link: `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(texto)}` });
+});
+// ============================================================
+// POST /api/docentes — Agregar nuevo docente
+// ============================================================
+app.post('/api/docentes', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    const { nombre, dni, telefono, email } = req.body;
+    if (!nombre || !dni) return res.status(400).json({ error: 'Nombre y DNI son obligatorios.' });
+    db.query(
+        'INSERT INTO docentes (nombre, dni, telefono, email, activo, sueldo_base) VALUES (?, ?, ?, ?, 1, 0)',
+        [nombre.trim(), dni.trim(), telefono || '', email || ''],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, id: result.insertId });
+        }
+    );
+});
+
+// ============================================================
+// PUT /api/docentes/:id/desactivar — Mover a inactivos
+// ============================================================
+app.put('/api/docentes/:id/desactivar', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    db.query(
+        'UPDATE docentes SET activo = 0 WHERE id_docente = ?',
+        [req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
+
+// ============================================================
+// PUT /api/docentes/:id/activar — Reactivar docente
+// ============================================================
+app.put('/api/docentes/:id/activar', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    db.query(
+        'UPDATE docentes SET activo = 1 WHERE id_docente = ?',
+        [req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
+
+// ============================================================
+// GET /api/docentes/inactivos — Listar inactivos
+// ============================================================
+app.get('/api/docentes/inactivos', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    db.query(
+        'SELECT id_docente, nombre, dni, telefono FROM docentes WHERE activo = 0 ORDER BY nombre',
+        [],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(result);
+        }
+    );
 });
 // DELETE /api/planillas/limpiar?mes=1 — Solo admin
 app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {

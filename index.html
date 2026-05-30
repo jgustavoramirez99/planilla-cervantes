@@ -339,6 +339,76 @@
         </div>
     </div>
 </div>
+<!-- ===================== MODAL GESTIONAR PERSONAL ===================== -->
+<div class="modal fade" id="modalGestionPersonal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#2c3e50,#3498db);">
+                <h5 class="modal-title fw-bold mb-0">
+                    <i class="fa-solid fa-users me-2"></i>Gestionar Personal
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+
+                <!-- TABS -->
+                <ul class="nav nav-tabs mb-3" id="tabsGestion">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-bold" onclick="mostrarTabGestion('agregar')">
+                            <i class="fa-solid fa-user-plus me-1"></i> Agregar Docente
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" onclick="mostrarTabGestion('inactivos')">
+                            <i class="fa-solid fa-user-slash me-1"></i> Docentes Inactivos
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- TAB: AGREGAR -->
+                <div id="tab-agregar">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Apellidos y Nombres <span class="text-danger">*</span></label>
+                            <input type="text" id="nuevo-nombre" class="form-control" placeholder="Ej: García López Juan Carlos">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">DNI <span class="text-danger">*</span></label>
+                            <input type="text" id="nuevo-dni" class="form-control" maxlength="8" placeholder="12345678">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Teléfono / Celular</label>
+                            <input type="text" id="nuevo-telefono" class="form-control" placeholder="987654321">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Correo Electrónico</label>
+                            <input type="email" id="nuevo-email" class="form-control" placeholder="correo@ejemplo.com">
+                        </div>
+                    </div>
+                    <div id="msg-agregar-docente" class="alert d-none py-2 small mt-3 mb-0"></div>
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-primary fw-bold" onclick="agregarDocente()">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Docente
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB: INACTIVOS -->
+                <div id="tab-inactivos" style="display:none;">
+                    <div class="text-end mb-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="cargarInactivos()">
+                            <i class="fa-solid fa-rotate me-1"></i> Actualizar lista
+                        </button>
+                    </div>
+                    <div id="lista-inactivos" class="text-muted text-center py-3">
+                        <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
 <!-- ===================== MODAL CAMBIAR CONTRASEÑA ===================== -->
 <div class="modal fade" id="modalCambiarPass" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -800,6 +870,7 @@ function renderizarTabla(lista) {
         const btnPDF = `<button class="btn btn-sm btn-outline-danger" onclick="generarBoletaPDF(${d.id_docente})"><i class="fa-solid fa-file-pdf"></i></button>`;
         const btnWA = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-success" id="btn-wa-${d.id_docente}" onclick="enviarWhatsApp(${d.id_docente})"><i class="fa-brands fa-whatsapp"></i></button>` : '';
         const btnEdit = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-primary" onclick="abrirModal(${d.id_docente})"><i class="fa-solid fa-pen-to-square"></i></button>` : '';
+        const btnDesactivar = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-secondary" title="Mover a inactivos" onclick="desactivarDocente(${d.id_docente}, '${d.nombre}')"><i class="fa-solid fa-user-slash"></i></button>` : '';
         const colorPago = d.pago_color || 'azul';
         const btnPago = (userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm ${colorPago === 'verde' ? 'btn-success' : 'btn-primary'}" title="${colorPago === 'verde' ? 'Pagado ✓' : 'Marcar como pagado'}" onclick="togglePagoColor(${d.id_docente}, '${colorPago}')"><i class="fa-solid fa-${colorPago === 'verde' ? 'check' : 'money-bill-wave'}"></i></button>` : '';
 
@@ -829,7 +900,7 @@ function renderizarTabla(lista) {
                 ${colEmail}
                 <td class="text-center">
                     <div class="btn-group gap-1">
-                        ${btnPDF} ${btnWA} ${btnEdit} ${btnPago}
+                        ${btnPDF} ${btnWA} ${btnEdit} ${btnPago} ${btnDesactivar}
                     </div>
                 </td>
             </tr>`;
@@ -1955,8 +2026,180 @@ async function togglePagoColor(idDocente, colorActual) {
         renderizarTabla(docentesData);
     }
 }
+async function guardarCorreo(idDocente, email) {
+    if (!email || !email.includes('@')) {
+        alert('❌ Ingresa un correo válido.');
+        return;
+    }
+    const token = localStorage.getItem('token');
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/docentes/${idDocente}/email`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ email: email.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Actualizar en memoria local también
+            const d = docentesData.find(x => x.id_docente === idDocente);
+            if (d) d.email = email.trim();
+            // Feedback visual en el botón
+            const btn = document.querySelector(`#email-${idDocente}`)?.nextElementSibling;
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                btn.classList.replace('btn-success', 'btn-outline-success');
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>';
+                    btn.classList.replace('btn-outline-success', 'btn-success');
+                }, 2000);
+            }
+        } else {
+            alert('❌ Error al guardar: ' + (data.error || 'Error desconocido.'));
+        }
+    } catch(e) {
+        alert('❌ No se pudo conectar con el servidor.');
+    }
+}
 function abrirGestionPersonal() {
-    alert('🚧 Módulo de Gestión de Personal próximamente.');
+    // Limpiar campos
+    document.getElementById('nuevo-nombre').value    = '';
+    document.getElementById('nuevo-dni').value       = '';
+    document.getElementById('nuevo-telefono').value  = '';
+    const msg = document.getElementById('msg-agregar-docente');
+    msg.className = 'alert d-none py-2 small mt-3 mb-0';
+    mostrarTabGestion('agregar');
+    new bootstrap.Modal(document.getElementById('modalGestionPersonal')).show();
+}
+
+function mostrarTabGestion(tab) {
+    document.getElementById('tab-agregar').style.display   = tab === 'agregar'   ? 'block' : 'none';
+    document.getElementById('tab-inactivos').style.display = tab === 'inactivos' ? 'block' : 'none';
+    document.querySelectorAll('#tabsGestion .nav-link').forEach((btn, i) => {
+        btn.classList.toggle('active', (tab === 'agregar' && i === 0) || (tab === 'inactivos' && i === 1));
+    });
+    if (tab === 'inactivos') cargarInactivos();
+}
+
+async function agregarDocente() {
+    const nombre   = document.getElementById('nuevo-nombre').value.trim();
+    const dni      = document.getElementById('nuevo-dni').value.trim();
+    const telefono = document.getElementById('nuevo-telefono').value.trim();
+    const email    = document.getElementById('nuevo-email').value.trim();
+    const msg      = document.getElementById('msg-agregar-docente');
+
+    if (!nombre || !dni) {
+        msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+        msg.textContent = '❌ Nombre y DNI son obligatorios.';
+        return;
+    }
+    if (dni.length !== 8 || isNaN(dni)) {
+        msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+        msg.textContent = '❌ El DNI debe tener exactamente 8 dígitos.';
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/docentes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ nombre, dni, telefono, email })
+        });
+        const data = await res.json();
+        if (data.success) {
+            msg.className   = 'alert alert-success py-2 small mt-3 mb-0';
+            msg.textContent = `✅ Docente "${nombre}" agregado correctamente.`;
+            document.getElementById('nuevo-nombre').value   = '';
+            document.getElementById('nuevo-dni').value      = '';
+            document.getElementById('nuevo-telefono').value = '';
+            document.getElementById('nuevo-email').value    = '';
+            cargarDatosServidor(); // Refresca la tabla principal
+        } else {
+            msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+            msg.textContent = '❌ ' + (data.error || 'Error al agregar docente.');
+        }
+    } catch(e) {
+        msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+        msg.textContent = '❌ No se pudo conectar con el servidor.';
+    }
+}
+
+async function cargarInactivos() {
+    const token = localStorage.getItem('token');
+    const cont  = document.getElementById('lista-inactivos');
+    cont.innerHTML = '<p class="text-muted text-center"><i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...</p>';
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/docentes/inactivos`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!data.length) {
+            cont.innerHTML = '<p class="text-muted text-center py-3">No hay docentes inactivos.</p>';
+            return;
+        }
+        cont.innerHTML = `
+            <table class="table table-sm table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>DNI</th>
+                        <th>Teléfono</th>
+                        <th class="text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.map(d => `
+                        <tr>
+                            <td>${d.nombre}</td>
+                            <td>${d.dni || '—'}</td>
+                            <td>${d.telefono || '—'}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-success" onclick="reactivarDocente(${d.id_docente}, '${d.nombre}')">
+                                    <i class="fa-solid fa-user-check me-1"></i> Reactivar
+                                </button>
+                            </td>
+                        </tr>`).join('')}
+                </tbody>
+            </table>`;
+    } catch(e) {
+        cont.innerHTML = '<p class="text-danger text-center">Error al cargar inactivos.</p>';
+    }
+}
+
+async function desactivarDocente(id, nombre) {
+    if (!confirm(`⚠️ ¿Mover a inactivos a "${nombre}"?\n\nYa no aparecerá en la planilla mensual.`)) return;
+    const token = localStorage.getItem('token');
+    const res   = await fetch(`${SERVER_BASE}/api/docentes/${id}/desactivar`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+        cargarDatosServidor();
+        alert(`✅ "${nombre}" movido a inactivos.`);
+    } else {
+        alert('❌ Error: ' + (data.error || 'No se pudo desactivar.'));
+    }
+}
+
+async function reactivarDocente(id, nombre) {
+    if (!confirm(`¿Reactivar a "${nombre}"?\n\nVolverá a aparecer en la planilla mensual.`)) return;
+    const token = localStorage.getItem('token');
+    const res   = await fetch(`${SERVER_BASE}/api/docentes/${id}/activar`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+        cargarInactivos();
+        cargarDatosServidor();
+        alert(`✅ "${nombre}" reactivado correctamente.`);
+    } else {
+        alert('❌ Error: ' + (data.error || 'No se pudo reactivar.'));
+    }
 }
 
 function abrirModalCambiarPass() {
