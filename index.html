@@ -359,6 +359,16 @@
                         </button>
                     </li>
                     <li class="nav-item">
+                        <button class="nav-link fw-bold" onclick="mostrarTabGestion('editar')">
+                            <i class="fa-solid fa-user-pen me-1"></i> Editar Docente
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" onclick="mostrarTabGestion('editar')">
+                            <i class="fa-solid fa-user-pen me-1"></i> Editar Docente
+                        </button>
+                    </li>
+                    <li class="nav-item">
                         <button class="nav-link fw-bold" onclick="mostrarTabGestion('inactivos')">
                             <i class="fa-solid fa-user-slash me-1"></i> Docentes Inactivos
                         </button>
@@ -392,7 +402,38 @@
                         </button>
                     </div>
                 </div>
-
+                <!-- TAB: EDITAR -->
+                <div id="tab-editar" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Buscar docente a editar</label>
+                        <select id="select-docente-editar" class="form-select" onchange="cargarDatosEditar()">
+                            <option value="">-- Selecciona un docente --</option>
+                        </select>
+                    </div>
+                    <div id="form-editar-docente" style="display:none;">
+                        <div class="row g-3">
+                            <input type="hidden" id="editar-id-docente">
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold">Apellidos y Nombres <span class="text-danger">*</span></label>
+                                <input type="text" id="editar-nombre" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">DNI <span class="text-danger">*</span></label>
+                                <input type="text" id="editar-dni" class="form-control" maxlength="8">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Teléfono / Celular</label>
+                                <input type="text" id="editar-telefono" class="form-control">
+                            </div>
+                        </div>
+                        <div id="msg-editar-docente" class="alert d-none py-2 small mt-3 mb-0"></div>
+                        <div class="mt-3 text-end">
+                            <button class="btn btn-warning fw-bold" onclick="guardarEdicionDocente()">
+                                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <!-- TAB: INACTIVOS -->
                 <div id="tab-inactivos" style="display:none;">
                     <div class="text-end mb-2">
@@ -465,7 +506,7 @@
                             <small class="text-muted" id="edit-codigo-display">DNI: —</small>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label small fw-bold mb-1">Sueldo Base (S/)</label>
+                            <label class="form-label small fw-bold mb-1">Sueldo Planilla (S/)</label>
                             <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
                     </div>
@@ -473,7 +514,7 @@
                     <!-- NUEVO CAMPO PAGADO - Opción A -->
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold mb-1 text-success">PAGADO (Una sola vez)</label>
+                            <label class="form-label small fw-bold mb-1 text-success">SUELDO BRUTO</label>
                             <div id="pagado-container">
                                 <!-- Se llenará con JS -->
                             </div>
@@ -611,20 +652,22 @@
                 </div>
                 <!-- ══ RESUMEN NETO A PAGAR ══ -->
                 <div class="alert alert-info border-2 mt-4" id="resumen-neto">
-                    <h6 class="fw-bold mb-2">📊 Resumen de Planilla</h6>
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <small class="text-muted">Sueldo Base</small><br>
+                    <h6 class="fw-bold mb-3">📊 Resumen de Planilla</h6>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="text-center">
+                            <small class="text-muted d-block">Sueldo Bruto</small>
                             <strong id="resumen-sb">S/ 0.00</strong>
                         </div>
-                        <div class="col-6">
-                            <small class="text-muted">Total Descuentos</small><br>
+                        <div class="text-muted fs-5">−</div>
+                        <div class="text-center">
+                            <small class="text-muted d-block">Descuentos Personales</small>
                             <strong id="resumen-descuentos" class="text-danger">S/ 0.00</strong>
                         </div>
-                    </div>
-                    <hr>
-                    <div class="text-center">
-                        <h5>NETO A PAGAR: <strong id="resumen-neto-final" class="text-success">S/ 0.00</strong></h5>
+                        <div class="text-muted fs-5">=</div>
+                        <div class="text-center">
+                            <small class="text-muted d-block">NETO A PAGAR</small>
+                            <strong id="resumen-neto-final" class="text-success fs-5">S/ 0.00</strong>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1388,7 +1431,7 @@ function abrirModal(id) {
     } else {
         pagadoContainer.innerHTML = `
             <input type="number" id="edit-pagado" class="form-control form-control-sm border-success" min="0" placeholder="0.00" value="0">
-            <small class="text-muted">Ingrese el monto PAGADO (solo una vez)</small>
+            <small class="text-muted">Ingrese el SUELDO BRUTO</small>
         `;
     }
 
@@ -1948,6 +1991,107 @@ for (let col = 1; col <= 20; col++) {
     });
 
     // Descargar
+    // ══════════════════════════════════════════════
+    // HOJA 2 — GRÁFICO ESTADÍSTICO DEL MES
+    // ══════════════════════════════════════════════
+    const ws2 = wb.addWorksheet('Estadísticas');
+    ws2.columns = [
+        { width: 30 },
+        { width: 20 },
+    ];
+
+    // Título
+    ws2.mergeCells('A1:B1');
+    ws2.getCell('A1').value = `RESUMEN ESTADÍSTICO — ${mesNombreEx}`;
+    ws2.getCell('A1').style = {
+        font: { bold: true, size: 14, color: { argb: 'FFFFFFFF' } },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
+        alignment: { horizontal: 'center', vertical: 'middle' }
+    };
+    ws2.getRow(1).height = 30;
+
+    // Encabezados
+    ws2.getCell('A2').value = 'CONCEPTO';
+    ws2.getCell('B2').value = 'MONTO TOTAL (S/)';
+    ['A2','B2'].forEach(c => {
+        ws2.getCell(c).style = {
+            font: { bold: true, color: { argb: 'FFFFFFFF' } },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '2E75B6' } },
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            border: { left:{style:'thin'}, right:{style:'thin'} }
+        };
+    });
+    ws2.getRow(2).height = 20;
+
+    // Calcular totales SIS
+    const totalSis = docentesData.filter(d => (d.tipo_salud||'ESSALUD') === 'SIS').length * 25;
+    const totalEssalud = totales.esalud;
+
+    // Filas de datos
+    const statsData = [
+        { concepto: '💰 Total Sueldos Brutos',       monto: totales.pagado,              color: 'E8F5E9' },
+        { concepto: '📋 Total AFP / ONP',             monto: totales.afp,                 color: 'E3F2FD' },
+        { concepto: '🏥 Total ESSALUD (9%)',          monto: totalEssalud,                color: 'FFF3E0' },
+        { concepto: '🩺 Total SIS (empleador)',       monto: totalSis,                    color: 'FCE4EC' },
+        { concepto: '💸 Total Adelantos',             monto: totales.adel,                color: 'F3E5F5' },
+        { concepto: '💳 Total Créditos',              monto: totales.cred,                color: 'F3E5F5' },
+        { concepto: '🏦 Total Préstamos',             monto: totales.prest,               color: 'F3E5F5' },
+        { concepto: '👶 Total Pensión por Hijo',      monto: totales.pen,                 color: 'F3E5F5' },
+        { concepto: '⏰ Total Tardanzas + Faltas',    monto: totales.tard,                color: 'FFEBEE' },
+        { concepto: '🎯 Total Actividades',           monto: totales.activ,               color: 'FFEBEE' },
+        { concepto: '⚠️ Total Desmérito',             monto: totales.desmr,               color: 'FFEBEE' },
+        { concepto: '🎁 Total Bonos',                 monto: totales.bono,                color: 'E8F5E9' },
+        { concepto: '✅ NETO A PAGAR TOTAL',          monto: totales.neto,                color: 'C8E6C9' },
+        { concepto: '🏢 CONSOLIDADO TOTAL',           monto: totales.consolidado,         color: 'BBDEFB' },
+    ];
+
+    statsData.forEach((item, i) => {
+        const rowNum = i + 3;
+        ws2.getCell(rowNum, 1).value = item.concepto;
+        ws2.getCell(rowNum, 2).value = item.monto;
+        const esNegrita = item.concepto.includes('NETO') || item.concepto.includes('CONSOLIDADO') || item.concepto.includes('Sueldos');
+        [1, 2].forEach(col => {
+            ws2.getCell(rowNum, col).style = {
+                font: { bold: esNegrita, size: esNegrita ? 11 : 10 },
+                fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: item.color } },
+                alignment: { horizontal: col === 2 ? 'center' : 'left', vertical: 'middle' },
+                border: { left:{style:'thin'}, right:{style:'thin'} },
+                numFmt: col === 2 ? '"S/ "#,##0.00' : undefined
+            };
+        });
+        ws2.getRow(rowNum).height = 18;
+    });
+
+    // Barra visual proporcional al monto (columna C)
+    ws2.getColumn(3).width = 40;
+    ws2.getCell('C2').value = 'PROPORCIÓN VISUAL';
+    ws2.getCell('C2').style = {
+        font: { bold: true, color: { argb: 'FFFFFFFF' } },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '2E75B6' } },
+        alignment: { horizontal: 'center' }
+    };
+    const maxMonto = Math.max(...statsData.map(d => d.monto || 0));
+    statsData.forEach((item, i) => {
+        const rowNum = i + 3;
+        const pct    = maxMonto > 0 ? Math.round((item.monto / maxMonto) * 20) : 0;
+        const barra  = '█'.repeat(pct) + '░'.repeat(20 - pct);
+        const pctNum = maxMonto > 0 ? ((item.monto / maxMonto) * 100).toFixed(1) : '0.0';
+        ws2.getCell(rowNum, 3).value = `${barra} ${pctNum}%`;
+        ws2.getCell(rowNum, 3).style = {
+            font: { color: { argb: '1F3864' }, size: 9 },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: item.color } },
+            alignment: { vertical: 'middle' }
+        };
+    });
+
+    // Pie de página hoja 2
+    const lastRow = statsData.length + 4;
+    ws2.mergeCells(`A${lastRow}:C${lastRow}`);
+    ws2.getCell(`A${lastRow}`).value = `Generado por Sistema de Planillas Digitales — R&R Tech Solutions © 2026`;
+    ws2.getCell(`A${lastRow}`).style = {
+        font: { italic: true, size: 8, color: { argb: '888888' } },
+        alignment: { horizontal: 'center' }
+    };
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const link = document.createElement('a');
@@ -1978,7 +2122,7 @@ for (let col = 1; col <= 20; col++) {
         // Neto parte desde PAGADO
         const totalDescuentos = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades;
         const neto = pagado + bono - totalDescuentos;
-        document.getElementById('resumen-sb').textContent = `S/ ${sb.toFixed(2)}`;
+        document.getElementById('resumen-sb').textContent = `S/ ${pagado.toFixed(2)}`;
         document.getElementById('resumen-descuentos').textContent = `S/ ${totalDescuentos.toFixed(2)}`;
         document.getElementById('resumen-neto-final').textContent = `S/ ${neto.toFixed(2)}`;
         document.getElementById('resumen-neto-final').style.color = neto >= 0 ? '#28a745' : '#dc3545';
@@ -2024,6 +2168,78 @@ async function togglePagoColor(idDocente, colorActual) {
         const d = docentesData.find(x => x.id_docente === idDocente);
         if (d) d.pago_color = nuevoColor;
         renderizarTabla(docentesData);
+    }
+}
+function cargarSelectEditar() {
+    const select = document.getElementById('select-docente-editar');
+    select.innerHTML = '<option value="">-- Selecciona un docente --</option>';
+    document.getElementById('form-editar-docente').style.display = 'none';
+    docentesData
+        .slice()
+        .sort((a, b) => a.nombre.localeCompare(b.nombre))
+        .forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id_docente;
+            opt.textContent = `${d.nombre} — DNI: ${d.dni || '—'}`;
+            select.appendChild(opt);
+        });
+}
+
+function cargarDatosEditar() {
+    const id = document.getElementById('select-docente-editar').value;
+    const form = document.getElementById('form-editar-docente');
+    if (!id) { form.style.display = 'none'; return; }
+    const d = docentesData.find(x => x.id_docente == id);
+    if (!d) return;
+    document.getElementById('editar-id-docente').value = d.id_docente;
+    document.getElementById('editar-nombre').value     = d.nombre    || '';
+    document.getElementById('editar-dni').value        = d.dni       || '';
+    document.getElementById('editar-telefono').value   = d.telefono  || '';
+    const msg = document.getElementById('msg-editar-docente');
+    msg.className = 'alert d-none py-2 small mt-3 mb-0';
+    form.style.display = 'block';
+}
+
+async function guardarEdicionDocente() {
+    const id       = document.getElementById('editar-id-docente').value;
+    const nombre   = document.getElementById('editar-nombre').value.trim();
+    const dni      = document.getElementById('editar-dni').value.trim();
+    const telefono = document.getElementById('editar-telefono').value.trim();
+    const msg      = document.getElementById('msg-editar-docente');
+
+    if (!nombre || !dni) {
+        msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+        msg.textContent = '❌ Nombre y DNI son obligatorios.';
+        return;
+    }
+    if (dni.length !== 8 || isNaN(dni)) {
+        msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+        msg.textContent = '❌ El DNI debe tener exactamente 8 dígitos.';
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/docentes/${id}/datos`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ nombre, dni, telefono })
+        });
+        const data = await res.json();
+        if (data.success) {
+            msg.className   = 'alert alert-success py-2 small mt-3 mb-0';
+            msg.textContent = '✅ Datos actualizados correctamente.';
+            // Actualizar en memoria local
+            const d = docentesData.find(x => x.id_docente == id);
+            if (d) { d.nombre = nombre; d.dni = dni; d.telefono = telefono; }
+            cargarDatosServidor(); // Refrescar tabla
+        } else {
+            msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+            msg.textContent = '❌ ' + (data.error || 'Error al actualizar.');
+        }
+    } catch(e) {
+        msg.className   = 'alert alert-danger py-2 small mt-3 mb-0';
+        msg.textContent = '❌ No se pudo conectar con el servidor.';
     }
 }
 async function guardarCorreo(idDocente, email) {
@@ -2075,12 +2291,18 @@ function abrirGestionPersonal() {
 }
 
 function mostrarTabGestion(tab) {
-    document.getElementById('tab-agregar').style.display   = tab === 'agregar'   ? 'block' : 'none';
+    document.getElementById('tab-agregar').style.display = tab === 'agregar'  ? 'block' : 'none';
+    document.getElementById('tab-editar').style.display  = tab === 'editar'   ? 'block' : 'none';
     document.getElementById('tab-inactivos').style.display = tab === 'inactivos' ? 'block' : 'none';
     document.querySelectorAll('#tabsGestion .nav-link').forEach((btn, i) => {
-        btn.classList.toggle('active', (tab === 'agregar' && i === 0) || (tab === 'inactivos' && i === 1));
+        btn.classList.toggle('active',
+            (tab === 'agregar'   && i === 0) ||
+            (tab === 'editar'    && i === 1) ||
+            (tab === 'inactivos' && i === 2)
+        );
     });
     if (tab === 'inactivos') cargarInactivos();
+    if (tab === 'editar')    cargarSelectEditar();
 }
 
 async function agregarDocente() {

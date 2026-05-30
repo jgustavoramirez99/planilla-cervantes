@@ -451,6 +451,23 @@ app.put('/api/docentes/:id/pago-color', verificarToken, (req, res) => {
     );
 });
 // ============================================================
+// PUT /api/docentes/:id/datos — Editar nombre, dni, telefono
+// ============================================================
+app.put('/api/docentes/:id/datos', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    const { nombre, dni, telefono } = req.body;
+    if (!nombre || !dni) return res.status(400).json({ error: 'Nombre y DNI son obligatorios.' });
+    db.query(
+        'UPDATE docentes SET nombre = ?, dni = ?, telefono = ? WHERE id_docente = ?',
+        [nombre.trim(), dni.trim(), telefono || '', req.params.id],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
+// ============================================================
 // PUT /api/docentes/:id/email — Guardar correo del docente
 // ============================================================
 app.put('/api/docentes/:id/email', verificarToken, (req, res) => {
