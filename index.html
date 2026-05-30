@@ -2074,7 +2074,42 @@ for (let col = 1; col <= 20; col++) {
             alignment: { vertical: 'middle' }
         };
     });
+    // ══════════════════════════════════════════════
+    // GRÁFICO DE BARRAS REAL (ExcelJS)
+    // ══════════════════════════════════════════════
+    // Datos para el gráfico: usamos solo los conceptos más representativos
+    const grafData = [
+        { concepto: 'Sueldos Brutos', monto: totales.pagado },
+        { concepto: 'AFP / ONP',      monto: totales.afp },
+        { concepto: 'ESSALUD',        monto: totalEssalud },
+        { concepto: 'Adelantos',      monto: totales.adel },
+        { concepto: 'Tardanzas',      monto: totales.tard },
+        { concepto: 'Bonos',          monto: totales.bono },
+        { concepto: 'NETO TOTAL',     monto: totales.neto },
+    ];
 
+    // Escribir datos del gráfico en columnas E y F (ocultas visualmente pero necesarias para ExcelJS)
+    const grafStartRow = 3;
+    ws2.getCell('E2').value = 'Concepto';
+    ws2.getCell('F2').value = 'Monto';
+    grafData.forEach((item, idx) => {
+        ws2.getCell(grafStartRow + idx, 5).value = item.concepto;
+        ws2.getCell(grafStartRow + idx, 6).value = item.monto;
+    });
+
+    // Crear el gráfico de barras 2D (bar)
+    const chart = wb.addChart('bar', {
+        title: { name: `Resumen Financiero — ${mesNombre}` },
+        series: [{
+            name:   { sqref: `Estadísticas!$F$2` },
+            labels: { sqref: `Estadísticas!$E$3:$E${grafStartRow + grafData.length - 1}` },
+            values: { sqref: `Estadísticas!$F$3:$F${grafStartRow + grafData.length - 1}` },
+        }],
+        plotArea: { bar: { barDir: 'col', grouping: 'clustered' } },  // col = columnas verticales
+        legend:   { position: 'bottom' },
+    });
+
+    ws2.addChart(chart, 'A' + (statsData.length + 6) + ':H' + (statsData.length + 22));
     // Pie de página hoja 2
     const lastRow = statsData.length + 4;
     ws2.mergeCells(`A${lastRow}:C${lastRow}`);
