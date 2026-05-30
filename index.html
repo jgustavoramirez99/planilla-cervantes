@@ -948,10 +948,10 @@ async function enviarWhatsApp(id) {
         const tipoSalud     = d.tipo_salud  || 'ESSALUD';
         const desmritoNivel = d.desmrito_nivel || '';
         const pagado        = Number(d.pagado) || 0;
-        const gastosEventos = 30;
+        const gastosEventos = Number(d.actividades) || 0;
         const pctAfpPdf    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfpPdf[tipoAfp] || 0.13)).toFixed(2)) : 0;
-        const esalud        = 0; // ESSALUD y SIS: nunca se descuenta al trabajador
+        
         const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
         const neto          = pagado + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
@@ -1060,8 +1060,9 @@ async function enviarWhatsApp(id) {
             const niveles = { LEVE:'Falta Leve', GRAVE:'Falta Grave', MUY_GRAVE:'Falta Muy Grave' };
             fila(`Desmérito: ${niveles[desmritoNivel]||desmritoNivel}`, '', `S/ ${desmrito.toFixed(2)}`);
         }
-        // ACTIVIDADES fijo
-        fila(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
+        
+        // ACTIVIDADES — solo mostrar si hay monto
+        if (gastosEventos > 0) fila(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
 
         // ── Total ────────────────────────────────────────────────────────────
         y += 2;
