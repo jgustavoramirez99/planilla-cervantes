@@ -322,7 +322,7 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 
     let sql = `
         SELECT d.*,
-               IFNULL(p.pagado,             0)    AS pagado,
+               IFNULL(p.pagado, d.pagado_fijo)    AS pagado,
                IFNULL(p.afp,                NULL) AS afp,
                IFNULL(p.adelantos,           0)   AS adelantos,
                IFNULL(p.faltas,              0)   AS faltas,
@@ -394,11 +394,11 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     // NETO/CONSOLIDADO: PAGADO + ESSALUD (aporte empleador) + BONO
     const consolidado = parseFloat(((Number(pagado) || 0) + esalud + (Number(bono) || 0)).toFixed(2));
 
-    // pagado y afp ahora se guardan en planillas (por mes), no en docentes
+    // DESPUÉS:
     db.query(
-        'UPDATE docentes SET sueldo_base = ? , pagado_fijo = ? WHERE id_docente = ?',
-        [sueldo_base, pagado, id],
-        (err) => { if (err) console.error('Error actualizando docentes:', err); }
+    'UPDATE docentes SET sueldo_base = ?, pagado_fijo = ? WHERE id_docente = ?',
+    [sueldo_base, pagado||0, id],
+    (err) => { if (err) console.error('Error actualizando docentes:', err); }
     );
 
     const sqlUpsert = `
