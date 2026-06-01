@@ -322,8 +322,8 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 
     let sql = `
         SELECT d.*,
-               IFNULL(p.pagado,           d.pagado_fijo)   AS pagado,
-               IFNULL(p.sueldo_base,      d.sb_fijo)       AS sueldo_base,
+               IFNULL(p.pagado,      d.pagado_fijo)   AS pagado,
+               d.sb_fijo                              AS sueldo_base,
                IFNULL(p.afp,                NULL)          AS afp,
                IFNULL(p.adelantos,           0)            AS adelantos,
                IFNULL(p.faltas,              0)            AS faltas,
