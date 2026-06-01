@@ -1196,7 +1196,7 @@ async function enviarWhatsApp(id) {
         doc.text(`S/ ${neto.toFixed(2)}`, 165, y);
 
         // ── Firmas ───────────────────────────────────────────────────────────
-        y += 120;
+        y += 100;
         doc.setFontSize(8.5); doc.setFont("courier","normal"); doc.setTextColor(0);
         doc.line(22,  y, 88,  y);
         doc.text("Lic. Edgar Cervantes", 55,  y+5, { align:"center" });
