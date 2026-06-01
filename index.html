@@ -515,7 +515,16 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold mb-1">Sueldo Planilla (S/)</label>
-                            <input type="number" id="edit-sb" class="form-control form-control-sm border-primary" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="number" id="edit-sb" class="form-control form-control-sm border-primary"
+                                       min="0" placeholder="0.00"
+                                       oninput="actualizarResumenNeto()"
+                                       readonly style="background:#f0f4ff;">
+                                <button type="button" class="btn btn-sm btn-outline-warning"
+                                        onclick="habilitarSueldoPlanilla()"
+                                        title="Editar Sueldo Planilla">✏️</button>
+                            </div>
+                            <small class="text-muted">Se mantiene mes a mes</small>
                         </div>
                     </div>
                 <input type="hidden" id="edit-nombre">
@@ -1412,7 +1421,10 @@ function abrirModal(id) {
     document.getElementById('edit-subtitulo').innerText = d.dni || '';
 
     // Sueldo Base
-    document.getElementById('edit-sb').value = d.sueldo_base || 0;
+    const inputSb = document.getElementById('edit-sb');
+inputSb.value = d.sueldo_base || 0;
+inputSb.setAttribute('readonly', true);
+inputSb.style.background = '#f0f4ff';
 
     // PAGADO - llenar el input directo (ya no hay pagado-container)
     const pagadoValor = Number(d.pagado) || 0;
@@ -1645,6 +1657,7 @@ function abrirModal(id) {
         if (res.ok) {
             miModal.hide();
             alert('✅ Datos guardados correctamente');
+            
 
             // Actualizar datos locales
             const docente = docentesData.find(doc => doc.id_docente == id);
@@ -2546,7 +2559,12 @@ async function cambiarPassword() {
         input.style.background = '';
         input.focus();
     }
-
+function habilitarSueldoPlanilla() {
+        const input = document.getElementById('edit-sb');
+        input.removeAttribute('readonly');
+        input.style.background = '';
+        input.focus();
+    }
 </script>
 
 <!-- ── FOOTER GRTECH ── -->
