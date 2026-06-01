@@ -322,24 +322,24 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 
     let sql = `
         SELECT d.*,
-               IFNULL(p.pagado, d.pagado_fijo)    AS pagado,
-               IFNULL(p.sueldo_base, d.sb_fijo)             AS sueldo_base,
-               IFNULL(p.afp,                NULL) AS afp,
-               IFNULL(p.adelantos,           0)   AS adelantos,
-               IFNULL(p.faltas,              0)   AS faltas,
-               IFNULL(p.pension,             0)   AS pension,
-               IFNULL(p.tardanza,            0)   AS tardanza,
-               IFNULL(p.bono,                0)   AS bono,
-               IFNULL(p.otros_descuentos,    0)   AS otros_descuentos,
-               IFNULL(p.otros_desc_detalle,  '')  AS otros_desc_detalle,
-               IFNULL(p.tipo_afp,            'AFP') AS tipo_afp,
-               IFNULL(p.tipo_salud,          'ESSALUD') AS tipo_salud,
-               IFNULL(p.creditos,            0)   AS creditos,
-               IFNULL(p.prestamos,           0)   AS prestamos,
-               IFNULL(p.desmrito_nivel,      '')  AS desmrito_nivel,
-               IFNULL(p.desmrito_monto,      0)   AS desmrito_monto,
-               IFNULL(p.num_faltas,          0)   AS num_faltas,
-               IFNULL(p.num_tardanzas,       0)   AS num_tardanzas
+               IFNULL(p.pagado,           d.pagado_fijo)   AS pagado,
+               IFNULL(p.sueldo_base,      d.sb_fijo)       AS sueldo_base,
+               IFNULL(p.afp,                NULL)          AS afp,
+               IFNULL(p.adelantos,           0)            AS adelantos,
+               IFNULL(p.faltas,              0)            AS faltas,
+               IFNULL(p.pension,             0)            AS pension,
+               IFNULL(p.tardanza,            0)            AS tardanza,
+               IFNULL(p.bono,                0)            AS bono,
+               IFNULL(p.otros_descuentos,    0)            AS otros_descuentos,
+               IFNULL(p.otros_desc_detalle,  '')           AS otros_desc_detalle,
+               IFNULL(p.tipo_afp,            'AFP')        AS tipo_afp,
+               IFNULL(p.tipo_salud,          'ESSALUD')    AS tipo_salud,
+               IFNULL(p.creditos,            0)            AS creditos,
+               IFNULL(p.prestamos,           0)            AS prestamos,
+               IFNULL(p.desmrito_nivel,      '')           AS desmrito_nivel,
+               IFNULL(p.desmrito_monto,      0)            AS desmrito_monto,
+               IFNULL(p.num_faltas,          0)            AS num_faltas,
+               IFNULL(p.num_tardanzas,       0)            AS num_tardanzas
         FROM docentes d
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
