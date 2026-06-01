@@ -1196,11 +1196,11 @@ async function enviarWhatsApp(id) {
         doc.text(`S/ ${neto.toFixed(2)}`, 165, y);
 
         // ── Firmas ───────────────────────────────────────────────────────────
-        y += 16;
+        y += 245;
         doc.setFontSize(8.5); doc.setFont("courier","normal"); doc.setTextColor(0);
         doc.line(22,  y, 88,  y);
         doc.text("Lic. Edgar Cervantes", 55,  y+5, { align:"center" });
-        doc.text("Promotoría",           55,  y+10,{ align:"center" });
+        doc.text("Promotor",           55,  y+10,{ align:"center" });
         doc.line(112, y, 185, y);
         doc.text(d.nombre,               148, y+5, { align:"center" });
         doc.text("Firma del Trabajador", 148, y+10,{ align:"center" });
@@ -1210,7 +1210,7 @@ async function enviarWhatsApp(id) {
         doc.setFontSize(7); doc.setTextColor(150);
         doc.text("Sistema de Planillas Digitales ", 105, y, { align:"center" });
         doc.setTextColor(52,152,219);
-        doc.text("Desarrollado por R&R Tech Solutions  © 2026", 105, y+5, { align:"center" });
+        doc.text("R&R Tech Solutions  © 2026", 105, y+5, { align:"center" });
 
         return doc.output('blob');
     }
