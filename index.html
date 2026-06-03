@@ -2495,36 +2495,39 @@ async function cargarInactivos() {
     }
 }
 async function verHistorialDocente(id, nombre) {
-    // Limpiar cualquier backdrop huérfano antes de abrir
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
-
     const token = localStorage.getItem('token');
     const res = await fetch(`${SERVER_BASE}/api/docentes/${id}/historial`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await res.json();
     if (!data.length) { alert(`${nombre} no tiene planillas registradas.`); return; }
-    
-    const meses = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    let html = `<b>Historial de ${nombre}</b><br><br><table class="table table-sm table-bordered">
-        <thead><tr><th>Mes</th><th>Año</th><th>Pagado</th><th>Neto est.</th></tr></thead><tbody>`;
+
+    const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    let filas = '';
     data.forEach(p => {
-        html += `<tr>
-            <td>${meses[p.mes]}</td>
+        filas += `<tr>
+            <td>${meses[p.mes] || p.mes}</td>
             <td>${p.anio}</td>
-            <td>S/ ${Number(p.pagado||0).toFixed(2)}</td>
             <td>S/ ${Number(p.pagado||0).toFixed(2)}</td>
         </tr>`;
     });
-    html += '</tbody></table>';
 
-    document.getElementById('modal-historial-body').innerHTML = html;
-    const elHistorial = document.getElementById('modal-historial');
-    bootstrap.Modal.getInstance(elHistorial)?.dispose();
-    new bootstrap.Modal(elHistorial).show();
+    const ventana = window.open('', '_blank', 'width=600,height=500');
+    ventana.document.write(`
+        <!DOCTYPE html><html><head>
+        <meta charset="UTF-8">
+        <title>Historial - ${nombre}</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head><body class="p-4">
+        <h5 class="fw-bold mb-3">📋 Historial de pagos — ${nombre}</h5>
+        <table class="table table-bordered table-sm">
+            <thead class="table-dark"><tr><th>Mes</th><th>Año</th><th>Pagado</th></tr></thead>
+            <tbody>${filas}</tbody>
+        </table>
+        <button onclick="window.close()" class="btn btn-secondary btn-sm mt-2">Cerrar</button>
+        </body></html>
+    `);
+    ventana.document.close();
 }
 async function desactivarDocente(id, nombre) {
     if (!confirm(`⚠️ ¿Mover a inactivos a "${nombre}"?\n\nYa no aparecerá en la planilla mensual.`)) return;
