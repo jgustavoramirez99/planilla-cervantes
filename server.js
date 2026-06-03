@@ -339,7 +339,8 @@ app.get('/api/docentes', verificarToken, (req, res) => {
                IFNULL(p.desmrito_nivel,      '')           AS desmrito_nivel,
                IFNULL(p.desmrito_monto,      0)            AS desmrito_monto,
                IFNULL(p.num_faltas,          0)            AS num_faltas,
-               IFNULL(p.num_tardanzas,       0)            AS num_tardanzas
+               IFNULL(p.num_tardanzas,       0)            AS num_tardanzas,
+               IFNULL(p.pago_color,          'azul')       AS pago_color
         FROM docentes d
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
