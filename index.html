@@ -587,15 +587,8 @@
                             <input type="number" id="edit-actividades" class="form-control form-control-sm" value="30" step="0.01" oninput="actualizarResumenNeto()">
                             <small class="text-muted">Monto por actividades este mes</small>
                         </div>
-                        <!-- ══ OTROS DESCUENTOS ══ -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-danger">Otros Descuentos (S/)</label>
-                            <input type="number" id="edit-otros-desc" class="form-control form-control-sm" min="0" placeholder="0.00" step="0.01" oninput="actualizarResumenNeto()">
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold">Detalle del descuento</label>
-                            <input type="text" id="edit-otros-desc-detalle" class="form-control form-control-sm" placeholder="Ej: Uniforme, multa, etc.">
-                        </div>
+                        <input type="hidden" id="edit-otros-desc" value="0">
+                        <input type="hidden" id="edit-otros-desc-detalle" value="">
                     </div>
                 </div>
 
@@ -2502,6 +2495,12 @@ async function cargarInactivos() {
     }
 }
 async function verHistorialDocente(id, nombre) {
+    // Limpiar cualquier backdrop huérfano antes de abrir
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+
     const token = localStorage.getItem('token');
     const res = await fetch(`${SERVER_BASE}/api/docentes/${id}/historial`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -2521,11 +2520,11 @@ async function verHistorialDocente(id, nombre) {
         </tr>`;
     });
     html += '</tbody></table>';
-    // Mostrar en un modal o alert simple:
+
     document.getElementById('modal-historial-body').innerHTML = html;
     const elHistorial = document.getElementById('modal-historial');
-    const instanciaHistorial = bootstrap.Modal.getInstance(elHistorial) || new bootstrap.Modal(elHistorial);
-    instanciaHistorial.show();
+    bootstrap.Modal.getInstance(elHistorial)?.dispose();
+    new bootstrap.Modal(elHistorial).show();
 }
 async function desactivarDocente(id, nombre) {
     if (!confirm(`⚠️ ¿Mover a inactivos a "${nombre}"?\n\nYa no aparecerá en la planilla mensual.`)) return;
