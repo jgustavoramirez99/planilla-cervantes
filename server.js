@@ -6,7 +6,7 @@ const fs         = require('fs');
 const jwt        = require('jsonwebtoken');
 const bcrypt     = require('bcryptjs');
 const nodemailer = require('nodemailer');
-
+const ANIO_ACTUAL = new Date().getFullYear(); // ← NUEVO
 require('dotenv').config();
 
 const app        = express();
@@ -344,7 +344,7 @@ app.get('/api/docentes', verificarToken, (req, res) => {
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
               AND p.mes  = ?
-              AND p.anio = 2026
+              AND p.anio = ${ANIO_ACTUAL}
         WHERE d.activo = 1`;
 
     const params = [mes];
@@ -372,9 +372,9 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 // PUT /api/docentes/:id
 // ============================================================
 app.put('/api/docentes/:id', verificarToken, (req, res) => {
-    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
-    }
+
     const id  = parseInt(req.params.id);
     const mes = parseInt(req.body.mes) || 5;
 
@@ -382,51 +382,59 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
         sueldo_base, pagado, afp,
         adelantos, faltas, pension, tardanza, bono,
         tipo_salud, creditos, prestamos,
-        desmrito_nivel, desmrito_monto
+        desmrito_nivel, desmrito_monto,
+        // ✅ CAMPOS QUE FALTABAN:
+        otros_descuentos, otros_desc_detalle,
+        num_faltas, num_tardanzas,
+        actividades
     } = req.body;
 
     const sb = Number(sueldo_base) || 0;
     const pctAfpMap = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
     const afpPct    = (afp && afp !== 'NINGUNO') ? (pctAfpMap[afp] || 0.13) : 0;
     const afpMonto  = parseFloat((sb * afpPct).toFixed(2));
-    // ESSALUD = 9% del sueldo base; SIS = S/ 25 fijo
     const tipoSaludVal = tipo_salud || 'ESSALUD';
     const esalud    = (tipoSaludVal === 'SIS') ? 25 : parseFloat((sb * 0.09).toFixed(2));
-    // NETO/CONSOLIDADO: PAGADO + ESSALUD (aporte empleador) + BONO
     const consolidado = parseFloat(((Number(pagado) || 0) + esalud + (Number(bono) || 0)).toFixed(2));
 
-    // DESPUÉS:
     db.query(
-    'UPDATE docentes SET sueldo_base = ?, pagado_fijo = ?, sb_fijo = ? WHERE id_docente = ?',
-    [sueldo_base, pagado||0, sueldo_base, id],
-    (err) => { if (err) console.error('Error actualizando docentes:', err); }
+        'UPDATE docentes SET sueldo_base = ?, pagado_fijo = ?, sb_fijo = ? WHERE id_docente = ?',
+        [sueldo_base, pagado||0, sueldo_base, id],
+        (err) => { if (err) console.error('Error actualizando docentes:', err); }
     );
 
     const sqlUpsert = `
         INSERT INTO planillas
             (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
-             tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp)
-        VALUES (?, ?, 2026, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
+             otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades)
+        VALUES (?, ?, ${ANIO_ACTUAL}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-            pagado          = VALUES(pagado),
-            afp             = VALUES(afp),
-            adelantos       = VALUES(adelantos),
-            faltas          = VALUES(faltas),
-            pension         = VALUES(pension),
-            tardanza        = VALUES(tardanza),
-            bono            = VALUES(bono),
-            tipo_salud      = VALUES(tipo_salud),
-            creditos        = VALUES(creditos),
-            prestamos       = VALUES(prestamos),
-            desmrito_nivel  = VALUES(desmrito_nivel),
-            desmrito_monto  = VALUES(desmrito_monto),
-            consolidado_bcp = VALUES(consolidado_bcp)`;
+            pagado           = VALUES(pagado),
+            afp              = VALUES(afp),
+            adelantos        = VALUES(adelantos),
+            faltas           = VALUES(faltas),
+            pension          = VALUES(pension),
+            tardanza         = VALUES(tardanza),
+            bono             = VALUES(bono),
+            tipo_salud       = VALUES(tipo_salud),
+            creditos         = VALUES(creditos),
+            prestamos        = VALUES(prestamos),
+            desmrito_nivel   = VALUES(desmrito_nivel),
+            desmrito_monto   = VALUES(desmrito_monto),
+            consolidado_bcp  = VALUES(consolidado_bcp),
+            otros_descuentos    = VALUES(otros_descuentos),
+            otros_desc_detalle  = VALUES(otros_desc_detalle),
+            num_faltas          = VALUES(num_faltas),
+            num_tardanzas       = VALUES(num_tardanzas),
+            actividades         = VALUES(actividades)`;
 
     db.query(
         sqlUpsert,
         [id, mes, pagado||0, afp||null, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
          tipo_salud||'ESSALUD', creditos||0, prestamos||0,
-         desmrito_nivel||'', desmrito_monto||0, consolidado],
+         desmrito_nivel||'', desmrito_monto||0, consolidado,
+         otros_descuentos||0, otros_desc_detalle||'', num_faltas||0, num_tardanzas||0, actividades||0],
         (err) => {
             if (err) {
                 console.error('❌ Error en PUT /api/docentes:', err);
@@ -443,8 +451,8 @@ app.put('/api/docentes/:id/pago-color', verificarToken, (req, res) => {
     const { id } = req.params;
     const { color, mes } = req.body;
     db.query(
-        'UPDATE planillas SET pago_color = ? WHERE id_docente = ? AND mes = ? AND anio = 2026',
-        [color, id, mes],
+        'UPDATE planillas SET pago_color = ? WHERE id_docente = ? AND mes = ? AND anio = ?',
+        [color, id, mes, ANIO_ACTUAL],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ success: true });
@@ -486,27 +494,39 @@ app.put('/api/docentes/:id/email', verificarToken, (req, res) => {
 // ============================================================
 // POST /api/guardar-boleta
 // ============================================================
+
 app.post('/api/guardar-boleta', verificarToken, (req, res) => {
     const { filename, base64 } = req.body;
     if (!filename || !base64) {
-        return res.status(400).json({ error: 'Faltan datos: filename o base64.' });
+        return res.status(400).json({ error: 'Faltan datos.' });
     }
-
     const nombreSeguro = path.basename(filename).replace(/[^a-zA-Z0-9._\-]/g, '_');
-    const rutaArchivo  = path.join(BOLETAS_DIR, nombreSeguro);
-
-    try {
-        fs.writeFileSync(rutaArchivo, Buffer.from(base64, 'base64'));
-        const protocolo  = req.headers['x-forwarded-proto'] || req.protocol;
-        const urlPublica = `${protocolo}://${req.get('host')}/boletas/${nombreSeguro}`;
-        res.json({ success: true, url: urlPublica, filename: nombreSeguro });
-    } catch (err) {
-        console.error('Error al guardar boleta:', err);
-        res.status(500).json({ error: 'No se pudo guardar el archivo.' });
-    }
+    
+    db.query(
+        'INSERT INTO boletas (filename, datos, created_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE datos = VALUES(datos), created_at = NOW()',
+        [nombreSeguro, base64],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const protocolo = req.headers['x-forwarded-proto'] || req.protocol;
+            const urlPublica = `${protocolo}://${req.get('host')}/api/boleta/${nombreSeguro}`;
+            res.json({ success: true, url: urlPublica, filename: nombreSeguro });
+        }
+    );
 });
 
-app.use('/boletas', express.static(BOLETAS_DIR));
+// Nuevo endpoint para servir el PDF siempre desde BD:
+app.get('/api/boleta/:filename', (req, res) => {
+    const nombre = req.params.filename.replace(/[^a-zA-Z0-9._\-]/g, '_');
+    db.query('SELECT datos FROM boletas WHERE filename = ?', [nombre], (err, rows) => {
+        if (err || !rows.length) return res.status(404).send('Boleta no encontrada.');
+        const buffer = Buffer.from(rows[0].datos, 'base64');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${nombre}"`);
+        res.send(buffer);
+    });
+});
+
+// app.use('/boletas', express.static(BOLETAS_DIR));
 
 // ============================================================
 // GET /api/whatsapp-link
@@ -515,7 +535,7 @@ app.get('/api/whatsapp-link', (req, res) => {
     const { nombre, sueldo, filename } = req.query;
     const numero    = req.query.telefono || '';
     const protocolo = req.headers['x-forwarded-proto'] || req.protocol;
-    const urlBoleta = `${protocolo}://${req.get('host')}/boletas/${filename}`;
+    const urlBoleta = `${protocolo}://${req.get('host')}/api/boleta/${filename}`;
     const texto     = `Hola *${nombre}*, adjunto tu boleta de pago.\n*Total Neto:* S/ ${sueldo}\n*Link:* ${urlBoleta}`;
     res.json({ link: `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(texto)}` });
 });
@@ -572,6 +592,24 @@ app.put('/api/docentes/:id/activar', verificarToken, (req, res) => {
 // ============================================================
 // GET /api/docentes/inactivos — Listar inactivos
 // ============================================================
+// GET /api/docentes/:id/historial — Ver planillas de un docente (activo o inactivo)
+app.get('/api/docentes/:id/historial', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+    const id = parseInt(req.params.id);
+    db.query(
+        `SELECT p.*, d.nombre, d.dni
+         FROM planillas p
+         JOIN docentes d ON d.id_docente = p.id_docente
+         WHERE p.id_docente = ?
+         ORDER BY p.anio DESC, p.mes DESC`,
+        [id],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
 app.get('/api/docentes/inactivos', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
@@ -596,8 +634,7 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
     // Borrar solo las planillas del mes seleccionado
     // pagado y afp ya viven en planillas, asi que con borrar la fila es suficiente
     db.query(
-        'DELETE FROM planillas WHERE mes = ? AND anio = 2026',
-        [mes],
+        'DELETE FROM planillas WHERE mes = ? AND anio = ?', [mes, ANIO_ACTUAL],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             // También resetear sueldo_base y actividades en docentes
