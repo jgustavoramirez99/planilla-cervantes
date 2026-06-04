@@ -12,6 +12,9 @@ require('dotenv').config();
 const app        = express();
 const rateLimit  = require('express-rate-limit');
 
+// ✅ AGREGA ESTA LÍNEA AQUÍ:
+app.set('trust proxy', 1);
+
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
     max: 10,                   // máximo 10 intentos por IP
