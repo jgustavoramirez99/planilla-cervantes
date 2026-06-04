@@ -1887,20 +1887,20 @@ if (tipoSaludEx === 'ESSALUD') {
 } else {
     ws.getCell(row, 7).value = 'S/. 25 (SIS)';
 }
-        ws.getCell(row, 8).value = adel;
-        ws.getCell(row, 9).value = cred;
-        ws.getCell(row, 10).value = prest;
-        ws.getCell(row, 11).value = pen;
-        ws.getCell(row, 12).value = tard;
-        ws.getCell(row, 13).value = activ;
-        ws.getCell(row, 14).value = desmr;
-        ws.getCell(row, 15).value = bono;
-        ws.getCell(row, 16).value = neto;
-        ws.getCell(row, 17).value = consolidado;
-        const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
-        ws.getCell(row, 18).value = tipoAfpEx === 'NINGUNO' ? '—' : (afpPctLabels[tipoAfpEx] || '13%');
-        ws.getCell(row, 19).value = ''; // columna separadora vacía
-        ws.getCell(row, 20).value = descuentosTotal;
+        ws.getCell(row, 8).value  = adel  || '';
+        ws.getCell(row, 9).value  = cred  || '';
+        ws.getCell(row, 10).value = prest || '';
+        ws.getCell(row, 11).value = pen   || '';
+ws.getCell(row, 12).value = tard  || '';
+ws.getCell(row, 13).value = activ || '';
+ws.getCell(row, 14).value = desmr || '';
+ws.getCell(row, 15).value = bono  || '';
+            ws.getCell(row, 16).value = neto;
+            ws.getCell(row, 17).value = consolidado;
+            const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
+            ws.getCell(row, 18).value = tipoAfpEx === 'NINGUNO' ? '—' : (afpPctLabels[tipoAfpEx] || '13%');
+            ws.getCell(row, 19).value = ''; // columna separadora vacía
+            ws.getCell(row, 20).value = descuentosTotal || '';
 
         const isOddRow = (row - 5) % 2 === 1; // fila impar = color, par = blanco
         for (let col = 1; col <= 20; col++) {
