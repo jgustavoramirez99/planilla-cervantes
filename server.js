@@ -340,7 +340,8 @@ app.get('/api/docentes', verificarToken, (req, res) => {
                IFNULL(p.desmrito_monto,      0)            AS desmrito_monto,
                IFNULL(p.num_faltas,          0)            AS num_faltas,
                IFNULL(p.num_tardanzas,       0)            AS num_tardanzas,
-               IFNULL(p.pago_color,          'azul')       AS pago_color
+               IFNULL(p.pago_color,          'azul')       AS pago_color,
+               IFNULL(p.actividades,         0)            AS actividades
         FROM docentes d
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
@@ -364,6 +365,7 @@ app.get('/api/docentes', verificarToken, (req, res) => {
         const resultadoConGasto = result.map(doc => ({
             ...doc,
             gastos_eventos_especiales: 30
+            
         }));
         res.json(resultadoConGasto);
     });

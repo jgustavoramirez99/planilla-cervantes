@@ -584,7 +584,7 @@
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small fw-bold">Actividades (S/)</label>
-                            <input type="number" id="edit-actividades" class="form-control form-control-sm" value="30" step="0.01" oninput="actualizarResumenNeto()">
+                            <input type="number" id="edit-actividades" class="form-control form-control-sm" value="0" step="0.01" oninput="actualizarResumenNeto()">
                             <small class="text-muted">Monto por actividades este mes</small>
                         </div>
                         <input type="hidden" id="edit-otros-desc" value="0">
@@ -1463,7 +1463,7 @@ inputSb.style.background = '#f0f4ff';
     document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
     // Actividades:
     // ←←← NUEVO CAMPO: ACTIVIDADES (editable)
-    document.getElementById('edit-actividades').value   = d.actividades  || 0;
+    document.getElementById('edit-actividades').value = (d.actividades != null) ? d.actividades : 0;
     // Después de línea 1449 (edit-actividades):
     document.getElementById('edit-num-faltas').value    = d.num_faltas    || 0;
     document.getElementById('edit-num-tardanzas').value = d.num_tardanzas || 0;
