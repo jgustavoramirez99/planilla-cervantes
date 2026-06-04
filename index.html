@@ -1766,7 +1766,7 @@ async function descargarExcel() {
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } },
     alignment: { horizontal: 'center', vertical: 'middle' },
     border: { left: {style:'thin'}, right: {style:'thin'} },
-    numFmt: '"S/ "#,##0.00'
+    numFmt: '"S/ "#,##0.##'
     };
 
     const totalStyle = {
@@ -1891,10 +1891,10 @@ if (tipoSaludEx === 'ESSALUD') {
         ws.getCell(row, 9).value  = cred  || '';
         ws.getCell(row, 10).value = prest || '';
         ws.getCell(row, 11).value = pen   || '';
-ws.getCell(row, 12).value = tard  || '';
-ws.getCell(row, 13).value = activ || '';
-ws.getCell(row, 14).value = desmr || '';
-ws.getCell(row, 15).value = bono  || '';
+        ws.getCell(row, 12).value = tard  || '';
+        ws.getCell(row, 13).value = activ || '';
+        ws.getCell(row, 14).value = desmr || '';
+        ws.getCell(row, 15).value = bono  || '';
             ws.getCell(row, 16).value = neto;
             ws.getCell(row, 17).value = consolidado;
             const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
@@ -1914,7 +1914,7 @@ ws.getCell(row, 15).value = bono  || '';
             fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
             alignment: { horizontal: 'center', vertical: 'middle' },
             border: { left:{style:'thin'}, right:{style:'thin'} },
-            numFmt: '"S/ "#,##0.00'
+            numFmt: '"S/ "#,##0.##'
         };
     } else if (colsVerdeClaro.includes(col)) {
         // PAGADO (4), NETO A PAGAR (16), CONSOLIDADO (17) — verde claro intercalado
@@ -1922,7 +1922,7 @@ ws.getCell(row, 15).value = bono  || '';
             fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'EAFAF1' } },
             alignment: { horizontal: 'center', vertical: 'middle' },
             border: { left:{style:'thin'}, right:{style:'thin'} },
-            numFmt: '"S/ "#,##0.00'
+            numFmt: '"S/ "#,##0.##'
         };
     } else if (col <= 3) {
         // N°, Apellidos y Nombres, DNI → celeste / blanco
@@ -1944,7 +1944,7 @@ ws.getCell(row, 15).value = bono  || '';
                 fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
                 alignment: { horizontal: 'center', vertical: 'middle' },
                 border: { left:{style:'thin'}, right:{style:'thin'} },
-                numFmt: '"S/ "#,##0.00'
+                numFmt: '"S/ "#,##0.##'
             };
         }
     } else {
@@ -1997,14 +1997,14 @@ ws.getCell(row, 15).value = bono  || '';
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
     alignment: { horizontal: 'center', vertical: 'middle' },
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
-    numFmt: '"S/ "#,##0.00'
+    numFmt: '"S/ "#,##0.##'
 };
 const totalVerdeSyle = {
     font: { bold: true, color: { argb: 'FF145A32' } },
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A9DFBF' } },
     alignment: { horizontal: 'center', vertical: 'middle' },
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
-    numFmt: '"S/ "#,##0.00'
+    numFmt: '"S/ "#,##0.##'
 };
 for (let col = 1; col <= 20; col++) {
     const cell = ws.getCell(totalRow, col);
