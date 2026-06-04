@@ -1777,8 +1777,8 @@ async function descargarExcel() {
     };
 
     // ==================== TÍTULOS + LOGO ====================
-    ws.mergeCells('A1:S1');
-    const titulo = ws.getCell('A1');
+    ws.mergeCells('B1:S1');
+    const titulo = ws.getCell('B1');
     titulo.value = "CERVANTES EDUCA SAC";
     titulo.style = { ...headerStyle, font: { bold: true, size: 16, color: { argb: 'FFFFFFFF' } } };
 
@@ -1793,16 +1793,16 @@ async function descargarExcel() {
             extension: 'png',
         });
         ws.addImage(imageId, {
-            tl: { col: 13, row: 0 },   // Posición del logo (columna M, fila 1)
-            ext: { width: 120, height: 60 }
-        });
+        tl: { col: 0, row: 0 },
+        ext: { width: 80, height: 55 }
+    });
     } catch (e) {
         console.log("Logo no encontrado, se omite.");
     }
 
-    ws.mergeCells('A2:S2');
-    ws.getCell('A2').value = `PLANILLA DE REMUNERACIONES - ${mesNombre} 2026`;
-    ws.getCell('A2').style = headerStyle;
+    ws.mergeCells('B2:S2');
+ws.getCell('B2').value = `PLANILLA DE REMUNERACIONES - ${mesNombre}`;
+ws.getCell('B2').style = headerStyle;
 
     ws.getCell('A3').value = `Fecha: ${new Date().toLocaleDateString('es-PE')}`;
     ws.getCell('A3').style = { alignment: { horizontal: 'left' } };
