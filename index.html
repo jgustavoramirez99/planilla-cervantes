@@ -368,6 +368,11 @@
                             <i class="fa-solid fa-user-slash me-1"></i> Docentes Inactivos
                         </button>
                     </li>
+                    <li class="nav-item">
+    <button class="nav-link fw-bold" onclick="mostrarTabGestion('participantes')">
+        <i class="fa-solid fa-calendar-check me-1"></i> Participantes del Mes
+    </button>
+</li>
                 </ul>
 
                 <!-- TAB: AGREGAR -->
@@ -436,6 +441,22 @@
                             <i class="fa-solid fa-rotate me-1"></i> Actualizar lista
                         </button>
                     </div>
+                    <!-- TAB: PARTICIPANTES DEL MES -->
+<div id="tab-participantes" style="display:none;">
+    <p class="text-muted small mb-2">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        Marca quiénes trabajaron en <strong id="label-mes-participantes"></strong>. 
+        Solo ellos aparecerán en la planilla.
+    </p>
+    <div id="lista-participantes" class="text-muted text-center py-3">
+        <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...
+    </div>
+    <div class="mt-3 text-end">
+        <button class="btn btn-primary fw-bold" onclick="guardarParticipantes()">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+        </button>
+    </div>
+</div>
                     <div id="lista-inactivos" class="text-muted text-center py-3">
                         <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...
                     </div>
@@ -858,17 +879,25 @@
         };
 
         try {
-            const response = await fetch(`${API_URL}?mes=${mesActual}`, { headers });
+            const anio = new Date().getFullYear();
+            const response = await fetch(`${API_URL}?mes=${mesActual}&anio=${anio}`, { headers });
             // ... resto del código
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 docentesData = await response.json();
+                // Filtrar solo los que participan en este mes
+                docentesData = docentesData.filter(d => d.incluido !== 0);
 
             // Marcar como emitida si tiene sueldo pagado registrado
             docentesData = docentesData.map(d => ({
                 ...d,
                 _boletaEmitida: (Number(d.pagado) || 0) > 0
             }));
+            
+            // Filtrar solo los que participan en este mes (admin ve solo los incluidos)
+            if (userRole === 'admin' || userRole === 'superadmin') {
+                docentesData = docentesData.filter(d => d.incluido !== 0);
+            }
 
             // Ordenar alfabéticamente por nombre
             docentesData.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
@@ -2394,16 +2423,19 @@ function abrirGestionPersonal() {
 function mostrarTabGestion(tab) {
     document.getElementById('tab-agregar').style.display = tab === 'agregar'  ? 'block' : 'none';
     document.getElementById('tab-editar').style.display  = tab === 'editar'   ? 'block' : 'none';
-    document.getElementById('tab-inactivos').style.display = tab === 'inactivos' ? 'block' : 'none';
+    document.getElementById('tab-inactivos').style.display     = tab === 'inactivos'     ? 'block' : 'none';
+    document.getElementById('tab-participantes').style.display = tab === 'participantes' ? 'block' : 'none';
     document.querySelectorAll('#tabsGestion .nav-link').forEach((btn, i) => {
         btn.classList.toggle('active',
             (tab === 'agregar'   && i === 0) ||
             (tab === 'editar'    && i === 1) ||
-            (tab === 'inactivos' && i === 2)
+            (tab === 'inactivos' && i === 2) ||
+            (tab === 'participantes'  && i === 3)
         );
     });
     if (tab === 'inactivos') cargarInactivos();
     if (tab === 'editar')    cargarSelectEditar();
+    if (tab === 'participantes') cargarParticipantes();
 }
 
 async function agregarDocente() {
@@ -2665,6 +2697,74 @@ function habilitarSueldoPlanilla() {
         input.style.background = '';
         input.focus();
     }
+    // ============================================================
+// PARTICIPANTES DEL MES
+// ============================================================
+async function cargarParticipantes() {
+    const mes  = document.getElementById('filtro-mes').value;
+    const anio = new Date().getFullYear();
+    const token = localStorage.getItem('token');
+    const cont  = document.getElementById('lista-participantes');
+
+    const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    document.getElementById('label-mes-participantes').textContent = `${meses[mes]} ${anio}`;
+
+    cont.innerHTML = '<p class="text-muted text-center"><i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...</p>';
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/docentes-mes?mes=${mes}&anio=${anio}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!data.length) { cont.innerHTML = '<p class="text-muted text-center">No hay docentes activos.</p>'; return; }
+
+        cont.innerHTML = data.map(d => `
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2 px-1">
+                <div>
+                    <div class="fw-bold small">${d.nombre}</div>
+                    <div class="text-muted" style="font-size:0.78rem;">DNI: ${d.dni}</div>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input participante-toggle" type="checkbox"
+                        data-id="${d.id_docente}"
+                        ${d.incluido ? 'checked' : ''}
+                        style="width:2.5em;height:1.3em;cursor:pointer;">
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        cont.innerHTML = '<p class="text-danger text-center">Error al cargar docentes.</p>';
+    }
+}
+
+async function guardarParticipantes() {
+    const mes   = document.getElementById('filtro-mes').value;
+    const anio  = new Date().getFullYear();
+    const token = localStorage.getItem('token');
+
+    const toggles = document.querySelectorAll('.participante-toggle');
+    const docentes = Array.from(toggles).map(t => ({
+        id_docente: parseInt(t.dataset.id),
+        incluido:   t.checked ? 1 : 0
+    }));
+
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/docentes-mes`, {
+            method : 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body   : JSON.stringify({ mes, anio, docentes })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Participantes guardados correctamente.');
+            cargarDatosServidor(); // Refresca la tabla principal
+        } else {
+            alert('❌ Error al guardar: ' + (data.error || ''));
+        }
+    } catch(e) {
+        alert('❌ No se pudo conectar con el servidor.');
+    }
+}
 </script>
 
 <!-- ── FOOTER GRTECH ── -->

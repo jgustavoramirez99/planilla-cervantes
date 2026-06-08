@@ -344,15 +344,20 @@ app.get('/api/docentes', verificarToken, (req, res) => {
                IFNULL(p.num_faltas,          0)            AS num_faltas,
                IFNULL(p.num_tardanzas,       0)            AS num_tardanzas,
                IFNULL(p.pago_color,          'azul')       AS pago_color,
-               IFNULL(p.actividades,         0)            AS actividades
+               IFNULL(p.actividades,         0)            AS actividades,
+               COALESCE(dm.incluido,         1)            AS incluido
         FROM docentes d
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
               AND p.mes  = ?
               AND p.anio = ${ANIO_ACTUAL}
+        LEFT JOIN docentes_mes dm
+               ON dm.id_docente = d.id_docente
+              AND dm.mes  = ?
+              AND dm.anio = ${ANIO_ACTUAL}
         WHERE d.activo = 1`;
 
-    const params = [mes];
+    const params = [mes, mes];
 
     const dniUsuario = req.usuario.dni || '';
     if (role === 'user' && dniUsuario) {
@@ -653,6 +658,61 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
                     res.json({ success: true, eliminados: result.affectedRows });
                 }
             );
+        }
+    );
+});
+// ============================================================
+// GET /api/docentes-mes?mes=1&anio=2026
+// ============================================================
+app.get('/api/docentes-mes', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const mes  = parseInt(req.query.mes);
+    const anio = parseInt(req.query.anio);
+
+    // Trae todos los docentes activos, y si tiene registro en docentes_mes
+    // muestra si está incluido o no. Si no tiene registro, por defecto es 1 (incluido)
+    db.query(
+        `SELECT d.id_docente, d.nombre, d.dni,
+                COALESCE(dm.incluido, 1) AS incluido
+         FROM docentes d
+         LEFT JOIN docentes_mes dm 
+            ON dm.id_docente = d.id_docente 
+            AND dm.mes = ? 
+            AND dm.anio = ?
+         WHERE d.activo = 1
+         ORDER BY d.nombre`,
+        [mes, anio],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+// ============================================================
+// POST /api/docentes-mes — Guardar participación del mes
+// Body: { mes, anio, docentes: [{ id_docente, incluido }] }
+// ============================================================
+app.post('/api/docentes-mes', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const { mes, anio, docentes } = req.body;
+    if (!mes || !anio || !Array.isArray(docentes))
+        return res.status(400).json({ error: 'Datos incompletos.' });
+
+    // Inserta o actualiza cada docente
+    const valores = docentes.map(d => [d.id_docente, mes, anio, d.incluido]);
+
+    db.query(
+        `INSERT INTO docentes_mes (id_docente, mes, anio, incluido)
+         VALUES ?
+         ON DUPLICATE KEY UPDATE incluido = VALUES(incluido)`,
+        [valores],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
         }
     );
 });
