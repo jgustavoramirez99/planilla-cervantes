@@ -369,10 +369,10 @@
                         </button>
                     </li>
                     <li class="nav-item">
-    <button class="nav-link fw-bold" onclick="mostrarTabGestion('participantes')">
-        <i class="fa-solid fa-calendar-check me-1"></i> Participantes del Mes
-    </button>
-</li>
+                        <button class="nav-link fw-bold" onclick="mostrarTabGestion('participantes')">
+                            <i class="fa-solid fa-calendar-check me-1"></i> Participantes del Mes
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- TAB: AGREGAR -->
@@ -402,6 +402,7 @@
                         </button>
                     </div>
                 </div>
+
                 <!-- TAB: EDITAR -->
                 <div id="tab-editar" style="display:none;">
                     <div class="mb-3">
@@ -434,6 +435,7 @@
                         </div>
                     </div>
                 </div>
+
                 <!-- TAB: INACTIVOS -->
                 <div id="tab-inactivos" style="display:none;">
                     <div class="text-end mb-2">
@@ -441,24 +443,25 @@
                             <i class="fa-solid fa-rotate me-1"></i> Actualizar lista
                         </button>
                     </div>
-                    <!-- TAB: PARTICIPANTES DEL MES -->
-<div id="tab-participantes" style="display:none;">
-    <p class="text-muted small mb-2">
-        <i class="fa-solid fa-circle-info me-1"></i>
-        Marca quiénes trabajaron en <strong id="label-mes-participantes"></strong>. 
-        Solo ellos aparecerán en la planilla.
-    </p>
-    <div id="lista-participantes" class="text-muted text-center py-3">
-        <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...
-    </div>
-    <div class="mt-3 text-end">
-        <button class="btn btn-primary fw-bold" onclick="guardarParticipantes()">
-            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
-        </button>
-    </div>
-</div>
                     <div id="lista-inactivos" class="text-muted text-center py-3">
                         <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...
+                    </div>
+                </div>
+
+                <!-- TAB: PARTICIPANTES DEL MES -->
+                <div id="tab-participantes" style="display:none;">
+                    <p class="text-muted small mb-2">
+                        <i class="fa-solid fa-circle-info me-1"></i>
+                        Marca quiénes trabajaron en <strong id="label-mes-participantes"></strong>. 
+                        Solo ellos aparecerán en la planilla.
+                    </p>
+                    <div id="lista-participantes" class="text-muted text-center py-3">
+                        <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando...
+                    </div>
+                    <div class="mt-3 text-end">
+                        <button class="btn btn-primary fw-bold" onclick="guardarParticipantes()">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+                        </button>
                     </div>
                 </div>
 
