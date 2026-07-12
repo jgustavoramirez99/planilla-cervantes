@@ -352,10 +352,11 @@ app.get('/api/docentes', verificarToken, (req, res) => {
               AND p.mes  = ?
               AND p.anio = ${ANIO_ACTUAL}
         LEFT JOIN docentes_mes dm
-               ON dm.id_docente = d.id_docente
+               ON d.id_docente = dm.id_docente
               AND dm.mes  = ?
               AND dm.anio = ${ANIO_ACTUAL}
-        WHERE d.activo = 1`;
+        WHERE d.activo = 1
+          AND IFNULL(dm.incluido, 1) = 1`;
 
     const params = [mes, mes];
 
@@ -563,7 +564,28 @@ app.post('/api/docentes', verificarToken, (req, res) => {
         [nombre.trim(), dni.trim(), telefono || '', email || ''],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true, id: result.insertId });
+
+            const nuevoId    = result.insertId;
+            const mesActual  = new Date().getMonth() + 1; // 1-12
+
+            // Excluir explícitamente al docente nuevo de los meses ya pasados
+            const filas = [];
+            for (let m = 1; m < mesActual; m++) {
+                filas.push([nuevoId, m, ANIO_ACTUAL, 0]);
+            }
+
+            if (filas.length === 0) {
+                return res.json({ success: true, id: nuevoId });
+            }
+
+            db.query(
+                'INSERT INTO docentes_mes (id_docente, mes, anio, incluido) VALUES ?',
+                [filas],
+                (err2) => {
+                    if (err2) console.error('Error creando docentes_mes para docente nuevo:', err2);
+                    res.json({ success: true, id: nuevoId });
+                }
+            );
         }
     );
 });
