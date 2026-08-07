@@ -456,6 +456,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
         }
     );
 });
+
 // PUT /api/docentes/:id/pago-color — Marcar como pagado (azul/verde)
 app.put('/api/docentes/:id/pago-color', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
@@ -732,6 +733,193 @@ app.post('/api/docentes-mes', verificarToken, (req, res) => {
          VALUES ?
          ON DUPLICATE KEY UPDATE incluido = VALUES(incluido)`,
         [valores],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
+// ============================================================
+// MÓDULO: CONTROL DE UNIFORMES Y DEUDAS
+// ============================================================
+
+// Lista de docentes activos para el desplegable (no se escribe nada a mano)
+app.get('/api/deudas/docentes', verificarToken, (req, res) => {
+    db.query(
+        `SELECT id_docente, nombre, dni FROM docentes WHERE activo = 1 ORDER BY nombre`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+
+// Resumen del panel: total acumulado + estado de confirmación, por docente, para un mes/año
+app.get('/api/deudas', verificarToken, (req, res) => {
+    const mes  = parseInt(req.query.mes);
+    const anio = parseInt(req.query.anio);
+    if (!mes || !anio) return res.status(400).json({ error: 'Falta mes o año.' });
+
+    db.query(
+        `SELECT d.id_docente, d.nombre,
+                IFNULL(SUM(r.monto), 0) AS total_deuda,
+                IFNULL(c.confirmado, 0) AS confirmado,
+                c.confirmado_por, c.confirmado_at
+         FROM docentes d
+         LEFT JOIN registros_deuda r
+                ON r.id_docente = d.id_docente AND r.mes = ? AND r.anio = ?
+         LEFT JOIN confirmacion_deudas c
+                ON c.id_docente = d.id_docente AND c.mes = ? AND c.anio = ?
+         WHERE d.activo = 1
+         GROUP BY d.id_docente, d.nombre, c.confirmado, c.confirmado_por, c.confirmado_at
+         ORDER BY d.nombre`,
+        [mes, anio, mes, anio],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+
+// Historial de movimientos de un docente en un mes (para ver/editar el detalle)
+app.get('/api/deudas/:id_docente/registros', verificarToken, (req, res) => {
+    const id_docente = parseInt(req.params.id_docente);
+    const mes  = parseInt(req.query.mes);
+    const anio = parseInt(req.query.anio);
+
+    db.query(
+        `SELECT * FROM registros_deuda WHERE id_docente = ? AND mes = ? AND anio = ?
+         ORDER BY fecha DESC, id_registro DESC`,
+        [id_docente, mes, anio],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+
+// Resumen rápido de UN docente (lo usa el modal de editar planilla al abrirse)
+app.get('/api/deudas/:id_docente/resumen', verificarToken, (req, res) => {
+    const id_docente = parseInt(req.params.id_docente);
+    const mes  = parseInt(req.query.mes);
+    const anio = parseInt(req.query.anio);
+
+    db.query(
+        `SELECT IFNULL(SUM(monto),0) AS total FROM registros_deuda WHERE id_docente = ? AND mes = ? AND anio = ?`,
+        [id_docente, mes, anio],
+        (err, sumRows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            db.query(
+                `SELECT confirmado FROM confirmacion_deudas WHERE id_docente = ? AND mes = ? AND anio = ?`,
+                [id_docente, mes, anio],
+                (err2, confRows) => {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.json({
+                        total: sumRows[0].total,
+                        confirmado: confRows.length ? !!confRows[0].confirmado : false,
+                        tieneRegistros: sumRows[0].total > 0
+                    });
+                }
+            );
+        }
+    );
+});
+
+// Si el período ya estaba confirmado y se agrega/edita/borra algo, vuelve a "pendiente"
+function reabrirConfirmacion(id_docente, mes, anio, cb) {
+    db.query(
+        `UPDATE confirmacion_deudas SET confirmado = 0, confirmado_por = NULL, confirmado_at = NULL
+         WHERE id_docente = ? AND mes = ? AND anio = ?`,
+        [id_docente, mes, anio],
+        cb || (() => {})
+    );
+}
+
+// Registrar un movimiento diario
+app.post('/api/deudas/registro', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const { id_docente, fecha, tipo, descripcion, monto } = req.body;
+    if (!id_docente || !fecha || !tipo || monto == null)
+        return res.status(400).json({ error: 'Datos incompletos.' });
+
+    const f = new Date(fecha);
+    const mes  = f.getMonth() + 1;
+    const anio = f.getFullYear();
+    const usuario = req.usuario.user || '';
+
+    db.query(
+        `INSERT INTO registros_deuda (id_docente, fecha, tipo, descripcion, monto, mes, anio, registrado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id_docente, fecha, tipo, descripcion || '', monto, mes, anio, usuario],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            reabrirConfirmacion(id_docente, mes, anio);
+            res.json({ success: true });
+        }
+    );
+});
+
+// Editar un movimiento
+app.put('/api/deudas/registro/:id', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const id = parseInt(req.params.id);
+    const { fecha, tipo, descripcion, monto } = req.body;
+
+    db.query(`SELECT id_docente, mes, anio FROM registros_deuda WHERE id_registro = ?`, [id], (errSel, rows) => {
+        if (errSel) return res.status(500).json({ error: errSel.message });
+        if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado.' });
+
+        db.query(
+            `UPDATE registros_deuda SET fecha=?, tipo=?, descripcion=?, monto=? WHERE id_registro=?`,
+            [fecha, tipo, descripcion || '', monto, id],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                const { id_docente, mes, anio } = rows[0];
+                reabrirConfirmacion(id_docente, mes, anio);
+                res.json({ success: true });
+            }
+        );
+    });
+});
+
+// Eliminar un movimiento
+app.delete('/api/deudas/registro/:id', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const id = parseInt(req.params.id);
+    db.query(`SELECT id_docente, mes, anio FROM registros_deuda WHERE id_registro = ?`, [id], (errSel, rows) => {
+        if (errSel) return res.status(500).json({ error: errSel.message });
+        if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado.' });
+
+        db.query(`DELETE FROM registros_deuda WHERE id_registro = ?`, [id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            const { id_docente, mes, anio } = rows[0];
+            reabrirConfirmacion(id_docente, mes, anio);
+            res.json({ success: true });
+        });
+    });
+});
+
+// Confirmar el acumulado del mes de UN docente (solo admin/superadmin)
+app.post('/api/deudas/confirmar', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const { id_docente, mes, anio } = req.body;
+    if (!id_docente || !mes || !anio) return res.status(400).json({ error: 'Datos incompletos.' });
+
+    const usuario = req.usuario.user || '';
+
+    db.query(
+        `INSERT INTO confirmacion_deudas (id_docente, mes, anio, confirmado, confirmado_por, confirmado_at)
+         VALUES (?, ?, ?, 1, ?, NOW())
+         ON DUPLICATE KEY UPDATE confirmado = 1, confirmado_por = VALUES(confirmado_por), confirmado_at = NOW()`,
+        [id_docente, mes, anio, usuario],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ success: true });

@@ -198,6 +198,9 @@
                 <button class="btn btn-outline-warning btn-sm me-2" onclick="abrirModalCambiarPass()">
     <i class="fa-solid fa-key me-1"></i> Cambiar Contraseña
 </button>
+<button class="btn btn-outline-info btn-sm me-2" onclick="abrirModalDeudas()">
+    <i class="fa-solid fa-shirt me-1"></i> Uniformes y Deudas
+</button>
 <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">
     <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
 </button>
@@ -503,6 +506,90 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="modalDeudas" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="fa-solid fa-shirt me-2"></i>Control de Uniformes y Deudas</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3">
+          <div class="col-md-3">
+            <label class="small fw-bold text-muted">AÑO</label>
+            <select id="deuda-anio" class="form-select" onchange="cargarPanelDeudas()">
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="small fw-bold text-muted">MES</label>
+            <select id="deuda-mes" class="form-select" onchange="cargarPanelDeudas()"></select>
+          </div>
+        </div>
+
+        <hr>
+        <h6 class="fw-bold">Registrar movimiento del día</h6>
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-md-3">
+            <label class="small">Docente</label>
+            <select id="deuda-form-docente" class="form-select"></select>
+          </div>
+          <div class="col-md-2">
+            <label class="small">Fecha</label>
+            <input type="date" id="deuda-form-fecha" class="form-control">
+          </div>
+          <div class="col-md-2">
+            <label class="small">Tipo</label>
+            <select id="deuda-form-tipo" class="form-select">
+              <option>BUZO</option><option>JEANS</option><option>POLO</option>
+              <option>MANDIL</option><option>CORBATA</option><option>SASTRE</option>
+              <option>ADELANTO</option><option>TARDANZA</option><option>PARRILLADA</option>
+              <option>DANZA</option><option>PINTADO</option><option>OTROS</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="small">Monto S/</label>
+            <input type="number" step="0.01" id="deuda-form-monto" class="form-control">
+          </div>
+          <div class="col-md-2">
+            <label class="small">Descripción</label>
+            <input type="text" id="deuda-form-desc" class="form-control" placeholder="Opcional">
+          </div>
+          <div class="col-md-1">
+            <button class="btn btn-success w-100" onclick="registrarDeuda()"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+
+        <hr>
+        <table class="table table-sm table-hover">
+          <thead>
+            <tr><th>Docente</th><th>Total acumulado</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tabla-deudas-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sub-modal: historial de un docente -->
+<div class="modal fade" id="modalDeudaDetalle" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="deuda-detalle-titulo">Historial</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-sm">
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th></th></tr></thead>
+          <tbody id="tabla-deuda-detalle-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- ===================== MODAL EDICIÓN ===================== -->
 <div class="modal fade" id="modalEditar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -708,7 +795,7 @@
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" class="btn btn-success px-4" onclick="guardarCambiosModal()">
+                <button type="button" id="btn-guardar-modal" class="btn btn-success px-4" onclick="guardarCambiosModal()">
                     <i class="fa-solid fa-floppy-disk me-1"></i> Sincronizar Datos
                 </button>
             </div>
@@ -1525,6 +1612,22 @@ inputSb.style.background = '#f0f4ff';
 
     miModal.show();
     actualizarResumenNeto();
+    // Verifica si la deuda del mes está confirmada antes de permitir emitir
+    const mes = document.getElementById('filtro-mes').value;
+    fetch(`${API_DEUDAS}/${id}/resumen?mes=${mes}&anio=${new Date().getFullYear()}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(r => r.json())
+    .then(info => {
+        window._deudaConfirmadaActual = !info.tieneRegistros || info.confirmado;
+        const btnGuardar = document.getElementById('btn-guardar-modal'); // usa el id real de tu botón
+        const aviso = document.getElementById('aviso-deuda-pendiente');   // opcional: un <div> de alerta en el modal
+        if (info.tieneRegistros && info.confirmado) {
+            document.getElementById('edit-otros-desc').value = info.total;
+        }
+        if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
+        if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
+    });
 }
 
         function actualizarLabelAfp() {
@@ -1667,7 +1770,10 @@ inputSb.style.background = '#f0f4ff';
 
     async function guardarCambiosModal() {
     if (userRole !== 'admin' && userRole !== 'superadmin') return;
-
+    if (window._deudaConfirmadaActual === false) {
+        alert('⚠️ Hay deudas del mes sin confirmar para este docente. Confírmalas en el panel de Uniformes y Deudas antes de emitir la boleta.');
+        return;
+    }
     const id  = document.getElementById('edit-id').value;
     const mes = document.getElementById('filtro-mes').value;
 
@@ -2440,7 +2546,110 @@ function mostrarTabGestion(tab) {
     if (tab === 'editar')    cargarSelectEditar();
     if (tab === 'participantes') cargarParticipantes();
 }
+const API_DEUDAS = 'https://planilla-cervantes.onrender.com/api/deudas';
 
+function abrirModalDeudas() {
+    const hoy = new Date();
+    document.getElementById('deuda-anio').value = hoy.getFullYear();
+    const selMes = document.getElementById('deuda-mes');
+    selMes.innerHTML = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
+        'Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+        .map((m,i) => `<option value="${i+1}" ${i+1===hoy.getMonth()+1 ? 'selected':''}>${m}</option>`).join('');
+    document.getElementById('deuda-form-fecha').value = hoy.toISOString().split('T')[0];
+    cargarDocentesDeuda();
+    cargarPanelDeudas();
+    new bootstrap.Modal(document.getElementById('modalDeudas')).show();
+}
+
+async function cargarDocentesDeuda() {
+    const res = await fetch(`${API_DEUDAS}/docentes`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const docentes = await res.json();
+    document.getElementById('deuda-form-docente').innerHTML =
+        docentes.map(d => `<option value="${d.id_docente}">${d.nombre}</option>`).join('');
+}
+
+async function cargarPanelDeudas() {
+    const mes = document.getElementById('deuda-mes').value;
+    const anio = document.getElementById('deuda-anio').value;
+    const res = await fetch(`${API_DEUDAS}?mes=${mes}&anio=${anio}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const rows = await res.json();
+    document.getElementById('tabla-deudas-body').innerHTML = rows.map(r => `
+        <tr>
+            <td>${r.nombre}</td>
+            <td>S/ ${Number(r.total_deuda).toFixed(2)}</td>
+            <td>${r.confirmado ? '<span class="badge bg-success">Confirmado</span>' : '<span class="badge bg-warning text-dark">Pendiente</span>'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="verDetalleDeuda(${r.id_docente}, '${r.nombre}')">Ver</button>
+                ${(userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-success" onclick="confirmarDeuda(${r.id_docente})">Confirmar</button>` : ''}
+            </td>
+        </tr>`).join('');
+}
+
+async function registrarDeuda() {
+    const payload = {
+        id_docente: document.getElementById('deuda-form-docente').value,
+        fecha: document.getElementById('deuda-form-fecha').value,
+        tipo: document.getElementById('deuda-form-tipo').value,
+        descripcion: document.getElementById('deuda-form-desc').value,
+        monto: Number(document.getElementById('deuda-form-monto').value) || 0
+    };
+    const res = await fetch(`${API_DEUDAS}/registro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        document.getElementById('deuda-form-monto').value = '';
+        document.getElementById('deuda-form-desc').value = '';
+        cargarPanelDeudas();
+    } else {
+        alert('No se pudo registrar el movimiento.');
+    }
+}
+
+async function confirmarDeuda(id_docente) {
+    const mes = document.getElementById('deuda-mes').value;
+    const anio = document.getElementById('deuda-anio').value;
+    if (!confirm('¿Confirmar el acumulado de este docente para este mes?')) return;
+    const res = await fetch(`${API_DEUDAS}/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ id_docente, mes, anio })
+    });
+    if (res.ok) cargarPanelDeudas();
+}
+
+async function verDetalleDeuda(id_docente, nombre) {
+    const mes = document.getElementById('deuda-mes').value;
+    const anio = document.getElementById('deuda-anio').value;
+    const res = await fetch(`${API_DEUDAS}/${id_docente}/registros?mes=${mes}&anio=${anio}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const rows = await res.json();
+    document.getElementById('deuda-detalle-titulo').innerText = `Historial — ${nombre}`;
+    document.getElementById('tabla-deuda-detalle-body').innerHTML = rows.map(r => `
+        <tr>
+            <td>${r.fecha.split('T')[0]}</td>
+            <td>${r.tipo}${r.descripcion ? ' — ' + r.descripcion : ''}</td>
+            <td>S/ ${Number(r.monto).toFixed(2)}</td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="eliminarDeuda(${r.id_registro}, ${id_docente}, '${nombre}')"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`).join('');
+    new bootstrap.Modal(document.getElementById('modalDeudaDetalle')).show();
+}
+
+async function eliminarDeuda(id_registro, id_docente, nombre) {
+    if (!confirm('¿Eliminar este movimiento?')) return;
+    await fetch(`${API_DEUDAS}/registro/${id_registro}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    verDetalleDeuda(id_docente, nombre);
+    cargarPanelDeudas();
+}
 async function agregarDocente() {
     const nombre   = document.getElementById('nuevo-nombre').value.trim();
     const dni      = document.getElementById('nuevo-dni').value.trim();
