@@ -540,13 +540,11 @@
             <input type="date" id="deuda-form-fecha" class="form-control">
           </div>
           <div class="col-md-2">
-            <label class="small">Tipo</label>
-            <select id="deuda-form-tipo" class="form-select">
-              <option>BUZO</option><option>JEANS</option><option>POLO</option>
-              <option>MANDIL</option><option>CORBATA</option><option>SASTRE</option>
-              <option>ADELANTO</option><option>TARDANZA</option><option>PARRILLADA</option>
-              <option>DANZA</option><option>PINTADO</option><option>OTROS</option>
-            </select>
+            <label class="small d-flex justify-content-between align-items-center">
+              <span>Tipo</span>
+              <button type="button" id="btn-gestionar-tipos" class="btn btn-link btn-sm p-0 d-none" onclick="abrirGestionTipos()" title="Agregar o quitar tipos"><i class="fa-solid fa-gear"></i></button>
+            </label>
+            <select id="deuda-form-tipo" class="form-select"></select>
           </div>
           <div class="col-md-2">
             <label class="small">Monto S/</label>
@@ -586,6 +584,25 @@
           <thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th></th></tr></thead>
           <tbody id="tabla-deuda-detalle-body"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Sub-modal: gestión de tipos de deuda/descuento (admin y superadmin) -->
+<div class="modal fade" id="modalGestionTipos" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="fa-solid fa-gear me-2"></i>Gestionar tipos de Uniforme/Descuento</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <input type="text" id="nuevo-tipo-deuda" class="form-control" placeholder="Ej: CASACA, FOTOCHECK, ACADEMIA...">
+          <button class="btn btn-success" onclick="agregarTipoDeuda()"><i class="fa-solid fa-plus"></i> Agregar</button>
+        </div>
+        <div id="lista-tipos-deuda" class="d-flex flex-wrap gap-2"></div>
+        <small class="text-muted d-block mt-3">Estos tipos se guardan en el servidor y se ven igual desde cualquier PC o navegador.</small>
       </div>
     </div>
   </div>
@@ -1206,10 +1223,12 @@ async function enviarWhatsApp(id) {
         const desmritoNivel = d.desmrito_nivel || '';
         const pagado        = Number(d.pagado) || 0;
         const gastosEventos = Number(d.actividades) || 0;
+        const otrosDesc      = Number(d.otros_descuentos) || 0;
+        const otrosDescDetalle = d.otros_desc_detalle || 'Uniformes y Deudas';
         const pctAfpPdf    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfpPdf[tipoAfp] || 0.13)).toFixed(2)) : 0;
         
-        const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos;
+        const totalDed      = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + gastosEventos + otrosDesc;
         const neto          = pagado + bono - totalDed;
         const mes           = document.getElementById('filtro-mes').value;
         const meses = {'1':'Enero','2':'Febrero','3':'Marzo','4':'Abril',
@@ -1320,6 +1339,9 @@ async function enviarWhatsApp(id) {
         
         // ACTIVIDADES — solo mostrar si hay monto
         if (gastosEventos > 0) fila(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
+
+        // UNIFORMES Y DEUDAS CONFIRMADAS (panel "Control de Uniformes y Deudas")
+        if (otrosDesc > 0) fila(`${otrosDescDetalle}`, '', `S/ ${otrosDesc.toFixed(2)}`);
 
         // ── Total ────────────────────────────────────────────────────────────
         y += 2;
@@ -2351,6 +2373,7 @@ for (let col = 1; col <= 20; col++) {
         const prestamos = Number(document.getElementById('edit-prestamos').value) || 0;
         const desmrito  = Number(document.getElementById('edit-desmrito-monto').value) || 0;
         const actividades = Number(document.getElementById('edit-actividades').value) || 0;
+        const otrosDesc = Number(document.getElementById('edit-otros-desc')?.value) || 0;
         const tipoAfp   = document.getElementById('edit-tipo-afp').value;
         // AFP sobre sueldo_base con porcentajes exactos
         const pctAfp = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
@@ -2359,7 +2382,7 @@ for (let col = 1; col <= 20; col++) {
         const tipoSalud = document.getElementById('edit-tipo-salud').value;
         const esalud  = 0; // ESSALUD y SIS: nunca se descuenta al trabajador
         // Neto parte desde PAGADO
-        const totalDescuentos = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades;
+        const totalDescuentos = descAfp + adelantos + faltas + pension + tardanza + creditos + prestamos + desmrito + actividades + otrosDesc;
         const neto = pagado + bono - totalDescuentos;
         document.getElementById('resumen-sb').textContent = `S/ ${pagado.toFixed(2)}`;
         document.getElementById('resumen-descuentos').textContent = `S/ ${totalDescuentos.toFixed(2)}`;
@@ -2548,7 +2571,91 @@ function mostrarTabGestion(tab) {
 }
 const API_DEUDAS = 'https://planilla-cervantes.onrender.com/api/deudas';
 
-function abrirModalDeudas() {
+// ============================================================
+// TIPOS DE UNIFORME/DESCUENTO — editable por admin y superadmin
+// Se guardan en la BD (tabla tipos_deuda) para verse igual en
+// cualquier PC/navegador, no solo en el que los creó.
+// ============================================================
+let cacheTiposDeuda = []; // [{id_tipo, nombre}, ...] última lista traída del servidor
+
+async function cargarTiposDeuda() {
+    try {
+        const res = await fetch(`${API_DEUDAS}/tipos`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        cacheTiposDeuda = res.ok ? await res.json() : [];
+    } catch (e) {
+        cacheTiposDeuda = [];
+    }
+    return cacheTiposDeuda;
+}
+
+function pintarSelectTipos() {
+    const sel = document.getElementById('deuda-form-tipo');
+    if (!sel) return;
+    const actual = sel.value;
+    sel.innerHTML = cacheTiposDeuda.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('')
+        || '<option value="">(sin tipos, agrega uno)</option>';
+    if (cacheTiposDeuda.some(t => t.nombre === actual)) sel.value = actual;
+    // Botón de gestión solo visible para admin/superadmin
+    const btnGestion = document.getElementById('btn-gestionar-tipos');
+    if (btnGestion) btnGestion.classList.toggle('d-none', !(userRole === 'admin' || userRole === 'superadmin'));
+}
+
+async function renderTiposDeuda() {
+    await cargarTiposDeuda();
+    pintarSelectTipos();
+}
+
+function abrirGestionTipos() {
+    if (!(userRole === 'admin' || userRole === 'superadmin')) return;
+    renderListaTiposDeuda();
+    document.getElementById('nuevo-tipo-deuda').value = '';
+    new bootstrap.Modal(document.getElementById('modalGestionTipos')).show();
+}
+
+function renderListaTiposDeuda() {
+    document.getElementById('lista-tipos-deuda').innerHTML = cacheTiposDeuda.map(t => `
+        <span class="badge bg-light text-dark border d-flex align-items-center gap-2 py-2 px-3">
+            ${t.nombre}
+            <i class="fa-solid fa-xmark text-danger" style="cursor:pointer" onclick="eliminarTipoDeuda(${t.id_tipo}, '${t.nombre.replace(/'/g,"\\'")}')" title="Quitar"></i>
+        </span>`).join('') || '<span class="text-muted small">No hay tipos registrados.</span>';
+}
+
+async function agregarTipoDeuda() {
+    const input = document.getElementById('nuevo-tipo-deuda');
+    const nuevo = (input.value || '').trim().toUpperCase();
+    if (!nuevo) return;
+    if (cacheTiposDeuda.some(t => t.nombre === nuevo)) { alert('Ese tipo ya existe.'); return; }
+
+    const res = await fetch(`${API_DEUDAS}/tipos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ nombre: nuevo })
+    });
+    if (!res.ok) { alert('No se pudo agregar el tipo.'); return; }
+
+    input.value = '';
+    await cargarTiposDeuda();
+    renderListaTiposDeuda();
+    pintarSelectTipos();
+}
+
+async function eliminarTipoDeuda(id_tipo, nombre) {
+    if (!confirm(`¿Quitar "${nombre}" del listado de tipos?`)) return;
+
+    const res = await fetch(`${API_DEUDAS}/tipos/${id_tipo}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) { alert('No se pudo quitar el tipo.'); return; }
+
+    await cargarTiposDeuda();
+    renderListaTiposDeuda();
+    pintarSelectTipos();
+}
+
+async function abrirModalDeudas() {
     const hoy = new Date();
     document.getElementById('deuda-anio').value = hoy.getFullYear();
     const selMes = document.getElementById('deuda-mes');
@@ -2556,6 +2663,7 @@ function abrirModalDeudas() {
         'Agosto','Septiembre','Octubre','Noviembre','Diciembre']
         .map((m,i) => `<option value="${i+1}" ${i+1===hoy.getMonth()+1 ? 'selected':''}>${m}</option>`).join('');
     document.getElementById('deuda-form-fecha').value = hoy.toISOString().split('T')[0];
+    await renderTiposDeuda();
     cargarDocentesDeuda();
     cargarPanelDeudas();
     new bootstrap.Modal(document.getElementById('modalDeudas')).show();

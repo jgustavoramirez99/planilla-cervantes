@@ -754,6 +754,57 @@ app.get('/api/deudas/docentes', verificarToken, (req, res) => {
     );
 });
 
+// ------------------------------------------------------------
+// Tipos de Uniforme/Descuento (desplegable "Tipo") — editable
+// por admin/superadmin y visible para todos los que registran.
+// ------------------------------------------------------------
+
+// Listar tipos activos
+app.get('/api/deudas/tipos', verificarToken, (req, res) => {
+    db.query(
+        `SELECT id_tipo, nombre FROM tipos_deuda WHERE activo = 1 ORDER BY nombre`,
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+
+// Agregar un tipo nuevo (solo admin/superadmin)
+app.post('/api/deudas/tipos', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const nombre = (req.body.nombre || '').trim().toUpperCase();
+    if (!nombre) return res.status(400).json({ error: 'Falta el nombre del tipo.' });
+    if (nombre.length > 50) return res.status(400).json({ error: 'Nombre demasiado largo.' });
+
+    db.query(
+        `INSERT INTO tipos_deuda (nombre, creado_por) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE activo = 1`,
+        [nombre, req.usuario.user || ''],
+        (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
+
+// Quitar un tipo (soft delete: no borra el historial de movimientos ya
+// registrados con ese tipo, solo lo oculta del desplegable a futuro)
+app.delete('/api/deudas/tipos/:id', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID inválido.' });
+
+    db.query(`UPDATE tipos_deuda SET activo = 0 WHERE id_tipo = ?`, [id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
 // Resumen del panel: total acumulado + estado de confirmación, por docente, para un mes/año
 app.get('/api/deudas', verificarToken, (req, res) => {
     const mes  = parseInt(req.query.mes);
