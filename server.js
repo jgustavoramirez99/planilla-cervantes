@@ -865,11 +865,24 @@ app.get('/api/deudas/:id_docente/resumen', verificarToken, (req, res) => {
                 [id_docente, mes, anio],
                 (err2, confRows) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    res.json({
-                        total: sumRows[0].total,
-                        confirmado: confRows.length ? !!confRows[0].confirmado : false,
-                        tieneRegistros: sumRows[0].total > 0
-                    });
+                    // Desglose por tipo (agrupado), para mostrar cada concepto por separado en la boleta
+                    db.query(
+                        `SELECT tipo, IFNULL(SUM(monto),0) AS monto
+                         FROM registros_deuda
+                         WHERE id_docente = ? AND mes = ? AND anio = ?
+                         GROUP BY tipo
+                         ORDER BY tipo`,
+                        [id_docente, mes, anio],
+                        (err3, detalleRows) => {
+                            if (err3) return res.status(500).json({ error: err3.message });
+                            res.json({
+                                total: sumRows[0].total,
+                                confirmado: confRows.length ? !!confRows[0].confirmado : false,
+                                tieneRegistros: sumRows[0].total > 0,
+                                detalle: detalleRows
+                            });
+                        }
+                    );
                 }
             );
         }

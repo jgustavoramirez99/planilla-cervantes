@@ -1224,7 +1224,17 @@ async function enviarWhatsApp(id) {
         const pagado        = Number(d.pagado) || 0;
         const gastosEventos = Number(d.actividades) || 0;
         const otrosDesc      = Number(d.otros_descuentos) || 0;
-        const otrosDescDetalle = d.otros_desc_detalle || 'Uniformes y Deudas';
+        // El detalle se guarda como JSON [{tipo, monto}, ...] desde el panel de
+        // Uniformes y Deudas. Si es un dato antiguo (texto plano) o viene vacío,
+        // se usa como una sola línea combinada (fallback).
+        let otrosDescItems = [];
+        try {
+            const parsed = JSON.parse(d.otros_desc_detalle || '[]');
+            if (Array.isArray(parsed)) otrosDescItems = parsed;
+        } catch (e) { /* no era JSON, era texto libre de una versión anterior */ }
+        const otrosDescDetalle = (typeof d.otros_desc_detalle === 'string' && d.otros_desc_detalle && !otrosDescItems.length)
+            ? d.otros_desc_detalle
+            : 'Uniformes y Deudas';
         const pctAfpPdf    = { ONP:0.13, Habitat:0.1284, Integra:0.1292, Prima:0.1297, Profuturo:0.1306 };
         const descAfp       = (tipoAfp !== 'NINGUNO') ? parseFloat((sb * (pctAfpPdf[tipoAfp] || 0.13)).toFixed(2)) : 0;
         
@@ -1341,7 +1351,16 @@ async function enviarWhatsApp(id) {
         if (gastosEventos > 0) fila(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
 
         // UNIFORMES Y DEUDAS CONFIRMADAS (panel "Control de Uniformes y Deudas")
-        if (otrosDesc > 0) fila(`${otrosDescDetalle}`, '', `S/ ${otrosDesc.toFixed(2)}`);
+        // Si hay desglose por tipo, se imprime cada uno en su propia línea;
+        // si no (dato antiguo), se imprime como una sola línea combinada.
+        if (otrosDescItems.length) {
+            otrosDescItems.forEach(item => {
+                const monto = Number(item.monto) || 0;
+                if (monto > 0) fila(`${item.tipo}`, '', `S/ ${monto.toFixed(2)}`);
+            });
+        } else if (otrosDesc > 0) {
+            fila(`${otrosDescDetalle}`, '', `S/ ${otrosDesc.toFixed(2)}`);
+        }
 
         // ── Total ────────────────────────────────────────────────────────────
         y += 2;
@@ -1646,6 +1665,9 @@ inputSb.style.background = '#f0f4ff';
         const aviso = document.getElementById('aviso-deuda-pendiente');   // opcional: un <div> de alerta en el modal
         if (info.tieneRegistros && info.confirmado) {
             document.getElementById('edit-otros-desc').value = info.total;
+            // Guardamos el desglose por tipo (BUZO, TARDANZA, etc.) como JSON
+            // para que la boleta en PDF lo imprima línea por línea, no en un solo total.
+            document.getElementById('edit-otros-desc-detalle').value = JSON.stringify(info.detalle || []);
         }
         if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
         if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
