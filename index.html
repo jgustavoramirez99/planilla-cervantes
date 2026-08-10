@@ -550,6 +550,10 @@
             <label class="small">Monto S/</label>
             <input type="number" step="0.01" id="deuda-form-monto" class="form-control">
           </div>
+          <div class="col-md-1">
+            <label class="small" title="En cuántas cuotas se paga (1 = pago único)">Cuotas</label>
+            <input type="number" min="1" max="24" step="1" id="deuda-form-cuotas" class="form-control" value="1">
+          </div>
           <div class="col-md-2">
             <label class="small">Descripción</label>
             <input type="text" id="deuda-form-desc" class="form-control" placeholder="Opcional">
@@ -558,6 +562,7 @@
             <button class="btn btn-success w-100" onclick="registrarDeuda()"><i class="fa-solid fa-plus"></i></button>
           </div>
         </div>
+        <small class="text-muted d-block mb-3">Si pones más de 1 cuota, se reparte el monto automáticamente en los siguientes meses (ej. S/300 en 3 cuotas = S/100 este mes, S/100 el siguiente, S/100 el otro).</small>
 
         <hr>
         <table class="table table-sm table-hover">
@@ -584,6 +589,65 @@
           <thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th></th></tr></thead>
           <tbody id="tabla-deuda-detalle-body"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sub-modal: EDITAR descuentos de un docente (mes/año actual del panel) -->
+<div class="modal fade" id="modalDeudaEditar" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h6 class="modal-title"><i class="fa-solid fa-pen me-2"></i>Editar Descuentos — <span id="deuda-editar-nombre"></span></h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="deuda-editar-id-docente">
+
+        <h6 class="fw-bold small text-muted text-uppercase">Agregar nuevo movimiento</h6>
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-md-3">
+            <label class="small">Fecha</label>
+            <input type="date" id="deuda-editar-fecha" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-3">
+            <label class="small">Tipo</label>
+            <select id="deuda-editar-tipo" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-md-2">
+            <label class="small">Monto S/</label>
+            <input type="number" step="0.01" id="deuda-editar-monto" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-1">
+            <label class="small" title="En cuántas cuotas se paga">Cuotas</label>
+            <input type="number" min="1" max="24" step="1" id="deuda-editar-cuotas" class="form-control form-control-sm" value="1">
+          </div>
+          <div class="col-md-2">
+            <label class="small">Descripción</label>
+            <input type="text" id="deuda-editar-desc" class="form-control form-control-sm" placeholder="Opcional">
+          </div>
+          <div class="col-md-1">
+            <button class="btn btn-success btn-sm w-100" onclick="agregarMovimientoDesdeEditar()"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+
+        <hr>
+        <h6 class="fw-bold small text-muted text-uppercase">Movimientos de este mes</h6>
+        <table class="table table-sm table-hover align-middle">
+          <thead>
+            <tr><th>Fecha</th><th>Tipo</th><th>Monto S/</th><th>Cuota</th><th>Descripción</th><th></th></tr>
+          </thead>
+          <tbody id="tabla-deuda-editar-body"></tbody>
+          <tfoot>
+            <tr class="table-light">
+              <td colspan="2" class="fw-bold">Total del mes</td>
+              <td class="fw-bold" id="deuda-editar-total">S/ 0.00</td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
+        </table>
+        <small class="text-muted">Los cambios aquí se guardan al instante. Si el mes ya estaba confirmado, vuelve a "Pendiente" — recuerda confirmar de nuevo para que el cambio se refleje en la planilla.</small>
       </div>
     </div>
   </div>
@@ -1351,12 +1415,14 @@ async function enviarWhatsApp(id) {
         if (gastosEventos > 0) fila(`Actividades (Eventos Especiales)`, '', `S/ ${gastosEventos.toFixed(2)}`);
 
         // UNIFORMES Y DEUDAS CONFIRMADAS (panel "Control de Uniformes y Deudas")
-        // Si hay desglose por tipo, se imprime cada uno en su propia línea;
-        // si no (dato antiguo), se imprime como una sola línea combinada.
+        // Si hay desglose por tipo, se imprime cada uno en su propia línea (con
+        // la cuota si aplica, ej. "PRESTAMOS (Cuota 2/3)"); si no (dato antiguo),
+        // se imprime como una sola línea combinada.
         if (otrosDescItems.length) {
             otrosDescItems.forEach(item => {
                 const monto = Number(item.monto) || 0;
-                if (monto > 0) fila(`${item.tipo}`, '', `S/ ${monto.toFixed(2)}`);
+                const etiquetaCuota = (item.cuotas && item.cuotas > 1) ? ` (Cuota ${item.cuota_actual}/${item.cuotas})` : '';
+                if (monto > 0) fila(`${item.tipo}${etiquetaCuota}`, '', `S/ ${monto.toFixed(2)}`);
             });
         } else if (otrosDesc > 0) {
             fila(`${otrosDescDetalle}`, '', `S/ ${otrosDesc.toFixed(2)}`);
@@ -1548,6 +1614,17 @@ chartPrincipal = new Chart(
         // Detalle textual
         const totalDed = afp + adelantos + faltas + pension + tardanza + otrosDesc + gastosEvt;
         const pct = pagadoG > 0 ? ((totalDed / pagadoG) * 100).toFixed(1) : 0;
+        // El detalle de "otros descuentos" ahora se guarda como JSON [{tipo, monto, cuota_actual, cuotas}]
+        let otrosDescLineas = '';
+        try {
+            const parsedOtros = JSON.parse(d.otros_desc_detalle || '[]');
+            if (Array.isArray(parsedOtros) && parsedOtros.length) {
+                otrosDescLineas = parsedOtros.map(item => {
+                    const etiquetaCuota = (item.cuotas && item.cuotas > 1) ? ` (Cuota ${item.cuota_actual}/${item.cuotas})` : '';
+                    return `<tr><td class="text-muted">${item.tipo}${etiquetaCuota}</td><td class="text-muted text-end">- S/ ${Number(item.monto).toFixed(2)}</td></tr>`;
+                }).join('');
+            }
+        } catch (e) { /* dato antiguo en texto plano, se maneja abajo */ }
         document.getElementById('detalle-usuario-planilla').innerHTML = `
             <table class="table table-sm table-borderless mb-0">
                 <tbody>
@@ -1560,7 +1637,7 @@ chartPrincipal = new Chart(
                     ${pension > 0   ? `<tr><td class="text-muted">Pensión</td><td class="text-muted text-end">- S/ ${pension.toFixed(2)}</td></tr>` : ''}
                     ${tardanza > 0  ? `<tr><td class="text-warning">Tardanza</td><td class="text-warning text-end">- S/ ${tardanza.toFixed(2)}</td></tr>` : ''}
                     <tr><td class="text-info">Gastos Eventos Especiales</td><td class="text-info text-end">- S/ 30.00</td></tr>
-                    ${otrosDesc > 0 ? `<tr><td class="text-muted">${d.otros_desc_detalle || 'Otros Desc.'}</td><td class="text-muted text-end">- S/ ${otrosDesc.toFixed(2)}</td></tr>` : ''}
+                    ${otrosDesc > 0 ? (otrosDescLineas || `<tr><td class="text-muted">${d.otros_desc_detalle || 'Otros Desc.'}</td><td class="text-muted text-end">- S/ ${otrosDesc.toFixed(2)}</td></tr>`) : ''}
                     <tr class="border-top"><td class="text-muted small">Total Descuentos</td><td class="text-danger text-end small">- S/ ${totalDed.toFixed(2)} (${pct}%)</td></tr>
                     <tr class="table-success fw-bold"><td>NETO A COBRAR</td><td class="text-end fs-5">S/ ${neto.toFixed(2)}</td></tr>
                 </tbody>
@@ -2714,6 +2791,7 @@ async function cargarPanelDeudas() {
             <td>${r.confirmado ? '<span class="badge bg-success">Confirmado</span>' : '<span class="badge bg-warning text-dark">Pendiente</span>'}</td>
             <td>
                 <button class="btn btn-sm btn-outline-primary" onclick="verDetalleDeuda(${r.id_docente}, '${r.nombre}')">Ver</button>
+                ${(userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-warning" onclick="abrirEditarDeuda(${r.id_docente}, '${r.nombre.replace(/'/g,"\\'")}')">Editar</button>` : ''}
                 ${(userRole === 'admin' || userRole === 'superadmin') ? `<button class="btn btn-sm btn-outline-success" onclick="confirmarDeuda(${r.id_docente})">Confirmar</button>` : ''}
             </td>
         </tr>`).join('');
@@ -2725,7 +2803,8 @@ async function registrarDeuda() {
         fecha: document.getElementById('deuda-form-fecha').value,
         tipo: document.getElementById('deuda-form-tipo').value,
         descripcion: document.getElementById('deuda-form-desc').value,
-        monto: Number(document.getElementById('deuda-form-monto').value) || 0
+        monto: Number(document.getElementById('deuda-form-monto').value) || 0,
+        cuotas: Number(document.getElementById('deuda-form-cuotas').value) || 1
     };
     const res = await fetch(`${API_DEUDAS}/registro`, {
         method: 'POST',
@@ -2735,6 +2814,7 @@ async function registrarDeuda() {
     if (res.ok) {
         document.getElementById('deuda-form-monto').value = '';
         document.getElementById('deuda-form-desc').value = '';
+        document.getElementById('deuda-form-cuotas').value = '1';
         cargarPanelDeudas();
     } else {
         alert('No se pudo registrar el movimiento.');
@@ -2744,13 +2824,135 @@ async function registrarDeuda() {
 async function confirmarDeuda(id_docente) {
     const mes = document.getElementById('deuda-mes').value;
     const anio = document.getElementById('deuda-anio').value;
-    if (!confirm('¿Confirmar el acumulado de este docente para este mes?')) return;
+    if (!confirm('¿Confirmar el acumulado de este docente para este mes? Esto se reflejará automáticamente en su planilla y boleta de ese mes.')) return;
     const res = await fetch(`${API_DEUDAS}/confirmar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ id_docente, mes, anio })
     });
-    if (res.ok) cargarPanelDeudas();
+    if (res.ok) {
+        const data = await res.json();
+        if (data.advertencia) alert(data.advertencia);
+        cargarPanelDeudas();
+    } else {
+        alert('No se pudo confirmar.');
+    }
+}
+
+// ============================================================
+// MODAL EDITAR DESCUENTOS (por docente, mes/año activos del panel)
+// ============================================================
+async function abrirEditarDeuda(id_docente, nombre) {
+    document.getElementById('deuda-editar-id-docente').value = id_docente;
+    document.getElementById('deuda-editar-nombre').innerText = nombre;
+    document.getElementById('deuda-editar-fecha').value = document.getElementById('deuda-form-fecha').value || new Date().toISOString().split('T')[0];
+    document.getElementById('deuda-editar-monto').value = '';
+    document.getElementById('deuda-editar-cuotas').value = '1';
+    document.getElementById('deuda-editar-desc').value = '';
+
+    // Reusa la misma lista de tipos ya cargada (cacheTiposDeuda)
+    const selTipo = document.getElementById('deuda-editar-tipo');
+    selTipo.innerHTML = cacheTiposDeuda.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
+
+    await cargarTablaDeudaEditar();
+    new bootstrap.Modal(document.getElementById('modalDeudaEditar')).show();
+}
+
+async function cargarTablaDeudaEditar() {
+    const id_docente = document.getElementById('deuda-editar-id-docente').value;
+    const mes = document.getElementById('deuda-mes').value;
+    const anio = document.getElementById('deuda-anio').value;
+
+    const res = await fetch(`${API_DEUDAS}/${id_docente}/registros?mes=${mes}&anio=${anio}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const rows = await res.json();
+
+    document.getElementById('tabla-deuda-editar-body').innerHTML = rows.length ? rows.map(r => `
+        <tr>
+            <td>
+                <input type="date" class="form-control form-control-sm" value="${r.fecha.split('T')[0]}"
+                       onchange="guardarEdicionRegistro(${r.id_registro}, this, '${r.tipo}')">
+            </td>
+            <td>${r.tipo}</td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm" value="${Number(r.monto).toFixed(2)}"
+                       onchange="guardarEdicionRegistro(${r.id_registro}, this, '${r.tipo}')">
+            </td>
+            <td>${r.cuotas > 1 ? `<span class="badge bg-info text-dark">Cuota ${r.cuota_actual}/${r.cuotas}</span>` : '<span class="text-muted small">Único</span>'}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm" value="${r.descripcion || ''}"
+                       onchange="guardarEdicionRegistro(${r.id_registro}, this, '${r.tipo}')">
+            </td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistroDesdeEditar(${r.id_registro})"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted small py-3">Sin movimientos este mes</td></tr>';
+
+    const total = rows.reduce((acc, r) => acc + Number(r.monto), 0);
+    document.getElementById('deuda-editar-total').innerText = `S/ ${total.toFixed(2)}`;
+}
+
+// Se dispara al cambiar fecha, monto o descripción de una fila (guarda esa fila individual)
+async function guardarEdicionRegistro(id_registro, inputEl, tipo) {
+    const fila = inputEl.closest('tr');
+    const inputs = fila.querySelectorAll('input');
+    const payload = {
+        fecha: inputs[0].value,
+        tipo: tipo,
+        monto: Number(inputs[1].value) || 0,
+        descripcion: inputs[2].value
+    };
+    const res = await fetch(`${API_DEUDAS}/registro/${id_registro}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        cargarTablaDeudaEditar();
+        cargarPanelDeudas();
+    } else {
+        alert('No se pudo guardar el cambio.');
+    }
+}
+
+async function agregarMovimientoDesdeEditar() {
+    const payload = {
+        id_docente: document.getElementById('deuda-editar-id-docente').value,
+        fecha: document.getElementById('deuda-editar-fecha').value,
+        tipo: document.getElementById('deuda-editar-tipo').value,
+        descripcion: document.getElementById('deuda-editar-desc').value,
+        monto: Number(document.getElementById('deuda-editar-monto').value) || 0,
+        cuotas: Number(document.getElementById('deuda-editar-cuotas').value) || 1
+    };
+    if (!payload.monto) { alert('Ingresa un monto.'); return; }
+
+    const res = await fetch(`${API_DEUDAS}/registro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        document.getElementById('deuda-editar-monto').value = '';
+        document.getElementById('deuda-editar-desc').value = '';
+        document.getElementById('deuda-editar-cuotas').value = '1';
+        cargarTablaDeudaEditar();
+        cargarPanelDeudas();
+    } else {
+        alert('No se pudo agregar el movimiento.');
+    }
+}
+
+async function eliminarRegistroDesdeEditar(id_registro) {
+    if (!confirm('¿Eliminar este movimiento?')) return;
+    const res = await fetch(`${API_DEUDAS}/registro/${id_registro}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (res.ok) {
+        cargarTablaDeudaEditar();
+        cargarPanelDeudas();
+    } else {
+        alert('No se pudo eliminar.');
+    }
 }
 
 async function verDetalleDeuda(id_docente, nombre) {

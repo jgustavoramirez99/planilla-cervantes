@@ -865,13 +865,12 @@ app.get('/api/deudas/:id_docente/resumen', verificarToken, (req, res) => {
                 [id_docente, mes, anio],
                 (err2, confRows) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    // Desglose por tipo (agrupado), para mostrar cada concepto por separado en la boleta
+                    // Desglose por tipo Y por cuota, para mostrar cada concepto por separado en la boleta
                     db.query(
-                        `SELECT tipo, IFNULL(SUM(monto),0) AS monto
+                        `SELECT tipo, monto, cuota_actual, cuotas
                          FROM registros_deuda
                          WHERE id_docente = ? AND mes = ? AND anio = ?
-                         GROUP BY tipo
-                         ORDER BY tipo`,
+                         ORDER BY tipo, cuota_actual`,
                         [id_docente, mes, anio],
                         (err3, detalleRows) => {
                             if (err3) return res.status(500).json({ error: err3.message });
@@ -899,33 +898,60 @@ function reabrirConfirmacion(id_docente, mes, anio, cb) {
     );
 }
 
-// Registrar un movimiento diario
+// Registrar un movimiento diario — soporta cuotas (PRESTAMOS, PARRILLADA, BUZO, cualquier tipo)
 app.post('/api/deudas/registro', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
 
     const { id_docente, fecha, tipo, descripcion, monto } = req.body;
+    let cuotas = parseInt(req.body.cuotas) || 1;
+    if (cuotas < 1) cuotas = 1;
+    if (cuotas > 24) return res.status(400).json({ error: 'Máximo 24 cuotas.' });
+
     if (!id_docente || !fecha || !tipo || monto == null)
         return res.status(400).json({ error: 'Datos incompletos.' });
 
     const f = new Date(fecha);
-    const mes  = f.getMonth() + 1;
-    const anio = f.getFullYear();
+    let mes  = f.getMonth() + 1;
+    let anio = f.getFullYear();
     const usuario = req.usuario.user || '';
+    const montoTotal = Number(monto) || 0;
+
+    // Reparte el monto total entre las cuotas; la última absorbe el redondeo
+    // para que la suma de todas las cuotas cuadre exacto con el monto total.
+    const montoCuota = Math.floor((montoTotal / cuotas) * 100) / 100;
+    const grupo_cuota = cuotas > 1 ? `g${Date.now()}${id_docente}` : null;
+
+    const filas = [];
+    let mAcum = mes, aAcum = anio;
+    for (let i = 1; i <= cuotas; i++) {
+        const esUltima = i === cuotas;
+        const montoFila = esUltima
+            ? parseFloat((montoTotal - montoCuota * (cuotas - 1)).toFixed(2))
+            : montoCuota;
+        filas.push([id_docente, fecha, tipo, descripcion || '', montoFila, mAcum, aAcum, usuario, cuotas, i, grupo_cuota]);
+        mAcum++;
+        if (mAcum > 12) { mAcum = 1; aAcum++; }
+    }
+
+    const placeholders = filas.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+    const valoresPlanos = filas.flat();
 
     db.query(
-        `INSERT INTO registros_deuda (id_docente, fecha, tipo, descripcion, monto, mes, anio, registrado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id_docente, fecha, tipo, descripcion || '', monto, mes, anio, usuario],
+        `INSERT INTO registros_deuda
+            (id_docente, fecha, tipo, descripcion, monto, mes, anio, registrado_por, cuotas, cuota_actual, grupo_cuota)
+         VALUES ${placeholders}`,
+        valoresPlanos,
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            reabrirConfirmacion(id_docente, mes, anio);
-            res.json({ success: true });
+            // Reabre la confirmación de cada mes afectado (por si ya estaba confirmado)
+            filas.forEach(f => reabrirConfirmacion(f[0], f[5], f[6]));
+            res.json({ success: true, cuotas, grupo_cuota });
         }
     );
 });
 
-// Editar un movimiento
+// Editar un movimiento (una fila/cuota individual)
 app.put('/api/deudas/registro/:id', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
@@ -970,6 +996,9 @@ app.delete('/api/deudas/registro/:id', verificarToken, (req, res) => {
 });
 
 // Confirmar el acumulado del mes de UN docente (solo admin/superadmin)
+// IMPORTANTE: al confirmar, el total de ESE mes se empuja directo a la
+// planilla (tabla planillas) de ese mismo mes/año, para que aparezca
+// automáticamente en la boleta PDF sin pasos adicionales.
 app.post('/api/deudas/confirmar', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
@@ -986,10 +1015,75 @@ app.post('/api/deudas/confirmar', verificarToken, (req, res) => {
         [id_docente, mes, anio, usuario],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json({ success: true });
+            empujarDeudaAPlanilla(id_docente, mes, anio, (err2) => {
+                if (err2) {
+                    console.error('⚠️ Deuda confirmada pero no se pudo empujar a planilla:', err2);
+                    return res.json({ success: true, advertencia: 'Confirmado, pero no se reflejó en la planilla automáticamente.' });
+                }
+                res.json({ success: true });
+            });
         }
     );
 });
+
+// Calcula el total + desglose (con info de cuota) de un docente en un mes,
+// y lo guarda en planillas.otros_descuentos / otros_desc_detalle de ese mes.
+// No toca ningún otro campo de la planilla (sueldo, afp, adelantos, etc.).
+function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
+    db.query(
+        `SELECT tipo, monto, cuota_actual, cuotas
+         FROM registros_deuda
+         WHERE id_docente = ? AND mes = ? AND anio = ?
+         ORDER BY tipo`,
+        [id_docente, mes, anio],
+        (err, filas) => {
+            if (err) return cb(err);
+
+            const total = filas.reduce((acc, f) => acc + Number(f.monto), 0);
+            const detalle = filas.map(f => ({
+                tipo: f.tipo,
+                monto: Number(f.monto),
+                cuota_actual: f.cuota_actual,
+                cuotas: f.cuotas
+            }));
+            const detalleJSON = JSON.stringify(detalle);
+
+            db.query(
+                `SELECT id_docente FROM planillas WHERE id_docente = ? AND mes = ? AND anio = ?`,
+                [id_docente, mes, ANIO_ACTUAL],
+                (errSel, rows) => {
+                    if (errSel) return cb(errSel);
+
+                    if (rows.length) {
+                        // Ya existe una fila de planilla ese mes: solo actualizamos estos 2 campos,
+                        // sin tocar sueldo, afp, adelantos ni nada más que ya haya cargado el admin.
+                        db.query(
+                            `UPDATE planillas SET otros_descuentos = ?, otros_desc_detalle = ?
+                             WHERE id_docente = ? AND mes = ? AND anio = ?`,
+                            [total, detalleJSON, id_docente, mes, ANIO_ACTUAL],
+                            cb
+                        );
+                    } else {
+                        // No existe fila todavía para ese docente ese mes: la creamos con
+                        // el resto de campos en 0/valores por defecto (igual que hace el
+                        // flujo normal de "Editar Planilla" la primera vez).
+                        db.query(
+                            `INSERT INTO planillas
+                                (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
+                                 tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
+                                 otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades)
+                             VALUES (?, ?, ${ANIO_ACTUAL}, 0, 'NINGUNO', 0, 0, 0, 0, 0,
+                                     'ESSALUD', 0, 0, '', 0, 0,
+                                     ?, ?, 0, 0, 0)`,
+                            [id_docente, mes, total, detalleJSON],
+                            cb
+                        );
+                    }
+                }
+            );
+        }
+    );
+}
 // ============================================================
 // INICIO DEL SERVIDOR
 // ============================================================
