@@ -1064,15 +1064,17 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
                             cb
                         );
                     } else {
-                        // No existe fila todavía para ese docente ese mes: la creamos con
-                        // el resto de campos en 0/valores por defecto (igual que hace el
-                        // flujo normal de "Editar Planilla" la primera vez).
+                        // No existe fila todavía para ese docente ese mes: la creamos.
+                        // OJO: 'pagado' se deja en NULL (no 0) a propósito — el sistema
+                        // usa IFNULL(p.pagado, d.pagado_fijo) al leer, así que dejándolo
+                        // NULL se respeta automáticamente el sueldo fijo del docente,
+                        // en vez de mostrar S/0.
                         db.query(
                             `INSERT INTO planillas
                                 (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
                                  tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
                                  otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades)
-                             VALUES (?, ?, ${ANIO_ACTUAL}, 0, 'NINGUNO', 0, 0, 0, 0, 0,
+                             VALUES (?, ?, ${ANIO_ACTUAL}, NULL, 'NINGUNO', 0, 0, 0, 0, 0,
                                      'ESSALUD', 0, 0, '', 0, 0,
                                      ?, ?, 0, 0, 0)`,
                             [id_docente, mes, total, detalleJSON],
