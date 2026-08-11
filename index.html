@@ -230,6 +230,7 @@
             </div>
             <div class="col-md-3" id="filtro-mes-container">
                 <label class="small fw-bold text-muted">PERIODO LABORAL</label>
+                <div class="d-flex gap-2">
                 <select id="filtro-mes" class="form-select shadow-sm" onchange="cargarDatosServidor()">
     <option value="1">Enero 2026</option>
     <option value="2">Febrero 2026</option>
@@ -244,6 +245,10 @@
     <option value="11">Noviembre 2026</option>
     <option value="12">Diciembre 2026</option>
 </select>
+                <button type="button" class="btn btn-outline-secondary shadow-sm" title="Actualizar planilla" onclick="cargarDatosServidor()">
+                    <i class="fa-solid fa-rotate"></i>
+                </button>
+                </div>
             </div>
             <div class="col-md-3 text-end d-flex align-items-end" id="buscador-container">
                 <div class="input-group">
@@ -2767,6 +2772,18 @@ async function abrirModalDeudas() {
     cargarPanelDeudas();
     new bootstrap.Modal(document.getElementById('modalDeudas')).show();
 }
+
+// ============================================================
+// AUTO-REFRESH: al cerrar el panel de Uniformes y Deudas,
+// se refresca automáticamente la planilla principal (tabla,
+// tarjetas y gráficos) para reflejar los descuentos confirmados,
+// sin necesidad de cambiar de mes manualmente.
+// ============================================================
+document.getElementById('modalDeudas').addEventListener('hidden.bs.modal', function () {
+    if (typeof cargarDatosServidor === 'function') {
+        cargarDatosServidor();
+    }
+});
 
 async function cargarDocentesDeuda() {
     const res = await fetch(`${API_DEUDAS}/docentes`, {
