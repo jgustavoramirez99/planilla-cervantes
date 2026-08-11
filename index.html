@@ -522,14 +522,14 @@
         <div class="row g-2 mb-3">
           <div class="col-md-3">
             <label class="small fw-bold text-muted">AÑO</label>
-            <select id="deuda-anio" class="form-select" onchange="cargarPanelDeudas()">
+            <select id="deuda-anio" class="form-select" onchange="sincronizarFechaConPanel(); cargarPanelDeudas()">
               <option value="2026">2026</option>
               <option value="2027">2027</option>
             </select>
           </div>
           <div class="col-md-3">
             <label class="small fw-bold text-muted">MES</label>
-            <select id="deuda-mes" class="form-select" onchange="cargarPanelDeudas()"></select>
+            <select id="deuda-mes" class="form-select" onchange="sincronizarFechaConPanel(); cargarPanelDeudas()"></select>
           </div>
         </div>
 
@@ -541,8 +541,8 @@
             <select id="deuda-form-docente" class="form-select"></select>
           </div>
           <div class="col-md-2">
-            <label class="small">Fecha</label>
-            <input type="date" id="deuda-form-fecha" class="form-control">
+            <label class="small" title="Se ajusta automáticamente al AÑO/MES seleccionados arriba">Fecha</label>
+            <input type="date" id="deuda-form-fecha" class="form-control" onchange="if(this.value){document.getElementById('deuda-mes').value=(new Date(this.value+'T00:00:00').getMonth()+1);document.getElementById('deuda-anio').value=new Date(this.value+'T00:00:00').getFullYear();cargarPanelDeudas();}">
           </div>
           <div class="col-md-2">
             <label class="small d-flex justify-content-between align-items-center">
@@ -2041,7 +2041,7 @@ async function descargarExcel() {
     };
 
     // ==================== TÍTULOS + LOGO ====================
-    ws.mergeCells('B1:S1');
+    ws.mergeCells('B1:U1');
     const titulo = ws.getCell('B1');
     titulo.value = "CERVANTES EDUCA SAC";
     titulo.style = { ...headerStyle, font: { bold: true, size: 16, color: { argb: 'FFFFFFFF' } } };
@@ -2064,7 +2064,7 @@ async function descargarExcel() {
         console.log("Logo no encontrado, se omite.");
     }
 
-    ws.mergeCells('B2:S2');
+    ws.mergeCells('B2:U2');
 ws.getCell('B2').value = `PLANILLA DE REMUNERACIONES - ${mesNombre}`;
 ws.getCell('B2').style = headerStyle;
 
@@ -2074,13 +2074,13 @@ ws.getCell('B2').style = headerStyle;
     // ==================== ENCABEZADOS (fila 5 más alta) ====================
     const headers = ["N°", "APELLIDOS Y NOMBRES", "DNI", "PAGADO", "SUELDO BASE", "AFP / ONP", 
                     "ESALUD (9%)", "ADELANTO", "CRÉDITOS", "PRÉSTAMOS", "PENSIÓN", "TARDANZAS + FALTAS", 
-                    "ACTIVIDADES", "DESMÉRITO", "BONO", "NETO A PAGAR", "CONSOLIDADO", "AFP %",
+                    "ACTIVIDADES", "DESMÉRITO", "UNIF. / DEUDAS", "BONO", "NETO A PAGAR", "CONSOLIDADO", "AFP %",
                     "", "DESCUENTOS"];
 
     headers.forEach((header, index) => {
         const cell = ws.getCell(5, index + 1);
         cell.value = header;
-        if (index === 19) {
+        if (index === 20) {
             // Columna DESCUENTOS — color verde para destacar
             cell.style = {
                 font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
@@ -2088,11 +2088,11 @@ ws.getCell('B2').style = headerStyle;
                 alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
                 border: { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
             };
-        } else if (index === 18) {
+        } else if (index === 19) {
             // Columna separadora vacía — sin bordes ni color
             cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-        } else if ([3, 14, 15, 16].includes(index)) {
-    // PAGADO (índice 3), BONO (índice 14), NETO A PAGAR (índice 15), CONSOLIDADO (índice 16) — verde claro
+        } else if ([3, 15, 16, 17].includes(index)) {
+    // PAGADO (índice 3), BONO (índice 15), NETO A PAGAR (índice 16), CONSOLIDADO (índice 17) — verde claro
             cell.style = {
                 font: { bold: true, color: { argb: 'FF1A5276' }, size: 12 },
                 fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A9DFBF' } },
@@ -2112,10 +2112,10 @@ ws.getCell('B2').style = headerStyle;
 
     // ==================== DATOS ====================
     let row = 6;
-    let totales = { pagado:0, sb:0, afp:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, bono:0, neto:0, consolidado:0, descuentos:0 };
+    let totales = { pagado:0, sb:0, afp:0, esalud:0, adel:0, cred:0, prest:0, pen:0, tard:0, activ:0, desmr:0, otrosDesc:0, bono:0, neto:0, consolidado:0, descuentos:0 };
 
-    const colsMoneda = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-    const colsVerdeClaro = [4, 15,16, 17]; // PAGADO, NETO A PAGAR, CONSOLIDADO
+    const colsMoneda = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+    const colsVerdeClaro = [4, 16, 17, 18]; // PAGADO, NETO A PAGAR, CONSOLIDADO
     docentesData.forEach(d => {
         // ... (mismo cálculo de datos que antes)
         const sb = Number(d.sueldo_base) || 0;
@@ -2134,9 +2134,11 @@ ws.getCell('B2').style = headerStyle;
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
         const activ = Number(d.actividades) || 0;
         const desmr = Number(d.desmrito_monto) || 0;
-        const neto = parseFloat((pagado + bono - afpMonto - adel - cred - prest - pen - tard - activ - desmr).toFixed(2));
+        // Uniformes y Deudas confirmadas (panel "Control de Uniformes y Deudas") — columna aparte, NO se mezcla con DESCUENTOS
+        const otrosDesc = Number(d.otros_descuentos) || 0;
+        const neto = parseFloat((pagado + bono - afpMonto - adel - cred - prest - pen - tard - activ - desmr - otrosDesc).toFixed(2));
         const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
-        // Columna DESCUENTOS: SOLO tardanzas + faltas + desmérito
+        // Columna DESCUENTOS: SOLO tardanzas + faltas + desmérito (Uniformes/Deudas va en su propia columna, no aquí)
         const descuentosTotal = parseFloat(((Number(d.tardanza)||0) + (Number(d.faltas)||0) + desmr).toFixed(2));
 
         ws.getCell(row, 1).value = row - 5;
@@ -2158,21 +2160,22 @@ if (tipoSaludEx === 'ESSALUD') {
         ws.getCell(row, 12).value = tard  || '';
         ws.getCell(row, 13).value = activ || '';
         ws.getCell(row, 14).value = desmr || '';
-        ws.getCell(row, 15).value = bono  || '';
-            ws.getCell(row, 16).value = neto;
-            ws.getCell(row, 17).value = consolidado;
+        ws.getCell(row, 15).value = otrosDesc || '';
+        ws.getCell(row, 16).value = bono  || '';
+            ws.getCell(row, 17).value = neto;
+            ws.getCell(row, 18).value = consolidado;
             const afpPctLabels = { ONP:'13%', Habitat:'12.84%', Integra:'12.92%', Prima:'12.97%', Profuturo:'13.06%' };
-            ws.getCell(row, 18).value = tipoAfpEx === 'NINGUNO' ? '—' : (afpPctLabels[tipoAfpEx] || '13%');
-            ws.getCell(row, 19).value = ''; // columna separadora vacía
-            ws.getCell(row, 20).value = descuentosTotal || '';
+            ws.getCell(row, 19).value = tipoAfpEx === 'NINGUNO' ? '—' : (afpPctLabels[tipoAfpEx] || '13%');
+            ws.getCell(row, 20).value = ''; // columna separadora vacía
+            ws.getCell(row, 21).value = descuentosTotal || '';
 
         const isOddRow = (row - 5) % 2 === 1; // fila impar = color, par = blanco
-        for (let col = 1; col <= 20; col++) {
+        for (let col = 1; col <= 21; col++) {
     const cell = ws.getCell(row, col);
-    if (col === 19) {
+    if (col === 20) {
         // separador vacío — sin estilo
         cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-    } else if (col === 20) {
+    } else if (col === 21) {
         // columna Descuentos — verde claro con formato moneda
         cell.style = {
             fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
@@ -2230,6 +2233,7 @@ if (tipoSaludEx === 'ESSALUD') {
         totales.esalud += esaludEmpleador;
         totales.adel += adel; totales.cred += cred; totales.prest += prest; totales.pen += pen;
         totales.tard += tard; totales.activ += activ; totales.desmr += desmr;
+        totales.otrosDesc += otrosDesc;
         totales.bono += bono; totales.neto += neto; totales.consolidado += consolidado;
         totales.descuentos += descuentosTotal;
 
@@ -2250,11 +2254,12 @@ if (tipoSaludEx === 'ESSALUD') {
     ws.getCell(totalRow, 12).value = totales.tard;
     ws.getCell(totalRow, 13).value = totales.activ;
     ws.getCell(totalRow, 14).value = totales.desmr;
-    ws.getCell(totalRow, 15).value = totales.bono;
-    ws.getCell(totalRow, 16).value = totales.neto;
-    ws.getCell(totalRow, 17).value = totales.consolidado;
-    ws.getCell(totalRow, 19).value = '';
-    ws.getCell(totalRow, 20).value = totales.descuentos;
+    ws.getCell(totalRow, 15).value = totales.otrosDesc;
+    ws.getCell(totalRow, 16).value = totales.bono;
+    ws.getCell(totalRow, 17).value = totales.neto;
+    ws.getCell(totalRow, 18).value = totales.consolidado;
+    ws.getCell(totalRow, 20).value = '';
+    ws.getCell(totalRow, 21).value = totales.descuentos;
 
     const totalMonedaStyle = {
     font: { bold: true, color: { argb: 'FFFFFFFF' } },
@@ -2270,13 +2275,13 @@ const totalVerdeSyle = {
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
     numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
 };
-for (let col = 1; col <= 20; col++) {
+for (let col = 1; col <= 21; col++) {
     const cell = ws.getCell(totalRow, col);
-    if (col === 19) {
+    if (col === 20) {
         cell.style = { fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } } };
-    } else if (col === 20) {
+    } else if (col === 21) {
         cell.style = { ...totalMonedaStyle, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E8449' } } };
-    } else if ([4, 15, 16, 17].includes(col)) {
+    } else if ([4, 16, 17, 18].includes(col)) {
         cell.style = totalVerdeSyle;
     } else {
         cell.style = colsMoneda.includes(col) ? totalMonedaStyle : totalStyle;
@@ -2285,7 +2290,7 @@ for (let col = 1; col <= 20; col++) {
 
     // Ancho de columnas
     ws.columns.forEach((column, i) => {
-        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 13, 14, 18, 13, 13, 13, 16, 18, 10, 4, 16][i] || 12;
+        column.width = [6, 42, 13, 14, 16, 14, 16, 13, 13, 13, 14, 18, 13, 13, 16, 13, 16, 18, 10, 4, 16][i] || 12;
     });
 
     // Descargar
@@ -2757,6 +2762,29 @@ async function eliminarTipoDeuda(id_tipo, nombre) {
     await cargarTiposDeuda();
     renderListaTiposDeuda();
     pintarSelectTipos();
+}
+
+// ============================================================
+// Mantiene el campo "Fecha" del formulario en el MISMO mes/año
+// que se está viendo arriba (selectores AÑO/MES del panel).
+// Así, si navegas a otro mes para revisar y registras algo,
+// se guarda en el mes que estás viendo y no en el mes de hoy.
+// Conserva el día si es válido para ese mes (si no, usa el último día).
+// ============================================================
+function sincronizarFechaConPanel() {
+    const mes  = parseInt(document.getElementById('deuda-mes').value);
+    const anio = parseInt(document.getElementById('deuda-anio').value);
+    if (!mes || !anio) return;
+
+    const fechaInput = document.getElementById('deuda-form-fecha');
+    const actual = fechaInput.value ? new Date(fechaInput.value + 'T00:00:00') : new Date();
+    const diaDeseado = actual.getDate();
+    const ultimoDiaDelMes = new Date(anio, mes, 0).getDate();
+    const dia = Math.min(diaDeseado, ultimoDiaDelMes);
+
+    const mm = String(mes).padStart(2, '0');
+    const dd = String(dia).padStart(2, '0');
+    fechaInput.value = `${anio}-${mm}-${dd}`;
 }
 
 async function abrirModalDeudas() {
