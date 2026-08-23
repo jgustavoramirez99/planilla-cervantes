@@ -198,9 +198,6 @@
                 <button class="btn btn-outline-warning btn-sm me-2" onclick="abrirModalCambiarPass()">
     <i class="fa-solid fa-key me-1"></i> Cambiar Contraseña
 </button>
-<button class="btn btn-outline-info btn-sm me-2" onclick="abrirModalDeudas()">
-    <i class="fa-solid fa-shirt me-1"></i> Uniformes y Deudas
-</button>
 <button class="btn btn-outline-light btn-sm" onclick="cerrarSesion()">
     <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
 </button>
@@ -653,6 +650,14 @@
           </tfoot>
         </table>
         <small class="text-muted">Los cambios aquí se guardan al instante. Si el mes ya estaba confirmado, vuelve a "Pendiente" — recuerda confirmar de nuevo para que el cambio se refleje en la planilla.</small>
+
+        <hr>
+        <div class="d-flex justify-content-between align-items-center">
+            <span id="deuda-editar-estado" class="badge bg-warning text-dark">Pendiente</span>
+            <button type="button" class="btn btn-success btn-sm" onclick="confirmarDesdeEditar()">
+                <i class="fa-solid fa-check"></i> Confirmar y aplicar a la planilla
+            </button>
+        </div>
       </div>
     </div>
   </div>
@@ -784,8 +789,29 @@
                             <input type="number" id="edit-actividades" class="form-control form-control-sm" value="0" step="0.01" oninput="actualizarResumenNeto()">
                             <small class="text-muted">Monto por actividades este mes</small>
                         </div>
-                        <input type="hidden" id="edit-otros-desc" value="0">
-                        <input type="hidden" id="edit-otros-desc-detalle" value="">
+
+                        <!-- Uniformes / Otros Descuentos — antes vivía en un panel aparte
+                             ("Control de Uniformes y Deudas"); ahora se gestiona desde aquí
+                             mismo, sin salir de "Actualizar Planilla". El total sigue
+                             viniendo de registros_deuda (via /api/deudas), esto solo abre
+                             el mismo editor de siempre ya apuntando al docente/mes correctos. -->
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center border rounded p-2" style="background:#f8f9fa;">
+                                <div>
+                                    <label class="form-label small fw-bold mb-0"><i class="fa-solid fa-shirt me-1"></i>Uniformes / Otros Descuentos</label>
+                                    <div class="small text-muted" id="edit-otros-desc-resumen">Cargando…</div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirDeudasDesdeModal()">
+                                    <i class="fa-solid fa-pen"></i> Gestionar
+                                </button>
+                            </div>
+                            <div id="aviso-deuda-pendiente" class="alert alert-warning small mt-2 mb-0 py-2" style="display:none;">
+                                ⚠️ Este docente tiene movimientos de Uniformes/Deudas <strong>sin confirmar</strong> este mes.
+                                Confírmalos (botón "Gestionar" de arriba) para poder guardar la planilla.
+                            </div>
+                            <input type="hidden" id="edit-otros-desc" value="0">
+                            <input type="hidden" id="edit-otros-desc-detalle" value="">
+                        </div>
                     </div>
                 </div>
 
@@ -1743,8 +1769,8 @@ inputSb.style.background = '#f0f4ff';
     .then(r => r.json())
     .then(info => {
         window._deudaConfirmadaActual = !info.tieneRegistros || info.confirmado;
-        const btnGuardar = document.getElementById('btn-guardar-modal'); // usa el id real de tu botón
-        const aviso = document.getElementById('aviso-deuda-pendiente');   // opcional: un <div> de alerta en el modal
+        const btnGuardar = document.getElementById('btn-guardar-modal');
+        const aviso = document.getElementById('aviso-deuda-pendiente');
         if (info.tieneRegistros && info.confirmado) {
             document.getElementById('edit-otros-desc').value = info.total;
             // Guardamos el desglose por tipo (BUZO, TARDANZA, etc.) como JSON
@@ -1753,8 +1779,91 @@ inputSb.style.background = '#f0f4ff';
         }
         if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
         if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
+        pintarResumenDeudaEnModal(info);
     });
 }
+
+// Texto corto del recuadro "Uniformes / Otros Descuentos" dentro de Actualizar Planilla.
+function pintarResumenDeudaEnModal(info) {
+    const el = document.getElementById('edit-otros-desc-resumen');
+    if (!el) return;
+    if (!info.tieneRegistros) {
+        el.innerHTML = '<span class="text-muted">Sin movimientos este mes</span>';
+    } else if (info.confirmado) {
+        el.innerHTML = `<span class="text-success">✅ Confirmado — S/ ${Number(info.total).toFixed(2)}</span>`;
+    } else {
+        el.innerHTML = `<span class="text-warning fw-bold">⏳ Pendiente de confirmar — S/ ${Number(info.total).toFixed(2)}</span>`;
+    }
+}
+
+// Asegura que los selectores/caché del panel de Uniformes y Deudas estén listos,
+// aunque nunca se haya abierto ese panel en esta sesión del navegador.
+async function asegurarPanelDeudasInicializado() {
+    const selMes = document.getElementById('deuda-mes');
+    if (selMes && !selMes.options.length) {
+        selMes.innerHTML = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
+            'Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+            .map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+    }
+    const selAnio = document.getElementById('deuda-anio');
+    if (selAnio && !selAnio.value) selAnio.value = new Date().getFullYear();
+    if (!cacheTiposDeuda.length) await renderTiposDeuda();
+}
+
+// Abre el editor de Uniformes/Deudas de este docente (el mismo modal y lógica
+// que ya existía) ya apuntando al docente y mes que se está editando en
+// "Actualizar Planilla" — así no hace falta salir a buscarlo en otro panel.
+async function abrirDeudasDesdeModal() {
+    if (!currentDocente) return;
+    await asegurarPanelDeudasInicializado();
+
+    const mes = parseInt(document.getElementById('filtro-mes').value);
+    const anio = new Date().getFullYear();
+    document.getElementById('deuda-mes').value = mes;
+    document.getElementById('deuda-anio').value = anio;
+
+    // Fecha por defecto para un movimiento nuevo: hoy si estamos en el mes
+    // actual, o el día 1 del mes que se está editando si es un mes distinto.
+    const hoy = new Date();
+    const esMesActual = (mes === hoy.getMonth() + 1 && anio === hoy.getFullYear());
+    document.getElementById('deuda-form-fecha').value = esMesActual
+        ? hoy.toISOString().split('T')[0]
+        : `${anio}-${String(mes).padStart(2, '0')}-01`;
+
+    await abrirEditarDeuda(currentDocente.id_docente, currentDocente.nombre);
+}
+
+// Cuando se cierra el editor de Uniformes/Deudas, si "Actualizar Planilla"
+// sigue abierto para el mismo docente, refresca el recuadro y el botón de
+// Guardar sin que la persona tenga que cerrar y volver a abrir el modal.
+document.getElementById('modalDeudaEditar').addEventListener('hidden.bs.modal', function () {
+    const modalPlanillaEl = document.getElementById('modalEditar');
+    const sigueAbierto = modalPlanillaEl && modalPlanillaEl.classList.contains('show');
+    if (sigueAbierto && currentDocente) {
+        const mes = document.getElementById('filtro-mes').value;
+        fetch(`${API_DEUDAS}/${currentDocente.id_docente}/resumen?mes=${mes}&anio=${new Date().getFullYear()}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        .then(r => r.json())
+        .then(info => {
+            window._deudaConfirmadaActual = !info.tieneRegistros || info.confirmado;
+            const btnGuardar = document.getElementById('btn-guardar-modal');
+            const aviso = document.getElementById('aviso-deuda-pendiente');
+            if (info.tieneRegistros && info.confirmado) {
+                document.getElementById('edit-otros-desc').value = info.total;
+                document.getElementById('edit-otros-desc-detalle').value = JSON.stringify(info.detalle || []);
+            } else {
+                // Ya no está confirmado (se agregó/editó algo) — no arrastramos un total viejo.
+                document.getElementById('edit-otros-desc').value = 0;
+                document.getElementById('edit-otros-desc-detalle').value = '';
+            }
+            if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
+            if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
+            pintarResumenDeudaEnModal(info);
+            if (typeof actualizarResumenNeto === 'function') actualizarResumenNeto();
+        });
+    }
+});
 
         function actualizarLabelAfp() {
         const tipo = document.getElementById('edit-tipo-afp').value;
@@ -2900,7 +3009,46 @@ async function abrirEditarDeuda(id_docente, nombre) {
     selTipo.innerHTML = cacheTiposDeuda.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
 
     await cargarTablaDeudaEditar();
+    await actualizarEstadoDeudaEditar();
     new bootstrap.Modal(document.getElementById('modalDeudaEditar')).show();
+}
+
+// Pinta el badge Confirmado/Pendiente dentro del editor de Uniformes/Deudas de un docente.
+async function actualizarEstadoDeudaEditar() {
+    const id_docente = document.getElementById('deuda-editar-id-docente').value;
+    const mes = document.getElementById('deuda-mes').value;
+    const anio = document.getElementById('deuda-anio').value;
+    const badge = document.getElementById('deuda-editar-estado');
+    if (!badge) return;
+    try {
+        const res = await fetch(`${API_DEUDAS}/${id_docente}/resumen?mes=${mes}&anio=${anio}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const info = await res.json();
+        if (!info.tieneRegistros) {
+            badge.className = 'badge bg-secondary';
+            badge.innerText = 'Sin movimientos';
+        } else if (info.confirmado) {
+            badge.className = 'badge bg-success';
+            badge.innerText = 'Confirmado';
+        } else {
+            badge.className = 'badge bg-warning text-dark';
+            badge.innerText = 'Pendiente';
+        }
+    } catch (e) {
+        badge.className = 'badge bg-secondary';
+        badge.innerText = '—';
+    }
+}
+
+// Botón "Confirmar y aplicar a la planilla" dentro del editor por docente —
+// reusa exactamente la misma función confirmarDeuda() de siempre.
+async function confirmarDesdeEditar() {
+    const id_docente = document.getElementById('deuda-editar-id-docente').value;
+    if (!id_docente) return;
+    await confirmarDeuda(id_docente);
+    await cargarTablaDeudaEditar();
+    await actualizarEstadoDeudaEditar();
 }
 
 async function cargarTablaDeudaEditar() {
@@ -2953,6 +3101,7 @@ async function guardarEdicionRegistro(id_registro, inputEl, tipo) {
     });
     if (res.ok) {
         cargarTablaDeudaEditar();
+        actualizarEstadoDeudaEditar();
         cargarPanelDeudas();
     } else {
         alert('No se pudo guardar el cambio.');
@@ -2980,6 +3129,7 @@ async function agregarMovimientoDesdeEditar() {
         document.getElementById('deuda-editar-desc').value = '';
         document.getElementById('deuda-editar-cuotas').value = '1';
         cargarTablaDeudaEditar();
+        actualizarEstadoDeudaEditar();
         cargarPanelDeudas();
     } else {
         alert('No se pudo agregar el movimiento.');
@@ -2994,6 +3144,7 @@ async function eliminarRegistroDesdeEditar(id_registro) {
     });
     if (res.ok) {
         cargarTablaDeudaEditar();
+        actualizarEstadoDeudaEditar();
         cargarPanelDeudas();
     } else {
         alert('No se pudo eliminar.');
