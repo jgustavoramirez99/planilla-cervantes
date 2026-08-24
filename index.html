@@ -791,23 +791,71 @@
                         </div>
 
                         <!-- Uniformes / Otros Descuentos — antes vivía en un panel aparte
-                             ("Control de Uniformes y Deudas"); ahora se gestiona desde aquí
-                             mismo, sin salir de "Actualizar Planilla". El total sigue
-                             viniendo de registros_deuda (via /api/deudas), esto solo abre
-                             el mismo editor de siempre ya apuntando al docente/mes correctos. -->
+                             ("Control de Uniformes y Deudas") que se abría como una ventana
+                             encima; ahora todo está integrado aquí mismo, sin abrir nada
+                             más arriba. El total sigue viniendo de registros_deuda
+                             (vía /api/deudas) — mismos endpoints de siempre, solo que el
+                             HTML/JS de esta sección es nuevo y vive directo en este modal. -->
                         <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-center border rounded p-2" style="background:#f8f9fa;">
-                                <div>
+                            <div class="border rounded p-2" style="background:#f8f9fa;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
                                     <label class="form-label small fw-bold mb-0"><i class="fa-solid fa-shirt me-1"></i>Uniformes / Otros Descuentos</label>
-                                    <div class="small text-muted" id="edit-otros-desc-resumen">Cargando…</div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span id="pd-estado" class="badge bg-secondary">—</span>
+                                        <button type="button" class="btn btn-link btn-sm p-0" onclick="pdToggleTipos()" title="Agregar o quitar tipos">
+                                            <i class="fa-solid fa-gear"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirDeudasDesdeModal()">
-                                    <i class="fa-solid fa-pen"></i> Gestionar
-                                </button>
+
+                                <!-- Gestión de tipos: colapsable, en la misma pantalla (sin modal) -->
+                                <div id="pd-tipos-panel" style="display:none;" class="border rounded p-2 mb-2 bg-white">
+                                    <div class="input-group input-group-sm mb-2">
+                                        <input type="text" id="pd-nuevo-tipo" class="form-control" placeholder="Ej: CASACA, FOTOCHECK, ACADEMIA...">
+                                        <button class="btn btn-success" type="button" onclick="pdAgregarTipo()"><i class="fa-solid fa-plus"></i></button>
+                                    </div>
+                                    <div id="pd-lista-tipos" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+
+                                <div class="row g-2 align-items-end mb-2">
+                                    <div class="col-6 col-md-3">
+                                        <label class="small mb-0">Fecha</label>
+                                        <input type="date" id="pd-fecha" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label class="small mb-0">Tipo</label>
+                                        <select id="pd-tipo" class="form-select form-select-sm"></select>
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="small mb-0">Monto S/</label>
+                                        <input type="number" step="0.01" id="pd-monto" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="small mb-0" title="En cuántas cuotas se paga">Cuotas</label>
+                                        <input type="number" min="1" max="24" step="1" value="1" id="pd-cuotas" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <button class="btn btn-success btn-sm w-100" type="button" onclick="pdAgregarMovimiento()"><i class="fa-solid fa-plus"></i> Agregar</button>
+                                    </div>
+                                </div>
+
+                                <div class="table-responsive" style="max-height:180px; overflow-y:auto;">
+                                    <table class="table table-sm table-hover align-middle mb-2">
+                                        <thead><tr><th>Fecha</th><th>Tipo</th><th>Monto S/</th><th>Cuota</th><th></th></tr></thead>
+                                        <tbody id="pd-tabla-body"></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold">Total del mes: <span id="pd-total">S/ 0.00</span></span>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="pdConfirmar()">
+                                        <i class="fa-solid fa-check"></i> Confirmar y aplicar a la planilla
+                                    </button>
+                                </div>
                             </div>
                             <div id="aviso-deuda-pendiente" class="alert alert-warning small mt-2 mb-0 py-2" style="display:none;">
                                 ⚠️ Este docente tiene movimientos de Uniformes/Deudas <strong>sin confirmar</strong> este mes.
-                                Confírmalos (botón "Gestionar" de arriba) para poder guardar la planilla.
+                                Confírmalos arriba para poder guardar la planilla.
                             </div>
                             <input type="hidden" id="edit-otros-desc" value="0">
                             <input type="hidden" id="edit-otros-desc-detalle" value="">
@@ -1761,109 +1809,244 @@ inputSb.style.background = '#f0f4ff';
 
     miModal.show();
     actualizarResumenNeto();
-    // Verifica si la deuda del mes está confirmada antes de permitir emitir
-    const mes = document.getElementById('filtro-mes').value;
-    fetch(`${API_DEUDAS}/${id}/resumen?mes=${mes}&anio=${new Date().getFullYear()}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    })
-    .then(r => r.json())
-    .then(info => {
-        window._deudaConfirmadaActual = !info.tieneRegistros || info.confirmado;
-        const btnGuardar = document.getElementById('btn-guardar-modal');
-        const aviso = document.getElementById('aviso-deuda-pendiente');
-        if (info.tieneRegistros && info.confirmado) {
-            document.getElementById('edit-otros-desc').value = info.total;
-            // Guardamos el desglose por tipo (BUZO, TARDANZA, etc.) como JSON
-            // para que la boleta en PDF lo imprima línea por línea, no en un solo total.
-            document.getElementById('edit-otros-desc-detalle').value = JSON.stringify(info.detalle || []);
-        }
-        if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
-        if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
-        pintarResumenDeudaEnModal(info);
-    });
+    pdInicializar();
 }
 
-// Texto corto del recuadro "Uniformes / Otros Descuentos" dentro de Actualizar Planilla.
-function pintarResumenDeudaEnModal(info) {
-    const el = document.getElementById('edit-otros-desc-resumen');
-    if (!el) return;
-    if (!info.tieneRegistros) {
-        el.innerHTML = '<span class="text-muted">Sin movimientos este mes</span>';
-    } else if (info.confirmado) {
-        el.innerHTML = `<span class="text-success">✅ Confirmado — S/ ${Number(info.total).toFixed(2)}</span>`;
-    } else {
-        el.innerHTML = `<span class="text-warning fw-bold">⏳ Pendiente de confirmar — S/ ${Number(info.total).toFixed(2)}</span>`;
-    }
-}
+// ============================================================
+// Uniformes / Otros Descuentos — INTEGRADO dentro de "Actualizar
+// Planilla" (prefijo "pd" = Planilla-Deudas). No abre ningún modal
+// encima; todo vive en la misma pantalla. Usa los mismos endpoints
+// de siempre (/api/deudas/...), sin cambios en el backend.
+// ============================================================
 
-// Asegura que los selectores/caché del panel de Uniformes y Deudas estén listos,
-// aunque nunca se haya abierto ese panel en esta sesión del navegador.
-async function asegurarPanelDeudasInicializado() {
-    const selMes = document.getElementById('deuda-mes');
-    if (selMes && !selMes.options.length) {
-        selMes.innerHTML = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
-            'Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-            .map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
-    }
-    const selAnio = document.getElementById('deuda-anio');
-    if (selAnio && !selAnio.value) selAnio.value = new Date().getFullYear();
-    if (!cacheTiposDeuda.length) await renderTiposDeuda();
-}
-
-// Abre el editor de Uniformes/Deudas de este docente (el mismo modal y lógica
-// que ya existía) ya apuntando al docente y mes que se está editando en
-// "Actualizar Planilla" — así no hace falta salir a buscarlo en otro panel.
-async function abrirDeudasDesdeModal() {
+async function pdInicializar() {
     if (!currentDocente) return;
-    await asegurarPanelDeudasInicializado();
+
+    await cargarTiposDeuda();      // función ya existente, llena cacheTiposDeuda
+    pdPintarSelectTipos();
+    pdPintarListaTipos();
+    document.getElementById('pd-tipos-panel').style.display = 'none';
 
     const mes = parseInt(document.getElementById('filtro-mes').value);
     const anio = new Date().getFullYear();
-    document.getElementById('deuda-mes').value = mes;
-    document.getElementById('deuda-anio').value = anio;
-
-    // Fecha por defecto para un movimiento nuevo: hoy si estamos en el mes
-    // actual, o el día 1 del mes que se está editando si es un mes distinto.
     const hoy = new Date();
     const esMesActual = (mes === hoy.getMonth() + 1 && anio === hoy.getFullYear());
-    document.getElementById('deuda-form-fecha').value = esMesActual
+    document.getElementById('pd-fecha').value = esMesActual
         ? hoy.toISOString().split('T')[0]
         : `${anio}-${String(mes).padStart(2, '0')}-01`;
 
-    await abrirEditarDeuda(currentDocente.id_docente, currentDocente.nombre);
+    await pdCargarTabla();
 }
 
-// Cuando se cierra el editor de Uniformes/Deudas, si "Actualizar Planilla"
-// sigue abierto para el mismo docente, refresca el recuadro y el botón de
-// Guardar sin que la persona tenga que cerrar y volver a abrir el modal.
-document.getElementById('modalDeudaEditar').addEventListener('hidden.bs.modal', function () {
-    const modalPlanillaEl = document.getElementById('modalEditar');
-    const sigueAbierto = modalPlanillaEl && modalPlanillaEl.classList.contains('show');
-    if (sigueAbierto && currentDocente) {
-        const mes = document.getElementById('filtro-mes').value;
-        fetch(`${API_DEUDAS}/${currentDocente.id_docente}/resumen?mes=${mes}&anio=${new Date().getFullYear()}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        })
-        .then(r => r.json())
-        .then(info => {
-            window._deudaConfirmadaActual = !info.tieneRegistros || info.confirmado;
-            const btnGuardar = document.getElementById('btn-guardar-modal');
-            const aviso = document.getElementById('aviso-deuda-pendiente');
-            if (info.tieneRegistros && info.confirmado) {
-                document.getElementById('edit-otros-desc').value = info.total;
-                document.getElementById('edit-otros-desc-detalle').value = JSON.stringify(info.detalle || []);
-            } else {
-                // Ya no está confirmado (se agregó/editó algo) — no arrastramos un total viejo.
-                document.getElementById('edit-otros-desc').value = 0;
-                document.getElementById('edit-otros-desc-detalle').value = '';
-            }
-            if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
-            if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
-            pintarResumenDeudaEnModal(info);
-            if (typeof actualizarResumenNeto === 'function') actualizarResumenNeto();
-        });
+function pdToggleTipos() {
+    const panel = document.getElementById('pd-tipos-panel');
+    panel.style.display = (panel.style.display === 'none') ? 'block' : 'none';
+}
+
+function pdPintarSelectTipos() {
+    const sel = document.getElementById('pd-tipo');
+    if (!sel) return;
+    const actual = sel.value;
+    sel.innerHTML = cacheTiposDeuda.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('')
+        || '<option value="">(sin tipos, agrega uno con la tuerca ⚙️)</option>';
+    if (cacheTiposDeuda.some(t => t.nombre === actual)) sel.value = actual;
+}
+
+function pdPintarListaTipos() {
+    const cont = document.getElementById('pd-lista-tipos');
+    if (!cont) return;
+    cont.innerHTML = cacheTiposDeuda.map(t => `
+        <span class="badge bg-light text-dark border d-flex align-items-center gap-2 py-2 px-3">
+            ${t.nombre}
+            <i class="fa-solid fa-xmark text-danger" style="cursor:pointer" onclick="pdEliminarTipo(${t.id_tipo}, '${t.nombre.replace(/'/g, "\\'")}')" title="Quitar"></i>
+        </span>`).join('') || '<span class="text-muted small">No hay tipos registrados.</span>';
+}
+
+async function pdAgregarTipo() {
+    const input = document.getElementById('pd-nuevo-tipo');
+    const nuevo = (input.value || '').trim().toUpperCase();
+    if (!nuevo) return;
+    if (cacheTiposDeuda.some(t => t.nombre === nuevo)) { alert('Ese tipo ya existe.'); return; }
+
+    const res = await fetch(`${API_DEUDAS}/tipos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ nombre: nuevo })
+    });
+    if (!res.ok) { alert('No se pudo agregar el tipo.'); return; }
+
+    input.value = '';
+    await cargarTiposDeuda();
+    pdPintarSelectTipos();
+    pdPintarListaTipos();
+}
+
+async function pdEliminarTipo(id_tipo, nombre) {
+    if (!confirm(`¿Quitar "${nombre}" del listado de tipos?`)) return;
+
+    const res = await fetch(`${API_DEUDAS}/tipos/${id_tipo}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) { alert('No se pudo quitar el tipo.'); return; }
+
+    await cargarTiposDeuda();
+    pdPintarSelectTipos();
+    pdPintarListaTipos();
+}
+
+async function pdCargarTabla() {
+    if (!currentDocente) return;
+    const id_docente = currentDocente.id_docente;
+    const mes = document.getElementById('filtro-mes').value;
+    const anio = new Date().getFullYear();
+
+    const res = await fetch(`${API_DEUDAS}/${id_docente}/registros?mes=${mes}&anio=${anio}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const rows = await res.json();
+
+    document.getElementById('pd-tabla-body').innerHTML = rows.length ? rows.map(r => `
+        <tr>
+            <td>
+                <input type="date" class="form-control form-control-sm" value="${r.fecha.split('T')[0]}"
+                       onchange="pdGuardarEdicion(${r.id_registro}, this)">
+            </td>
+            <td>${r.tipo}</td>
+            <td>
+                <input type="number" step="0.01" class="form-control form-control-sm" value="${Number(r.monto).toFixed(2)}"
+                       onchange="pdGuardarEdicion(${r.id_registro}, this)">
+            </td>
+            <td>${r.cuotas > 1 ? `<span class="badge bg-info text-dark">${r.cuota_actual}/${r.cuotas}</span>` : '<span class="text-muted small">Único</span>'}</td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="pdEliminarMovimiento(${r.id_registro})"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>`).join('') : '<tr><td colspan="5" class="text-center text-muted small py-2">Sin movimientos este mes</td></tr>';
+
+    const total = rows.reduce((acc, r) => acc + Number(r.monto), 0);
+    document.getElementById('pd-total').innerText = `S/ ${total.toFixed(2)}`;
+
+    await pdActualizarEstado();
+}
+
+// Se dispara al cambiar fecha o monto de una fila (el tipo de cada fila no se edita, solo se elimina y se vuelve a crear).
+async function pdGuardarEdicion(id_registro, inputEl) {
+    const fila = inputEl.closest('tr');
+    const inputs = fila.querySelectorAll('input');
+    const tipoTexto = fila.children[1].innerText.trim();
+    const payload = {
+        fecha: inputs[0].value,
+        tipo: tipoTexto,
+        monto: Number(inputs[1].value) || 0,
+        descripcion: ''
+    };
+    const res = await fetch(`${API_DEUDAS}/registro/${id_registro}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        pdCargarTabla();
+    } else {
+        alert('No se pudo guardar el cambio.');
     }
-});
+}
+
+async function pdAgregarMovimiento() {
+    if (!currentDocente) return;
+    const payload = {
+        id_docente: currentDocente.id_docente,
+        fecha: document.getElementById('pd-fecha').value,
+        tipo: document.getElementById('pd-tipo').value,
+        descripcion: '',
+        monto: Number(document.getElementById('pd-monto').value) || 0,
+        cuotas: Number(document.getElementById('pd-cuotas').value) || 1
+    };
+    if (!payload.tipo) { alert('Primero agrega o elige un tipo (⚙️).'); return; }
+    if (!payload.monto) { alert('Ingresa un monto.'); return; }
+
+    const res = await fetch(`${API_DEUDAS}/registro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+        document.getElementById('pd-monto').value = '';
+        document.getElementById('pd-cuotas').value = '1';
+        pdCargarTabla();
+    } else {
+        alert('No se pudo agregar el movimiento.');
+    }
+}
+
+async function pdEliminarMovimiento(id_registro) {
+    if (!confirm('¿Eliminar este movimiento?')) return;
+    const res = await fetch(`${API_DEUDAS}/registro/${id_registro}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (res.ok) {
+        pdCargarTabla();
+    } else {
+        alert('No se pudo eliminar.');
+    }
+}
+
+// Pinta el badge de estado, actualiza los campos ocultos que se guardan con
+// la planilla, y habilita/bloquea el botón "Guardar" según corresponda.
+async function pdActualizarEstado() {
+    if (!currentDocente) return;
+    const mes = document.getElementById('filtro-mes').value;
+    const anio = new Date().getFullYear();
+
+    const res = await fetch(`${API_DEUDAS}/${currentDocente.id_docente}/resumen?mes=${mes}&anio=${anio}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    const info = await res.json();
+    window._deudaConfirmadaActual = !info.tieneRegistros || info.confirmado;
+
+    const badge = document.getElementById('pd-estado');
+    if (badge) {
+        if (!info.tieneRegistros) { badge.className = 'badge bg-secondary'; badge.innerText = 'Sin movimientos'; }
+        else if (info.confirmado) { badge.className = 'badge bg-success'; badge.innerText = 'Confirmado'; }
+        else { badge.className = 'badge bg-warning text-dark'; badge.innerText = 'Pendiente'; }
+    }
+
+    if (info.tieneRegistros && info.confirmado) {
+        document.getElementById('edit-otros-desc').value = info.total;
+        // Guardamos el desglose por tipo (BUZO, TARDANZA, etc.) como JSON
+        // para que la boleta en PDF lo imprima línea por línea, no en un solo total.
+        document.getElementById('edit-otros-desc-detalle').value = JSON.stringify(info.detalle || []);
+    } else {
+        document.getElementById('edit-otros-desc').value = 0;
+        document.getElementById('edit-otros-desc-detalle').value = '';
+    }
+
+    const btnGuardar = document.getElementById('btn-guardar-modal');
+    const aviso = document.getElementById('aviso-deuda-pendiente');
+    if (btnGuardar) btnGuardar.disabled = !window._deudaConfirmadaActual;
+    if (aviso) aviso.style.display = window._deudaConfirmadaActual ? 'none' : 'block';
+
+    if (typeof actualizarResumenNeto === 'function') actualizarResumenNeto();
+}
+
+async function pdConfirmar() {
+    if (!currentDocente) return;
+    const mes = document.getElementById('filtro-mes').value;
+    const anio = new Date().getFullYear();
+    if (!confirm('¿Confirmar el acumulado de este docente para este mes? Esto se reflejará automáticamente en su planilla y boleta de ese mes.')) return;
+
+    const res = await fetch(`${API_DEUDAS}/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ id_docente: currentDocente.id_docente, mes, anio })
+    });
+    if (res.ok) {
+        const data = await res.json();
+        if (data.advertencia) alert(data.advertencia);
+        await pdCargarTabla(); // ya llama a pdActualizarEstado adentro
+    } else {
+        alert('No se pudo confirmar.');
+    }
+}
 
         function actualizarLabelAfp() {
         const tipo = document.getElementById('edit-tipo-afp').value;
