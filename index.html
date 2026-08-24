@@ -120,7 +120,42 @@
         .chart-container { position: relative; height: 250px; width: 100%; }
 
         /* Spinner para WhatsApp */
-        .btn-loading { pointer-events: none; opacity: 0.7; } 
+        .btn-loading { pointer-events: none; opacity: 0.7; }
+
+        /* ══ Asistente GusTI (chatbot local, sin IA, sin costo) ══ */
+        .chatbot-fab {
+            position: fixed; bottom: 24px; right: 24px; z-index: 1080;
+            width: 56px; height: 56px; border-radius: 50%; border: none;
+            background: linear-gradient(135deg,#2c3e50,#3498db); color: #fff;
+            font-size: 1.5rem; box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .chatbot-fab:hover { filter: brightness(1.08); }
+        .chatbot-window {
+            position: fixed; bottom: 92px; right: 24px; z-index: 1080;
+            width: 340px; max-width: calc(100vw - 32px); height: 460px; max-height: 70vh;
+            background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+            display: none; flex-direction: column; overflow: hidden;
+        }
+        .chatbot-window.show { display: flex; }
+        .chatbot-header {
+            background: linear-gradient(135deg,#2c3e50,#3498db); color: #fff;
+            padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;
+            font-weight: 700;
+        }
+        .chatbot-header-close { background: none; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; }
+        .chatbot-messages { flex: 1; overflow-y: auto; padding: 12px; background: #f4f6f8; }
+        .chatbot-msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; font-size: 0.85rem; line-height: 1.35; white-space: pre-line; }
+        .chatbot-msg.bot { background: #e9ecef; color: #212529; border-bottom-left-radius: 3px; }
+        .chatbot-msg.user { background: #2c3e50; color: #fff; margin-left: auto; border-bottom-right-radius: 3px; }
+        .chatbot-typing { display: flex; gap: 4px; padding: 8px 12px; }
+        .chatbot-typing span { width: 6px; height: 6px; border-radius: 50%; background: #adb5bd; animation: chatbotBlink 1.2s infinite ease-in-out; }
+        .chatbot-typing span:nth-child(2) { animation-delay: 0.2s; }
+        .chatbot-typing span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes chatbotBlink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+        .chatbot-input-row { display: flex; gap: 6px; padding: 10px; border-top: 1px solid #e0e0e0; background: #fff; }
+        .chatbot-input-row input { flex: 1; border: 1px solid #ced4da; border-radius: 20px; padding: 8px 14px; font-size: 0.85rem; outline: none; }
+        .chatbot-input-row button { border: none; background: #2c3e50; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
     </style>
 </head>
 <body> 
@@ -1097,6 +1132,7 @@
 
     document.getElementById('buscador').value = '';
     cargarDatosServidor();
+    actualizarVisibilidadChatbotPlanilla();
 }
 
     // ============================================================
@@ -3697,6 +3733,146 @@ async function guardarParticipantes() {
         alert('❌ No se pudo conectar con el servidor.');
     }
 }
+</script>
+
+<!-- ══════════════════════════════
+     ASISTENTE GusTI — ayuda de uso del Panel de Planillas
+     Local, sin IA, sin costo (igual que en ScoreDocente): responde
+     por palabras clave leyendo un FAQ fijo, sin llamar a ningún servidor.
+     Solo se muestra a admin/superadmin (no a docentes con rol "user").
+     ══════════════════════════════ -->
+<button class="chatbot-fab" id="chatbot-fab" onclick="toggleChatbotPlanilla()" style="display:none;" title="Ayuda">
+    💬<span></span>
+</button>
+<div class="chatbot-window" id="chatbot-window-planilla">
+    <div class="chatbot-header">
+        <div>🤖 GusTI</div>
+        <button class="chatbot-header-close" onclick="toggleChatbotPlanilla()">✕</button>
+    </div>
+    <div class="chatbot-messages" id="chatbot-messages-planilla">
+        <div class="chatbot-msg bot">¡Hola! 👋 Soy GusTI. Puedo explicarte cómo usar el Panel de Planillas — sueldos, descuentos, Excel, boletas por WhatsApp y más. ¿En qué te ayudo?</div>
+    </div>
+    <div class="chatbot-input-row">
+        <input type="text" id="chatbot-input-planilla" placeholder="Escribe tu duda..." onkeydown="if(event.key==='Enter') enviarMensajeChatbotPlanilla()">
+        <button onclick="enviarMensajeChatbotPlanilla()">➤</button>
+    </div>
+</div>
+
+<script>
+    let chatbotPlanillaEnviando = false;
+
+    // Base de preguntas frecuentes del asistente (sin IA, sin costo, sin backend).
+    const CHATBOT_PLANILLA_FAQ = [
+        { keywords: ['sueldo bruto', 'sueldo base'], respuesta: 'El "Sueldo Bruto" es el sueldo de referencia del docente (fijo, no cambia mes a mes). El "Sueldo Planilla (S/)" es el monto sobre el que realmente se calculan los descuentos ese mes.' },
+        { keywords: ['pagado', 'cuanto se le paga', 'cuanto le pago'], respuesta: 'El campo "Pagado" es el monto de partida del cual se restan todos los descuentos del mes para llegar al Neto a pagar.' },
+        { keywords: ['afp', 'pension permanente', 'aporte pension'], respuesta: 'En "Tipo de Aporte Pensión" eliges la AFP del docente (o "Sin aporte pensión"). El sistema calcula el descuento con el porcentaje exacto de esa AFP sobre el sueldo bruto — no hace falta calcularlo a mano.' },
+        { keywords: ['seguro salud', 'essalud', 'sis'], respuesta: 'En "Tipo de Seguro Salud" eliges ESSALUD (9%, lo aporta el colegio, no se descuenta al trabajador) o SIS (sin descuento al trabajador). Ninguno de los dos le quita dinero al docente.' },
+        { keywords: ['adelanto', 'credito', 'prestamo'], respuesta: 'Adelantos, Créditos y Préstamos ahora se registran dentro de "Uniformes / Otros Descuentos" (más abajo en el mismo formulario) — crea el tipo con la tuerca ⚙️ si no existe, y regístralo ahí. Ya no hay un campo aparte para esto.' },
+        { keywords: ['uniforme', 'otros descuentos', 'tuerca', 'tipo de descuento'], respuesta: 'En "Uniformes / Otros Descuentos": la tuerca ⚙️ te deja crear o quitar tipos (ADELANTO, BUZO, CASACA, lo que necesites). Registra el movimiento con fecha, tipo y monto (puedes dividirlo en cuotas), y dale "Confirmar y aplicar a la planilla" para que se sume al neto y salga en la boleta.' },
+        { keywords: ['cuotas', 'en partes', 'varios meses'], respuesta: 'Si en "Uniformes / Otros Descuentos" pones más de 1 cuota, el monto se reparte solo entre los siguientes meses (ej. S/300 en 3 cuotas = S/100 este mes, S/100 el siguiente, S/100 el otro).' },
+        { keywords: ['confirmar', 'no me deja guardar', 'boton guardar bloqueado', 'pendiente'], respuesta: 'Si el docente tiene movimientos de Uniformes/Otros Descuentos sin confirmar, el botón "Guardar" se bloquea hasta que los confirmes (para que la planilla no se guarde con un descuento a medias). Dale "Confirmar y aplicar a la planilla" en esa sección y ya se habilita.' },
+        { keywords: ['falta', 'tardanza'], respuesta: 'En "Faltas y Tardanzas" pones el monto a descontar directamente (no el número de días) — el sistema no lo calcula solo, se ingresa manual.' },
+        { keywords: ['desmerito'], respuesta: 'El "Descuento por Desmérito" tiene 4 niveles: Sin desmérito, Leve, Grave y Muy Grave. Elige el nivel y el monto correspondiente se aplica al neto.' },
+        { keywords: ['bono'], respuesta: 'El campo "Bono" SUMA al pago (no descuenta) — se agrega directo al neto final del docente.' },
+        { keywords: ['actividades'], respuesta: 'El campo "Actividades (S/)" es un descuento aparte por actividades del mes — se resta igual que los demás descuentos.' },
+        { keywords: ['excel', 'descargar excel', 'exportar'], respuesta: 'El botón para descargar el Excel exporta la planilla completa del mes que tengas seleccionado en "Periodo Laboral", con todos los descuentos ya aplicados (incluye Adelantos, Créditos, Préstamos y Uniformes/Otros Descuentos).' },
+        { keywords: ['whatsapp', 'enviar boleta', 'mandar boleta'], respuesta: 'El botón de WhatsApp genera la boleta en PDF con TODOS los descuentos del docente (sueldo, AFP, faltas, tardanzas, desmérito, Uniformes/Otros Descuentos, etc.), la sube al servidor y te abre WhatsApp con el link listo para enviar — solo falta darle "Enviar".' },
+        { keywords: ['boleta', 'historial'], respuesta: 'Puedes ver la boleta/historial de un docente haciendo clic en su fila, o desde el botón de historial — ahí se ve el detalle completo de sueldo y descuentos de meses anteriores.' },
+        { keywords: ['periodo laboral', 'cambiar de mes', 'otro mes'], respuesta: 'El selector "Periodo Laboral" arriba a la izquierda cambia el mes que estás viendo/editando en todo el panel — asegúrate de estar en el mes correcto antes de registrar algo.' },
+        { keywords: ['buscador', 'buscar docente', 'encontrar docente'], respuesta: 'Arriba a la derecha está el buscador "Buscar docente..." — filtra la tabla en tiempo real por nombre o código mientras escribes.' },
+        { keywords: ['marcar como pagado', 'boton verde', 'boton azul', 'color de pago'], respuesta: 'El botón con el ícono de dinero marca a un docente como pagado ese mes (se pone verde ✓). Vuelve a hacer clic para revertirlo si fue un error.' },
+        { keywords: ['desactivar docente', 'inactivo', 'dar de baja'], respuesta: 'El botón con el ícono de "usuario tachado" mueve a un docente a inactivos — deja de aparecer en la planilla del mes, pero no se borra su información.' },
+        { keywords: ['reactivar docente', 'activar docente'], respuesta: 'Para reactivar a un docente que diste de baja, ve a la sección de inactivos y dale "Reactivar" — vuelve a aparecer en la planilla mensual.' }
+    ];
+    const CHATBOT_PLANILLA_SALUDOS = ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'buen dia'];
+    const CHATBOT_PLANILLA_AGRADECIMIENTOS = ['gracias', 'genial', 'perfecto', 'excelente'];
+    const CHATBOT_PLANILLA_COMO_ESTAS = ['como estas', 'que tal'];
+
+    function chatbotPlanillaNormalizar(t) {
+        return (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    }
+
+    function responderChatbotPlanillaLocal(pregunta) {
+        const q = chatbotPlanillaNormalizar(pregunta);
+
+        for (const item of CHATBOT_PLANILLA_FAQ) {
+            if (item.keywords.some((k) => q.includes(chatbotPlanillaNormalizar(k)))) return item.respuesta;
+        }
+
+        if (CHATBOT_PLANILLA_SALUDOS.some((s) => q.includes(s))) return '¡Hola! 👋 Soy GusTI. Puedo explicarte cómo usar el Panel de Planillas — pregúntame por sueldo, descuentos, Excel, WhatsApp o boletas.';
+        if (CHATBOT_PLANILLA_AGRADECIMIENTOS.some((s) => q.includes(s))) return '¡De nada! 💙 Aquí ando si necesitas algo más.';
+        if (CHATBOT_PLANILLA_COMO_ESTAS.some((s) => q.includes(s))) return '¡Todo bien por aquí, gracias por preguntar! ¿En qué te ayudo con el panel?';
+
+        return 'No tengo una respuesta preparada para eso todavía 🙈 Prueba preguntándome sobre sueldo, AFP, seguro de salud, Uniformes/Otros Descuentos, faltas y tardanzas, desmérito, bono, Excel o boletas por WhatsApp. Para otras dudas, escríbele a Gustavo por WhatsApp al 943706872 📱.';
+    }
+
+    function toggleChatbotPlanilla() {
+        const win = document.getElementById('chatbot-window-planilla');
+        if (!win) return;
+        win.classList.toggle('show');
+        if (win.classList.contains('show')) {
+            const input = document.getElementById('chatbot-input-planilla');
+            if (input) input.focus();
+            const msgs = document.getElementById('chatbot-messages-planilla');
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
+        }
+    }
+
+    function chatbotPlanillaAgregarMensaje(texto, tipo) {
+        const msgs = document.getElementById('chatbot-messages-planilla');
+        if (!msgs) return;
+        const div = document.createElement('div');
+        div.className = 'chatbot-msg ' + tipo;
+        div.textContent = texto;
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function chatbotPlanillaMostrarEscribiendo(mostrar) {
+        const msgs = document.getElementById('chatbot-messages-planilla');
+        if (!msgs) return;
+        let indicador = document.getElementById('chatbot-typing-planilla');
+        if (mostrar) {
+            if (indicador) return;
+            indicador = document.createElement('div');
+            indicador.className = 'chatbot-typing';
+            indicador.id = 'chatbot-typing-planilla';
+            indicador.innerHTML = '<span></span><span></span><span></span>';
+            msgs.appendChild(indicador);
+            msgs.scrollTop = msgs.scrollHeight;
+        } else if (indicador) {
+            indicador.remove();
+        }
+    }
+
+    function enviarMensajeChatbotPlanilla() {
+        if (chatbotPlanillaEnviando) return;
+        const input = document.getElementById('chatbot-input-planilla');
+        const texto = input.value.trim();
+        if (!texto) return;
+        input.value = '';
+        chatbotPlanillaAgregarMensaje(texto, 'user');
+
+        chatbotPlanillaEnviando = true;
+        chatbotPlanillaMostrarEscribiendo(true);
+
+        // Pequeña pausa artificial para que se sienta natural (no hay red real de por medio).
+        setTimeout(() => {
+            const respuesta = responderChatbotPlanillaLocal(texto);
+            chatbotPlanillaMostrarEscribiendo(false);
+            chatbotPlanillaAgregarMensaje(respuesta, 'bot');
+            chatbotPlanillaEnviando = false;
+            input.focus();
+        }, 450);
+    }
+
+    // Solo se muestra el botón flotante para admin/superadmin — un docente
+    // (rol "user") viendo su propia boleta no necesita ayuda de este panel.
+    function actualizarVisibilidadChatbotPlanilla() {
+        const fab = document.getElementById('chatbot-fab');
+        if (!fab) return;
+        fab.style.display = (typeof userRole !== 'undefined' && (userRole === 'admin' || userRole === 'superadmin')) ? 'flex' : 'none';
+    }
 </script>
 
 <!-- ── FOOTER GRTECH ── -->
