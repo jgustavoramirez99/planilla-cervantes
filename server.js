@@ -1069,12 +1069,19 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
                         // usa IFNULL(p.pagado, d.pagado_fijo) al leer, así que dejándolo
                         // NULL se respeta automáticamente el sueldo fijo del docente,
                         // en vez de mostrar S/0.
+                        // OJO 2: 'afp' se deja en NULL (no 'NINGUNO') a propósito.
+                        // Antes se guardaba 'NINGUNO' aquí, lo que dejaba al docente
+                        // marcado como "Sin aporte pensión" y bloqueado en el modal
+                        // apenas se confirmaba una deuda, aunque sí aportara a su AFP.
+                        // Con NULL, el campo queda simplemente sin definir todavía
+                        // (tal como pasa cuando aún no se guarda planilla ese mes),
+                        // y el admin lo completa la primera vez que abre el modal.
                         db.query(
                             `INSERT INTO planillas
                                 (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
                                  tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
                                  otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades)
-                             VALUES (?, ?, ${ANIO_ACTUAL}, NULL, 'NINGUNO', 0, 0, 0, 0, 0,
+                             VALUES (?, ?, ${ANIO_ACTUAL}, NULL, NULL, 0, 0, 0, 0, 0,
                                      'ESSALUD', 0, 0, '', 0, 0,
                                      ?, ?, 0, 0, 0)`,
                             [id_docente, mes, total, detalleJSON],

@@ -776,14 +776,19 @@
                         <!-- AFP - Permanente -->
                         <div class="col-md-6">
                         <label class="form-label small fw-bold text-danger">Tipo de Aporte Pensión (Permanente)</label>
-                            <select id="edit-tipo-afp" class="form-select form-select-sm" onchange="actualizarLabelAfp()">
-                            <option value="ONP">ONP (13% universal)</option>
-                            <option value="Profuturo">Profuturo</option>
-                            <option value="Integra">Integra</option>
-                            <option value="Habitat">Habitat</option>
-                            <option value="Prima">Prima</option>
-                            <option value="NINGUNO">Sin aporte pensión</option>
-                        </select>
+                            <div class="d-flex align-items-center gap-2">
+                                <select id="edit-tipo-afp" class="form-select form-select-sm" onchange="actualizarLabelAfp()">
+                                <option value="ONP">ONP (13% universal)</option>
+                                <option value="Profuturo">Profuturo</option>
+                                <option value="Integra">Integra</option>
+                                <option value="Habitat">Habitat</option>
+                                <option value="Prima">Prima</option>
+                                <option value="NINGUNO">Sin aporte pensión</option>
+                                </select>
+                                <button type="button" class="btn btn-sm btn-outline-warning"
+                                        onclick="habilitarTipoAfp()"
+                                        title="Corregir Tipo de Aporte Pensión">✏️</button>
+                            </div>
                     <div class="text-muted small mt-1" id="label-calculo-afp"></div>
                 </div>
                         <!-- ESSALUD / SIS -->
@@ -3665,6 +3670,14 @@ function habilitarSueldoPlanilla() {
         input.removeAttribute('readonly');
         input.style.background = '';
         input.focus();
+    }
+    // Permite corregir el Tipo de Aporte Pensión aunque ya esté "bloqueado"
+    // (por ejemplo, si se guardó mal la primera vez, como "Sin aporte pensión"
+    // en vez de la AFP real del docente).
+    function habilitarTipoAfp() {
+        const afpSelect = document.getElementById('edit-tipo-afp');
+        afpSelect.disabled = false;
+        afpSelect.focus();
     }
     // ============================================================
 // PARTICIPANTES DEL MES
