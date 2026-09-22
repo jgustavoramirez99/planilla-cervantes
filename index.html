@@ -1387,13 +1387,14 @@ async function enviarWhatsApp(id) {
         const prestamos = Number(d.prestamos)      || 0;
         const desmrito  = Number(d.desmrito_monto) || 0;
         const actividades = Number(d.actividades)  || 0;
+        const otrosDesc = Number(d.otros_descuentos) || 0;
         return pagado + bono
             - descAfp
             - (Number(d.adelantos) || 0)
             - (Number(d.faltas)    || 0)
             - (Number(d.pension)   || 0)
             - (Number(d.tardanza)  || 0)
-            - creditos - prestamos - desmrito - actividades;
+            - creditos - prestamos - desmrito - actividades - otrosDesc;
     }
 
     async function crearBoletaPdfBlob(d) {
@@ -2373,7 +2374,7 @@ async function descargarExcel() {
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2CC' } },
     alignment: { horizontal: 'center', vertical: 'middle' },
     border: { left: {style:'thin'}, right: {style:'thin'} },
-    numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
+    numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##'
     };
 
     const totalStyle = {
@@ -2524,7 +2525,7 @@ if (tipoSaludEx === 'ESSALUD') {
             fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'FFFFFFFF' } },
             alignment: { horizontal: 'center', vertical: 'middle' },
             border: { left:{style:'thin'}, right:{style:'thin'} },
-            numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
+            numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##'
         };
     } else if (colsVerdeClaro.includes(col)) {
         // PAGADO (4), NETO A PAGAR (16), CONSOLIDADO (17) — verde claro intercalado
@@ -2532,7 +2533,7 @@ if (tipoSaludEx === 'ESSALUD') {
             fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: isOddRow ? 'D5F5E3' : 'EAFAF1' } },
             alignment: { horizontal: 'center', vertical: 'middle' },
             border: { left:{style:'thin'}, right:{style:'thin'} },
-            numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
+            numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##'
         };
     } else if (col <= 3) {
         // N°, Apellidos y Nombres, DNI → celeste / blanco
@@ -2554,7 +2555,7 @@ if (tipoSaludEx === 'ESSALUD') {
                 fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } },
                 alignment: { horizontal: 'center', vertical: 'middle' },
                 border: { left:{style:'thin'}, right:{style:'thin'} },
-                numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
+                numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##'
             };
         }
     } else {
@@ -2609,14 +2610,14 @@ if (tipoSaludEx === 'ESSALUD') {
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F3864' } },
     alignment: { horizontal: 'center', vertical: 'middle' },
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
-    numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
+    numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##'
 };
 const totalVerdeSyle = {
     font: { bold: true, color: { argb: 'FF145A32' } },
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A9DFBF' } },
     alignment: { horizontal: 'center', vertical: 'middle' },
     border: { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} },
-    numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##;"S/ "'
+    numFmt: '"S/ "#,##0.##;[Red]-"S/ "#,##0.##'
 };
 for (let col = 1; col <= 21; col++) {
     const cell = ws.getCell(totalRow, col);
