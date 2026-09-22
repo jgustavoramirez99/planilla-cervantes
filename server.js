@@ -328,17 +328,17 @@ app.get('/api/docentes', verificarToken, (req, res) => {
                IFNULL(p.pagado,      d.pagado_fijo)   AS pagado,
                d.sb_fijo                              AS sueldo_base,
                IFNULL(p.afp,                NULL)          AS afp,
-               IFNULL(p.adelantos,           0)            AS adelantos,
+               (IFNULL(p.adelantos,0) + IFNULL(p.adelantos_deuda,0)) AS adelantos,
                IFNULL(p.faltas,              0)            AS faltas,
-               IFNULL(p.pension,             0)            AS pension,
-               IFNULL(p.tardanza,            0)            AS tardanza,
+               (IFNULL(p.pension,0) + IFNULL(p.pension_deuda,0)) AS pension,
+               (IFNULL(p.tardanza,0) + IFNULL(p.tardanza_deuda,0)) AS tardanza,
                IFNULL(p.bono,                0)            AS bono,
                IFNULL(p.otros_descuentos,    0)            AS otros_descuentos,
                IFNULL(p.otros_desc_detalle,  '')           AS otros_desc_detalle,
                IFNULL(p.tipo_afp,            'AFP')        AS tipo_afp,
                IFNULL(p.tipo_salud,          'ESSALUD')    AS tipo_salud,
                IFNULL(p.creditos,            0)            AS creditos,
-               IFNULL(p.prestamos,           0)            AS prestamos,
+               (IFNULL(p.prestamos,0) + IFNULL(p.prestamos_deuda,0)) AS prestamos,
                IFNULL(p.desmrito_nivel,      '')           AS desmrito_nivel,
                IFNULL(p.desmrito_monto,      0)            AS desmrito_monto,
                IFNULL(p.num_faltas,          0)            AS num_faltas,
@@ -1026,9 +1026,20 @@ app.post('/api/deudas/confirmar', verificarToken, (req, res) => {
     );
 });
 
-// Calcula el total + desglose (con info de cuota) de un docente en un mes,
-// y lo guarda en planillas.otros_descuentos / otros_desc_detalle de ese mes.
-// No toca ningún otro campo de la planilla (sueldo, afp, adelantos, etc.).
+// Calcula el total + desglose (con info de cuota) de un docente en un mes.
+// Los tipos de deuda que tienen columna propia en "planillas" (Adelanto,
+// Prestamos, Pension, Tardanza) se suman a su columna "_deuda" correspondiente.
+// El resto de tipos (Buzo, Eventos, Ayuda Solidaria, etc.) se sigue sumando
+// a otros_descuentos / otros_desc_detalle, igual que antes.
+// No toca los campos manuales (adelantos, prestamos, pension, tardanza)
+// que el admin llena directamente en el modal de edición de planilla.
+const TIPOS_CON_COLUMNA_PROPIA = {
+    'ADELANTO':  'adelantos_deuda',
+    'PRESTAMOS': 'prestamos_deuda',
+    'PENSIÓN':   'pension_deuda',
+    'TARDANZA':  'tardanza_deuda'
+};
+
 function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
     db.query(
         `SELECT tipo, monto, cuota_actual, cuotas
@@ -1039,8 +1050,21 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
         (err, filas) => {
             if (err) return cb(err);
 
-            const total = filas.reduce((acc, f) => acc + Number(f.monto), 0);
-            const detalle = filas.map(f => ({
+            let adelantosDeuda = 0, prestamosDeuda = 0, pensionDeuda = 0, tardanzaDeuda = 0;
+            const otrosFilas = [];
+
+            filas.forEach(f => {
+                const monto = Number(f.monto) || 0;
+                const col = TIPOS_CON_COLUMNA_PROPIA[f.tipo];
+                if (col === 'adelantos_deuda')      adelantosDeuda += monto;
+                else if (col === 'prestamos_deuda') prestamosDeuda += monto;
+                else if (col === 'pension_deuda')   pensionDeuda   += monto;
+                else if (col === 'tardanza_deuda')  tardanzaDeuda  += monto;
+                else otrosFilas.push(f);
+            });
+
+            const total = otrosFilas.reduce((acc, f) => acc + (Number(f.monto) || 0), 0);
+            const detalle = otrosFilas.map(f => ({
                 tipo: f.tipo,
                 monto: Number(f.monto),
                 cuota_actual: f.cuota_actual,
@@ -1055,12 +1079,15 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
                     if (errSel) return cb(errSel);
 
                     if (rows.length) {
-                        // Ya existe una fila de planilla ese mes: solo actualizamos estos 2 campos,
-                        // sin tocar sueldo, afp, adelantos ni nada más que ya haya cargado el admin.
+                        // Ya existe una fila de planilla ese mes: actualizamos otros_descuentos
+                        // y las columnas "_deuda", sin tocar sueldo, afp, ni los campos manuales
+                        // (adelantos, prestamos, pension, tardanza) que ya haya cargado el admin.
                         db.query(
-                            `UPDATE planillas SET otros_descuentos = ?, otros_desc_detalle = ?
+                            `UPDATE planillas
+                             SET otros_descuentos = ?, otros_desc_detalle = ?,
+                                 adelantos_deuda = ?, prestamos_deuda = ?, pension_deuda = ?, tardanza_deuda = ?
                              WHERE id_docente = ? AND mes = ? AND anio = ?`,
-                            [total, detalleJSON, id_docente, mes, ANIO_ACTUAL],
+                            [total, detalleJSON, adelantosDeuda, prestamosDeuda, pensionDeuda, tardanzaDeuda, id_docente, mes, ANIO_ACTUAL],
                             cb
                         );
                     } else {
@@ -1080,11 +1107,13 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
                             `INSERT INTO planillas
                                 (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
                                  tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
-                                 otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades)
+                                 otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades,
+                                 adelantos_deuda, prestamos_deuda, pension_deuda, tardanza_deuda)
                              VALUES (?, ?, ${ANIO_ACTUAL}, NULL, NULL, 0, 0, 0, 0, 0,
                                      'ESSALUD', 0, 0, '', 0, 0,
-                                     ?, ?, 0, 0, 0)`,
-                            [id_docente, mes, total, detalleJSON],
+                                     ?, ?, 0, 0, 0,
+                                     ?, ?, ?, ?)`,
+                            [id_docente, mes, total, detalleJSON, adelantosDeuda, prestamosDeuda, pensionDeuda, tardanzaDeuda],
                             cb
                         );
                     }
