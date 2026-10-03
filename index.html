@@ -183,9 +183,9 @@
                 font-size:0.78rem;font-weight:600;letter-spacing:0.5px;margin-top:4px;">
                 <svg width="18" height="18" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="17" fill="white" fill-opacity="0.2" stroke="white" stroke-width="1.5"/>
-                    <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">GR</text>
+                    <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">RC</text>
                 </svg>
-                R&R Tech Solutions 
+                R&C Tech Solutions 
             </span>
         </div>
 
@@ -1589,7 +1589,7 @@ async function enviarWhatsApp(id) {
         doc.setFontSize(7); doc.setTextColor(150);
         doc.text("Sistema de Planillas Digitales ", 105, y, { align:"center" });
         doc.setTextColor(52,152,219);
-        doc.text("R&R Tech Solutions  © 2026", 105, y+5, { align:"center" });
+        doc.text("R&C Tech Solutions  © 2026", 105, y+5, { align:"center" });
 
         return doc.output('blob');
     }
@@ -2841,7 +2841,7 @@ for (let col = 1; col <= 21; col++) {
     // Pie de página hoja 2
     const lastRow = statsData.length + 4;
     ws2.mergeCells(`A${lastRow}:C${lastRow}`);
-    ws2.getCell(`A${lastRow}`).value = `Generado por Sistema de Planillas Digitales — R&R Tech Solutions © 2026`;
+    ws2.getCell(`A${lastRow}`).value = `Generado por Sistema de Planillas Digitales — R&C Tech Solutions © 2026`;
     ws2.getCell(`A${lastRow}`).style = {
         font: { italic: true, size: 8, color: { argb: '888888' } },
         alignment: { horizontal: 'center' }
@@ -3936,9 +3936,9 @@ async function guardarParticipantes() {
     <span style="display:inline-flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;">
         <svg width="22" height="22" viewBox="0 0 36 36">
             <circle cx="18" cy="18" r="17" fill="none" stroke="#3498db" stroke-width="2"/>
-            <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="#3498db" font-family="Arial">GR</text>
+            <text x="18" y="23" text-anchor="middle" font-size="13" font-weight="bold" fill="#3498db" font-family="Arial">RC</text>
         </svg>
-        <span style="color:white;font-weight:600;letter-spacing:0.5px;">R&R Tech Solutions - "Transformando procesos con ingeniería"</span>
+        <span style="color:white;font-weight:600;letter-spacing:0.5px;">R&C Tech Solutions - "Transformando procesos con ingeniería"</span>
         <span style="color:#555;">|</span>
         Sistema de Planillas Digitales
         <span style="color:#555;">|</span>
