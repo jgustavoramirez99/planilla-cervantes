@@ -248,7 +248,7 @@
 
         <!-- FILTROS Y ESTADÍSTICAS -->
         <div class="row g-3 mb-4">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card stats-card shadow-sm p-3">
                     <div class="text-muted small fw-bold">DOCENTES ACTIVOS</div>
                     <div class="h3 mb-0" id="stat-total-personal">0</div>
@@ -260,7 +260,13 @@
                     <div class="h3 mb-0" id="stat-planilla-total">S/ 0.00</div>
                 </div>
             </div>
-            <div class="col-md-3" id="filtro-mes-container">
+            <div class="col-md-3" id="stat-presupuesto-container">
+                <div class="card stats-card shadow-sm p-3" style="border-left-color: #8e44ad;">
+                    <div class="text-muted small fw-bold">PRESUPUESTO DE PLANILLA</div>
+                    <div class="h3 mb-0" id="stat-presupuesto-planilla">S/ 0.00</div>
+                </div>
+            </div>
+            <div class="col-md-2" id="filtro-mes-container">
                 <label class="small fw-bold text-muted">PERIODO LABORAL</label>
                 <div class="d-flex gap-2">
                 <select id="filtro-mes" class="form-select shadow-sm" onchange="cargarDatosServidor()">
@@ -282,7 +288,7 @@
                 </button>
                 </div>
             </div>
-            <div class="col-md-3 text-end d-flex align-items-end" id="buscador-container">
+            <div class="col-md-2 text-end d-flex align-items-end" id="buscador-container">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0">
                         <i class="fa-solid fa-magnifying-glass text-muted"></i>
@@ -1354,8 +1360,7 @@ async function enviarWhatsApp(id) {
 
         const result = await uploadRes.json();
 
-        const neto = calcularNeto(d);
-        const texto = `Hola *${d.nombre}*,\n\nAdjunto tu boleta de pago del mes.\n*Total Neto:* S/ ${neto.toFixed(2)}\n\nLink: ${result.url}`;
+        const texto = `Hola *${d.nombre}*,\n\nAdjunto tu boleta de pago del mes.\n\nLink: ${result.url}`;
 
         window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`, '_blank');
 
@@ -1782,9 +1787,15 @@ chartPrincipal = new Chart(
         if (userRole === 'user') {
             document.getElementById('stat-total-personal').innerText  = '1';
             document.getElementById('stat-planilla-total').innerText  = 'Ver Boleta';
+            const cp = document.getElementById('stat-presupuesto-container');
+            if (cp) cp.style.display = 'none';
             return;
         }
         const totalNeto = data.reduce((s, d) => s + calcularNeto(d), 0);
+        // Presupuesto de Planilla: sueldo bruto + bono, sin descuentos (no cambia al agregar deudas)
+        const presupuesto = data.reduce((s, d) => s + (Number(d.pagado) || 0) + (Number(d.bono) || 0), 0);
+        const elPres = document.getElementById('stat-presupuesto-planilla');
+        if (elPres) elPres.innerText = `S/ ${presupuesto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
         document.getElementById('stat-total-personal').innerText =
             data.length;
         document.getElementById('stat-planilla-total').innerText =
