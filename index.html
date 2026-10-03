@@ -1821,13 +1821,22 @@ inputSb.style.background = '#f0f4ff';
     }
 
     // Resto de campos mensuales
-    document.getElementById('edit-al').value            = d.adelantos   || 0;
+    // Los 4 campos con parte "Deudas" muestran SOLO lo manual; lo de Deudas se suma
+    // aparte en el resumen (window._deudaCols). Así al guardar no se duplica.
+    // (Si el servidor es antiguo y no manda *_manual, se comporta como antes.)
+    window._deudaCols = {
+        adelantos: Number(d.adelantos_deuda) || 0,
+        prestamos: Number(d.prestamos_deuda) || 0,
+        pension:   Number(d.pension_deuda)   || 0,
+        tardanza:  Number(d.tardanza_deuda)  || 0
+    };
+    document.getElementById('edit-al').value            = (d.adelantos_manual ?? d.adelantos) || 0;
     document.getElementById('edit-fl').value            = d.faltas      || 0;
-    document.getElementById('edit-pen').value           = d.pension     || 0;
-    document.getElementById('edit-tar').value           = d.tardanza    || 0;
+    document.getElementById('edit-pen').value           = (d.pension_manual ?? d.pension) || 0;
+    document.getElementById('edit-tar').value           = (d.tardanza_manual ?? d.tardanza) || 0;
     document.getElementById('edit-bono').value          = d.bono        || 0;
     document.getElementById('edit-creditos').value      = d.creditos    || 0;
-    document.getElementById('edit-prestamos').value     = d.prestamos   || 0;
+    document.getElementById('edit-prestamos').value     = (d.prestamos_manual ?? d.prestamos) || 0;
     document.getElementById('edit-desmrito-monto').value = d.desmrito_monto || 0;
     // Actividades:
     // ←←← NUEVO CAMPO: ACTIVIDADES (editable)
@@ -2060,6 +2069,13 @@ async function pdActualizarEstado() {
         if (!info.tieneRegistros) { badge.className = 'badge bg-secondary'; badge.innerText = 'Sin movimientos'; }
         else if (info.confirmado) { badge.className = 'badge bg-success'; badge.innerText = 'Confirmado'; }
         else { badge.className = 'badge bg-warning text-dark'; badge.innerText = 'Pendiente'; }
+    }
+
+    // Parte de Deudas que va a columnas propias (se suma en el resumen, no se guarda desde aquí)
+    if (info.columnas && (info.confirmado || !info.tieneRegistros)) {
+        window._deudaCols = info.tieneRegistros
+            ? info.columnas
+            : { adelantos: 0, prestamos: 0, pension: 0, tardanza: 0 };
     }
 
     if (info.tieneRegistros && info.confirmado) {
@@ -2305,15 +2321,24 @@ async function pdConfirmar() {
                 docente.afp = tipoAfp;   
                 docente.tipo_afp = tipoAfp;        // ← Actualizar en memoria
                 // Actualizar también otros campos mensuales si quieres
-                docente.adelantos = payload.adelantos;
+                const dcG = window._deudaCols || { adelantos: 0, prestamos: 0, pension: 0, tardanza: 0 };
+                docente.adelantos_manual = payload.adelantos;
+                docente.pension_manual   = payload.pension;
+                docente.tardanza_manual  = payload.tardanza;
+                docente.prestamos_manual = payload.prestamos;
+                docente.adelantos_deuda = dcG.adelantos;
+                docente.prestamos_deuda = dcG.prestamos;
+                docente.pension_deuda   = dcG.pension;
+                docente.tardanza_deuda  = dcG.tardanza;
+                docente.adelantos = payload.adelantos + dcG.adelantos;
                 docente.faltas = payload.faltas;
                 docente.otros_descuentos   = payload.otros_descuentos;
                 docente.otros_desc_detalle = payload.otros_desc_detalle;
-                docente.pension = payload.pension;
-                docente.tardanza = payload.tardanza;
+                docente.pension = payload.pension + dcG.pension;
+                docente.tardanza = payload.tardanza + dcG.tardanza;
                 docente.bono = payload.bono;
                 docente.creditos = payload.creditos;
-                docente.prestamos = payload.prestamos;
+                docente.prestamos = payload.prestamos + dcG.prestamos;
                 docente.desmrito_nivel = payload.desmrito_nivel;
                 docente.desmrito_monto = payload.desmrito_monto;
                 docente.num_faltas    = payload.num_faltas;
@@ -2818,12 +2843,13 @@ for (let col = 1; col <= 21; col++) {
         const sb      = Number(document.getElementById('edit-sb').value) || 0;
         const pagado  = Number(document.getElementById('edit-pagado') ? document.getElementById('edit-pagado').value : 0) || 0;
         const bono    = Number(document.getElementById('edit-bono').value) || 0;
-        const adelantos = Number(document.getElementById('edit-al').value) || 0;
+        const dc = window._deudaCols || { adelantos: 0, prestamos: 0, pension: 0, tardanza: 0 };
+        const adelantos = (Number(document.getElementById('edit-al').value) || 0) + dc.adelantos;
         const faltas    = Number(document.getElementById('edit-fl').value) || 0;
-        const pension   = Number(document.getElementById('edit-pen').value) || 0;
-        const tardanza  = Number(document.getElementById('edit-tar').value) || 0;
+        const pension   = (Number(document.getElementById('edit-pen').value) || 0) + dc.pension;
+        const tardanza  = (Number(document.getElementById('edit-tar').value) || 0) + dc.tardanza;
         const creditos  = Number(document.getElementById('edit-creditos').value) || 0;
-        const prestamos = Number(document.getElementById('edit-prestamos').value) || 0;
+        const prestamos = (Number(document.getElementById('edit-prestamos').value) || 0) + dc.prestamos;
         const desmrito  = Number(document.getElementById('edit-desmrito-monto').value) || 0;
         const actividades = Number(document.getElementById('edit-actividades').value) || 0;
         const otrosDesc = Number(document.getElementById('edit-otros-desc')?.value) || 0;

@@ -339,6 +339,17 @@ app.get('/api/docentes', verificarToken, (req, res) => {
                IFNULL(p.tipo_salud,          'ESSALUD')    AS tipo_salud,
                IFNULL(p.creditos,            0)            AS creditos,
                (IFNULL(p.prestamos,0) + IFNULL(p.prestamos_deuda,0)) AS prestamos,
+               -- Parte MANUAL (la que escribe el admin en el modal) y parte que viene de
+               -- Uniformes/Deudas, por separado. El modal edita solo la manual; si guardara
+               -- la suma, la parte de Deudas se duplicaría en cada guardado.
+               IFNULL(p.adelantos, 0)        AS adelantos_manual,
+               IFNULL(p.prestamos, 0)        AS prestamos_manual,
+               IFNULL(p.pension,   0)        AS pension_manual,
+               IFNULL(p.tardanza,  0)        AS tardanza_manual,
+               IFNULL(p.adelantos_deuda, 0)  AS adelantos_deuda,
+               IFNULL(p.prestamos_deuda, 0)  AS prestamos_deuda,
+               IFNULL(p.pension_deuda,   0)  AS pension_deuda,
+               IFNULL(p.tardanza_deuda,  0)  AS tardanza_deuda,
                IFNULL(p.desmrito_nivel,      '')           AS desmrito_nivel,
                IFNULL(p.desmrito_monto,      0)            AS desmrito_monto,
                IFNULL(p.num_faltas,          0)            AS num_faltas,
@@ -874,11 +885,26 @@ app.get('/api/deudas/:id_docente/resumen', verificarToken, (req, res) => {
                         [id_docente, mes, anio],
                         (err3, detalleRows) => {
                             if (err3) return res.status(500).json({ error: err3.message });
+                            // Los tipos con columna propia (ADELANTO, PRESTAMOS, PENSIÓN, TARDANZA)
+                            // ya se suman en adelantos/prestamos/pension/tardanza de la planilla
+                            // (ver empujarDeudaAPlanilla). Aquí solo devolvemos el resto, para no
+                            // descontarlos dos veces en el resumen del modal.
+                            const detalleOtros = detalleRows.filter(f => !TIPOS_CON_COLUMNA_PROPIA[f.tipo]);
+                            const totalOtros = detalleOtros.reduce((acc, f) => acc + (Number(f.monto) || 0), 0);
+                            // Suma por columna de los tipos con columna propia (lo que
+                            // empujarDeudaAPlanilla dejará en *_deuda al confirmar).
+                            const columnas = { adelantos: 0, prestamos: 0, pension: 0, tardanza: 0 };
+                            detalleRows.forEach(f => {
+                                const col = TIPOS_CON_COLUMNA_PROPIA[f.tipo];
+                                if (!col) return;
+                                columnas[col.replace('_deuda', '')] += Number(f.monto) || 0;
+                            });
                             res.json({
-                                total: sumRows[0].total,
+                                columnas,
+                                total: totalOtros,
                                 confirmado: confRows.length ? !!confRows[0].confirmado : false,
-                                tieneRegistros: sumRows[0].total > 0,
-                                detalle: detalleRows
+                                tieneRegistros: sumRows[0].total > 0,   // sigue contando TODOS los tipos
+                                detalle: detalleOtros
                             });
                         }
                     );
