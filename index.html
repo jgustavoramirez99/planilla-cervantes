@@ -827,11 +827,11 @@
                             <label class="form-label small fw-bold">Préstamos (S/)</label>
                             <input type="number" id="edit-prestamos" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
-                        <div class="col-6 col-md-4">
+                        <div class="col-6 col-md-4 campo-solo-super">
                             <label class="form-label small fw-bold">Pensión por Hijo (S/)</label>
                             <input type="number" id="edit-pen" class="form-control form-control-sm" min="0" placeholder="0.00" oninput="actualizarResumenNeto()">
                         </div>
-                        <div class="col-6 col-md-4">
+                        <div class="col-6 col-md-4 campo-solo-super">
                             <label class="form-label small fw-bold">Actividades (S/)</label>
                             <input type="number" id="edit-actividades" class="form-control form-control-sm" value="0" step="0.01" oninput="actualizarResumenNeto()">
                             <small class="text-muted">Monto por actividades este mes</small>
@@ -914,7 +914,7 @@
                 </div>
 
                 <!-- ══ FALTAS Y TARDANZAS (SOLO MONTOS MANUALES) ══ -->
-                <div class="mb-3">
+                <div class="mb-3 campo-solo-super">
                     <div class="fw-bold small text-uppercase text-secondary mb-2">
                         <i class="fa-solid fa-clock me-1"></i>Faltas y Tardanzas
                     </div>
@@ -933,7 +933,7 @@
                 </div>
 
                 <!-- ══ DESCUENTO POR DESMÉRITO ══ -->
-                <div class="mb-3">
+                <div class="mb-3 campo-solo-super">
                     <div class="fw-bold small text-uppercase text-secondary mb-2">
                         <i class="fa-solid fa-triangle-exclamation me-1"></i>Descuento por Desmérito
                     </div>
@@ -1797,6 +1797,10 @@ function abrirModal(id) {
     if (userRole !== 'admin' && userRole !== 'superadmin') return;
     const d = docentesData.find(doc => doc.id_docente == id);
     if (!d) return;
+
+    // Pensión, Actividades, Faltas, Tardanzas y Desmérito: solo los ve el superadmin
+    // (quien digita los registra como tipos en Deudas). Los valores guardados se conservan y suman igual.
+    document.querySelectorAll('.campo-solo-super').forEach(el => el.classList.toggle('d-none', userRole !== 'superadmin'));
 
     // Info del docente
     document.getElementById('edit-id').value            = d.id_docente;
