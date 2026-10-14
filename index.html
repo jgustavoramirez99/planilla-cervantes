@@ -2516,10 +2516,25 @@ ws.getCell('B2').style = headerStyle;
         const prest = Number(d.prestamos) || 0;
         const pen = Number(d.pension) || 0;
         const tard = (Number(d.tardanza)||0) + (Number(d.faltas)||0);
-        const activ = Number(d.actividades) || 0;
+        const activManual = Number(d.actividades) || 0;
         const desmr = Number(d.desmrito_monto) || 0;
         // Uniformes y Deudas confirmadas (panel "Control de Uniformes y Deudas") — columna aparte, NO se mezcla con DESCUENTOS
-        const otrosDesc = Number(d.otros_descuentos) || 0;
+        const otrosDescTotal = Number(d.otros_descuentos) || 0;
+        // Gastos de Eventos Especiales (tipo EVENTOS del panel Uniformes y Deudas):
+        // se muestran en ACTIVIDADES y se sacan de UNIF./DEUDAS. El NETO no cambia
+        // (solo se reubica el monto entre las dos columnas, nunca se suma dos veces).
+        let eventosDeuda = 0;
+        try {
+            const detalleEx = JSON.parse(d.otros_desc_detalle || '[]');
+            if (Array.isArray(detalleEx)) {
+                detalleEx.forEach(it => {
+                    if (String(it.tipo || '').trim().toUpperCase() === 'EVENTOS') eventosDeuda += Number(it.monto) || 0;
+                });
+            }
+        } catch (e) { /* detalle antiguo en texto plano: no se separa nada */ }
+        eventosDeuda = parseFloat(Math.min(eventosDeuda, otrosDescTotal).toFixed(2));
+        const activ = parseFloat((activManual + eventosDeuda).toFixed(2));
+        const otrosDesc = parseFloat((otrosDescTotal - eventosDeuda).toFixed(2));
         const neto = parseFloat((pagado + bono - afpMonto - adel - cred - prest - pen - tard - activ - desmr - otrosDesc).toFixed(2));
         const consolidado = parseFloat((pagado + esaludEmpleador + bono).toFixed(2));
         // Columna DESCUENTOS: SOLO tardanzas + faltas + desmérito (Uniformes/Deudas va en su propia columna, no aquí)
