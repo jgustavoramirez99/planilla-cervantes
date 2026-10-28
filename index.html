@@ -1360,7 +1360,7 @@ async function enviarWhatsApp(id) {
 
         const result = await uploadRes.json();
 
-        const texto = `Hola *${d.nombre}*,\n\nAdjunto tu boleta de pago del mes.\n\nLink: ${result.url}`;
+        const texto = `Hola *${d.nombre}*,\n\nTe enviamos tu boleta del mes, gracias por dar siempre lo mejor de ti. En Cervantes School valoramos tu esfuerzo.\n\nLink: ${result.url}`;
 
         window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`, '_blank');
 
