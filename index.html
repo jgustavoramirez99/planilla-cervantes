@@ -1904,12 +1904,18 @@ async function pdInicializar() {
     document.getElementById('pd-tipos-panel').style.display = 'none';
 
     const mes = parseInt(document.getElementById('filtro-mes').value);
-    const anio = new Date().getFullYear();
-    const hoy = new Date();
-    const esMesActual = (mes === hoy.getMonth() + 1 && anio === hoy.getFullYear());
-    document.getElementById('pd-fecha').value = esMesActual
-        ? hoy.toISOString().split('T')[0]
-        : `${anio}-${String(mes).padStart(2, '0')}-01`;
+const anio = new Date().getFullYear();
+const hoy = new Date();
+const esMesActual = (mes === hoy.getMonth() + 1 && anio === hoy.getFullYear());
+
+// Fecha en hora LOCAL (toISOString usa UTC y de noche salta al día siguiente)
+const hh = hoy.getFullYear();
+const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+const dd = String(hoy.getDate()).padStart(2, '0');
+
+document.getElementById('pd-fecha').value = esMesActual
+    ? `${hh}-${mm}-${dd}`
+    : `${anio}-${String(mes).padStart(2, '0')}-01`;
 
     await pdCargarTabla();
 }
