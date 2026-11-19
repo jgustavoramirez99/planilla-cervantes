@@ -37,7 +37,17 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '20mb' }));
-app.use(express.static(path.join(__dirname, './')));
+// Solo se publican estos archivos. NUNCA publicar la carpeta entera:
+// ahí hay código, respaldos y datos del personal.
+const ARCHIVOS_PUBLICOS = new Set([
+    'index.html', 'sw.js', 'manifest.json', 'logo.png', 'fondo1.png', 'fondo2.png', 'reset-password.html'
+]);
+app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const nombre = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+    if (!ARCHIVOS_PUBLICOS.has(nombre)) return next();
+    res.sendFile(path.join(__dirname, nombre), (err) => { if (err && !res.headersSent) next(); });
+});
 
 // ============================================================
 // CONEXIÓN A LA BASE DE DATOS — Una sola vez, sin doble connect

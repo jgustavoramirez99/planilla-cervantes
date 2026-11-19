@@ -4,3 +4,6 @@ ca.pem
 *.sql
 _backup_server_antes_2fa.js
 _backup_index_antes_2fa.html
+_backup_2026-10-02/
+backup_planilla_*.zip
+_backup_server_antes_static.js
