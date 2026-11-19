@@ -209,6 +209,38 @@
                 INGRESAR AL SISTEMA
             </button>
         </form>
+
+        <!-- ===== PASO 2: VERIFICACIÓN EN DOS PASOS ===== -->
+        <div id="panel-2fa" class="text-start d-none">
+            <h6 class="fw-bold mb-3"><i class="fa-solid fa-shield-halved me-2"></i>Verificación en dos pasos</h6>
+
+            <div id="tfa-email-box" class="d-none">
+                <p class="small text-muted">Tu cuenta aún no tiene correo. Escríbelo para continuar con la configuración.</p>
+                <input type="email" id="tfa-email" class="form-control mb-2" placeholder="correo@ejemplo.com" autocomplete="email">
+                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="tfaContinuarSetup()">CONTINUAR</button>
+            </div>
+
+            <div id="tfa-qr-box" class="d-none text-center">
+                <p class="small text-muted text-start mb-2">
+                    1. Abre <b>Google Authenticator</b> o <b>Microsoft Authenticator</b> en tu celular.<br>
+                    2. Toca <b>+</b> y elige <b>Escanear código QR</b>.
+                </p>
+                <img id="tfa-qr" alt="Código QR" style="width:200px;height:200px;" class="border rounded mb-2">
+                <p class="small text-muted mb-2">¿No puedes escanear? Elige "Ingresar clave" y escribe:<br>
+                    <code id="tfa-secret" class="user-select-all"></code></p>
+            </div>
+
+            <div id="tfa-code-box" class="d-none">
+                <label class="form-label small fw-bold">Código de 6 dígitos de tu app</label>
+                <input type="text" id="tfa-code" class="form-control text-center fs-4 fw-bold" inputmode="numeric" maxlength="6"
+                       autocomplete="one-time-code" placeholder="000000" style="letter-spacing:6px;">
+                <button type="button" id="tfa-btn" class="btn btn-primary w-100 fw-bold mt-2" onclick="tfaEnviarCodigo()">VERIFICAR E INGRESAR</button>
+            </div>
+
+            <div id="tfa-error" class="alert alert-danger d-none py-2 small mt-2 mb-0"></div>
+            <div class="text-center mt-3"><a href="#" class="small" onclick="tfaVolver(); return false;">&larr; Volver</a></div>
+        </div>
+
     </div>
     </div><!-- /login-panel -->
 
@@ -230,6 +262,9 @@
             <div class="text-end text-white">
                 <span id="badge-rol" class="badge bg-danger mb-1 d-block"></span>
     
+                <button id="btn-seguridad" class="btn btn-outline-info btn-sm me-2 d-none" onclick="abrirModalSeguridad()">
+    <i class="fa-solid fa-shield-halved me-1"></i> Seguridad
+</button>
                 <button class="btn btn-outline-warning btn-sm me-2" onclick="abrirModalCambiarPass()">
     <i class="fa-solid fa-key me-1"></i> Cambiar Contraseña
 </button>
@@ -512,6 +547,61 @@
                 </div>
 
             </div>
+        </div>
+    </div>
+</div>
+<!-- ===================== MODAL SEGURIDAD (2FA) ===================== -->
+<div class="modal fade" id="modalSeguridad" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#2c3e50,#16a085);">
+                <h5 class="modal-title fw-bold mb-0"><i class="fa-solid fa-shield-halved me-2"></i>Seguridad — Verificación en dos pasos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div id="seg-estado" class="mb-3 fw-bold">Cargando…</div>
+
+                <div id="seg-activar-box" class="d-none">
+                    <p class="small text-muted">Protege tu cuenta con un código de tu celular (Google o Microsoft Authenticator).</p>
+                    <div id="seg-email-box" class="d-none mb-2">
+                        <input type="email" id="seg-email" class="form-control" placeholder="Tu correo (obligatorio para activar)">
+                    </div>
+                    <button class="btn btn-success btn-sm fw-bold" onclick="segActivar()"><i class="fa-solid fa-qrcode me-1"></i>Activar</button>
+                </div>
+
+                <div id="seg-qr-box" class="d-none text-center">
+                    <p class="small text-muted text-start mb-2">Escanea el QR con la app y escribe el código que te muestre.</p>
+                    <img id="seg-qr" alt="Código QR" style="width:200px;height:200px;" class="border rounded mb-2">
+                    <p class="small text-muted mb-2">Clave manual: <code id="seg-secret" class="user-select-all"></code></p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <input type="text" id="seg-code" class="form-control text-center fw-bold" style="max-width:160px;letter-spacing:4px;" inputmode="numeric" maxlength="6" placeholder="000000">
+                        <button class="btn btn-primary fw-bold" onclick="segConfirmar()">Confirmar</button>
+                    </div>
+                </div>
+
+                <div id="seg-desactivar-box" class="d-none">
+                    <p class="small text-muted mb-2">Para desactivarla escribe un código actual de tu app:</p>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="seg-code-off" class="form-control text-center fw-bold" style="max-width:160px;letter-spacing:4px;" inputmode="numeric" maxlength="6" placeholder="000000">
+                        <button class="btn btn-outline-danger btn-sm fw-bold" onclick="segDesactivar()">Desactivar</button>
+                    </div>
+                </div>
+
+                <div id="seg-msg" class="alert d-none py-2 small mt-3 mb-0"></div>
+
+                <div id="seg-cuentas-box" class="d-none mt-4">
+                    <hr>
+                    <h6 class="fw-bold"><i class="fa-solid fa-users-gear me-2"></i>Cuentas administradoras</h6>
+                    <p class="small text-muted">Si un administrador perdió su celular, usa "Reiniciar 2FA": en su próximo ingreso configurará uno nuevo.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Correo</th><th>2FA</th><th></th></tr></thead>
+                            <tbody id="seg-cuentas-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button></div>
         </div>
     </div>
 </div>
@@ -1085,7 +1175,9 @@
 
             const data = await res.json();
 
-            if (res.ok && data.success) {
+            if (res.ok && data.success && data.requires2fa) {
+                mostrarPaso2fa(data);
+            } else if (res.ok && data.success) {
 
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('usuario', data.user || u);
@@ -1127,6 +1219,7 @@
     document.getElementById('seccion-principal').style.display = 'block';
     document.getElementById('banner-bienvenida').style.display = 'block';
     document.getElementById('badge-rol').innerText = `MODO: ${rol.toUpperCase()}`;
+    document.getElementById('btn-seguridad').classList.toggle('d-none', !(rol === 'admin' || rol === 'superadmin'));
     document.getElementById('texto-bienvenida').innerText = `Bienvenido, ${userNombre}`;
 
     if (rol === 'user') {
@@ -3659,6 +3752,238 @@ async function reactivarDocente(id, nombre) {
     } else {
         alert('❌ Error: ' + (data.error || 'No se pudo reactivar.'));
     }
+}
+
+// ============================================================
+// 2FA — paso extra en el login
+// ============================================================
+let tfaTemp = null, tfaModo = null, tfaEmail = '';
+
+function _tfaEsc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function tfaLlamar(ruta, body, token, metodo) {
+    const r = await fetch(`${SERVER_BASE}${ruta}`, {
+        method: metodo || 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { 'Authorization': 'Bearer ' + token } : {}),
+        body: metodo === 'GET' ? undefined : JSON.stringify(body || {})
+    });
+    let data = {};
+    try { data = await r.json(); } catch (e) {}
+    return { ok: r.ok, status: r.status, data };
+}
+
+function tfaMostrarError(msg) {
+    const el = document.getElementById('tfa-error');
+    el.textContent = msg || '';
+    el.classList.toggle('d-none', !msg);
+}
+
+function mostrarPaso2fa(data) {
+    tfaTemp = data.tempToken;
+    tfaModo = data.mode === 'setup' ? 'activate' : 'verify';
+    tfaEmail = '';
+    document.getElementById('form-login').classList.add('d-none');
+    document.getElementById('alerta-login').classList.add('d-none');
+    document.getElementById('panel-2fa').classList.remove('d-none');
+    ['tfa-email-box', 'tfa-qr-box', 'tfa-code-box'].forEach(id => document.getElementById(id).classList.add('d-none'));
+    tfaMostrarError('');
+    document.getElementById('tfa-code').value = '';
+
+    if (tfaModo === 'verify') {
+        document.getElementById('tfa-code-box').classList.remove('d-none');
+        document.getElementById('tfa-code').focus();
+    } else if (data.needsEmail) {
+        document.getElementById('tfa-email-box').classList.remove('d-none');
+        document.getElementById('tfa-email').focus();
+    } else {
+        tfaIniciarSetup();
+    }
+}
+
+function tfaContinuarSetup() {
+    const correo = document.getElementById('tfa-email').value.trim();
+    if (!correo) return tfaMostrarError('Escribe tu correo.');
+    tfaEmail = correo;
+    tfaIniciarSetup();
+}
+
+async function tfaIniciarSetup() {
+    tfaMostrarError('');
+    try {
+        const r = await tfaLlamar('/api/2fa/setup', tfaEmail ? { email: tfaEmail } : {}, tfaTemp);
+        if (r.ok && r.data.success) {
+            document.getElementById('tfa-email-box').classList.add('d-none');
+            document.getElementById('tfa-qr').src = r.data.qr;
+            document.getElementById('tfa-secret').textContent = r.data.secret;
+            document.getElementById('tfa-qr-box').classList.remove('d-none');
+            document.getElementById('tfa-code-box').classList.remove('d-none');
+            document.getElementById('tfa-code').focus();
+        } else if (r.data.needsEmail) {
+            document.getElementById('tfa-email-box').classList.remove('d-none');
+            tfaMostrarError(r.data.message || 'Escribe un correo válido.');
+        } else {
+            tfaMostrarError(r.data.message || 'No se pudo iniciar la configuración.');
+        }
+    } catch (e) { tfaMostrarError('Error de conexión. Intenta de nuevo.'); }
+}
+
+async function tfaEnviarCodigo() {
+    const code = document.getElementById('tfa-code').value.replace(/\D/g, '');
+    if (code.length !== 6) return tfaMostrarError('Escribe los 6 dígitos del código.');
+    const btn = document.getElementById('tfa-btn');
+    btn.disabled = true; tfaMostrarError('');
+    try {
+        const ruta = tfaModo === 'activate' ? '/api/2fa/activate' : '/api/2fa/verify';
+        const r = await tfaLlamar(ruta, { code }, tfaTemp);
+        if (r.ok && r.data.success && r.data.token) {
+            completar2fa(r.data);
+        } else {
+            tfaMostrarError(r.data.message || 'Código incorrecto.');
+            document.getElementById('tfa-code').value = '';
+        }
+    } catch (e) { tfaMostrarError('Error de conexión. Intenta de nuevo.'); }
+    finally { btn.disabled = false; }
+}
+
+function tfaVolver() {
+    tfaTemp = null; tfaModo = null; tfaEmail = '';
+    document.getElementById('panel-2fa').classList.add('d-none');
+    document.getElementById('form-login').classList.remove('d-none');
+    document.getElementById('pass').value = '';
+    tfaMostrarError('');
+}
+
+function completar2fa(data) {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('usuario', data.user || '');
+    const ultimoMes = localStorage.getItem('ultimo_mes');
+    if (ultimoMes) document.getElementById('filtro-mes').value = ultimoMes;
+    userNombre = data.nombre;
+    userDni    = data.dni || '';
+    tfaTemp = null;
+    document.getElementById('panel-2fa').classList.add('d-none');
+    document.getElementById('form-login').classList.remove('d-none');
+    document.getElementById('pass').value = '';
+    iniciarSistema(data.role);
+}
+
+document.getElementById('tfa-code').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); tfaEnviarCodigo(); }
+});
+
+// ============================================================
+// 2FA — modal "Seguridad" (mi cuenta + reinicio por superadmin)
+// ============================================================
+function segMsg(texto, tipo) {
+    const el = document.getElementById('seg-msg');
+    el.className = 'alert py-2 small mt-3 mb-0 alert-' + (tipo || 'info') + (texto ? '' : ' d-none');
+    el.textContent = texto || '';
+}
+
+function abrirModalSeguridad() {
+    segMsg('');
+    ['seg-activar-box', 'seg-qr-box', 'seg-desactivar-box', 'seg-cuentas-box', 'seg-email-box'].forEach(id => document.getElementById(id).classList.add('d-none'));
+    ['seg-email', 'seg-code', 'seg-code-off'].forEach(id => document.getElementById(id).value = '');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSeguridad')).show();
+    cargarEstado2fa();
+    if (userRole === 'superadmin') cargarCuentas2fa();
+}
+
+async function cargarEstado2fa() {
+    const est = document.getElementById('seg-estado');
+    try {
+        const r = await tfaLlamar('/api/2fa/estado', null, localStorage.getItem('token'), 'GET');
+        if (!r.ok) { est.textContent = r.data.message || r.data.error || 'No se pudo consultar.'; return; }
+        const d = r.data;
+        document.getElementById('seg-qr-box').classList.add('d-none');
+        document.getElementById('seg-activar-box').classList.add('d-none');
+        document.getElementById('seg-desactivar-box').classList.add('d-none');
+        if (d.enabled) {
+            est.innerHTML = '<span class="badge bg-success me-2">ACTIVADA</span> Tu cuenta pide un código de tu celular al ingresar.';
+            if (!d.requerido) document.getElementById('seg-desactivar-box').classList.remove('d-none');
+            else est.innerHTML += '<div class="small text-muted fw-normal mt-1">Es obligatoria para tu rol; no se puede desactivar.</div>';
+        } else {
+            est.innerHTML = '<span class="badge bg-secondary me-2">DESACTIVADA</span>';
+            if (d.puedeActivar) {
+                document.getElementById('seg-activar-box').classList.remove('d-none');
+                document.getElementById('seg-email-box').classList.toggle('d-none', !!d.tieneEmail);
+            }
+        }
+    } catch (e) { est.textContent = 'Error de conexión.'; }
+}
+
+async function segActivar() {
+    segMsg('');
+    const email = document.getElementById('seg-email').value.trim();
+    try {
+        const r = await tfaLlamar('/api/2fa/setup', email ? { email } : {}, localStorage.getItem('token'));
+        if (r.ok && r.data.success) {
+            document.getElementById('seg-qr').src = r.data.qr;
+            document.getElementById('seg-secret').textContent = r.data.secret;
+            document.getElementById('seg-activar-box').classList.add('d-none');
+            document.getElementById('seg-qr-box').classList.remove('d-none');
+            document.getElementById('seg-code').focus();
+        } else {
+            if (r.data.needsEmail) document.getElementById('seg-email-box').classList.remove('d-none');
+            segMsg(r.data.message || 'No se pudo generar el QR.', 'danger');
+        }
+    } catch (e) { segMsg('Error de conexión.', 'danger'); }
+}
+
+async function segConfirmar() {
+    const code = document.getElementById('seg-code').value.replace(/\D/g, '');
+    if (code.length !== 6) return segMsg('Escribe los 6 dígitos.', 'warning');
+    try {
+        const r = await tfaLlamar('/api/2fa/activate', { code }, localStorage.getItem('token'));
+        if (r.ok && r.data.success) {
+            segMsg('✅ Verificación en dos pasos activada.', 'success');
+            document.getElementById('seg-code').value = '';
+            cargarEstado2fa();
+            if (userRole === 'superadmin') cargarCuentas2fa();
+        } else segMsg(r.data.message || 'Código incorrecto.', 'danger');
+    } catch (e) { segMsg('Error de conexión.', 'danger'); }
+}
+
+async function segDesactivar() {
+    const code = document.getElementById('seg-code-off').value.replace(/\D/g, '');
+    if (code.length !== 6) return segMsg('Escribe los 6 dígitos.', 'warning');
+    try {
+        const r = await tfaLlamar('/api/2fa/desactivar', { code }, localStorage.getItem('token'));
+        if (r.ok && r.data.success) {
+            segMsg('Verificación en dos pasos desactivada.', 'success');
+            document.getElementById('seg-code-off').value = '';
+            cargarEstado2fa();
+            if (userRole === 'superadmin') cargarCuentas2fa();
+        } else segMsg(r.data.message || 'Código incorrecto.', 'danger');
+    } catch (e) { segMsg('Error de conexión.', 'danger'); }
+}
+
+async function cargarCuentas2fa() {
+    try {
+        const r = await tfaLlamar('/api/2fa/cuentas', null, localStorage.getItem('token'), 'GET');
+        if (!r.ok || !r.data.success) return;
+        document.getElementById('seg-cuentas-box').classList.remove('d-none');
+        document.getElementById('seg-cuentas-body').innerHTML = r.data.cuentas.map(c => `
+            <tr>
+                <td>${_tfaEsc(c.nombre)}</td>
+                <td>${_tfaEsc(c.user)}</td>
+                <td>${_tfaEsc(c.role)}</td>
+                <td class="small">${_tfaEsc(c.email) || '<span class="text-muted">—</span>'}</td>
+                <td>${c.enabled ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-secondary">No</span>'}</td>
+                <td class="text-end">${c.enabled ? `<button class="btn btn-outline-danger btn-sm" onclick="reiniciar2fa(${Number(c.id)}, '${_tfaEsc(c.user).replace(/'/g, '')}')">Reiniciar 2FA</button>` : ''}</td>
+            </tr>`).join('');
+    } catch (e) {}
+}
+
+async function reiniciar2fa(id, usuario) {
+    if (!confirm(`¿Reiniciar la verificación en dos pasos de "${usuario}"?\n\nEn su próximo ingreso tendrá que configurarla de nuevo con su celular.`)) return;
+    try {
+        const r = await tfaLlamar('/api/2fa/reiniciar/' + id, {}, localStorage.getItem('token'));
+        segMsg(r.ok && r.data.success ? '✅ ' + r.data.message : (r.data.message || 'No se pudo reiniciar.'), r.ok ? 'success' : 'danger');
+        cargarCuentas2fa();
+    } catch (e) { segMsg('Error de conexión.', 'danger'); }
 }
 
 function abrirModalCambiarPass() {

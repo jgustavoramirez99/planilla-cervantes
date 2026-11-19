@@ -83,10 +83,33 @@ function verificarToken(req, res, next) {
 
     try {
         req.usuario = jwt.verify(token, JWT_SECRET);
+        // Solo sirven tokens de sesión completos: se rechazan los temporales de 2FA
+        // (purpose) y los de "recuperar contraseña" (sin role).
+        if (!req.usuario.role || req.usuario.purpose) {
+            return res.status(401).json({ error: 'Token inválido.' });
+        }
         next();
     } catch (err) {
         return res.status(401).json({ error: 'Token expirado o inválido.' });
     }
+}
+
+// Arma la respuesta de sesión (token de 8h + datos del usuario)
+function emitirSesion(cuenta) {
+    const token = jwt.sign(
+        { user: cuenta.user, role: cuenta.role, dni: cuenta.dni },
+        JWT_SECRET,
+        { expiresIn: '8h' }
+    );
+    return {
+        success : true,
+        token,
+        user    : cuenta.user,
+        role    : cuenta.role,
+        nombre  : cuenta.nombre,
+        dni     : cuenta.dni,
+        telefono: cuenta.telefono
+    };
 }
 
 // ============================================================
@@ -115,23 +138,19 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
 
-        const token = jwt.sign(
-            { user: cuenta.user, role: cuenta.role, dni: cuenta.dni },
-            JWT_SECRET,
-            { expiresIn: '8h' }
-        );
+        // 2FA: si la cuenta lo tiene activo (o su rol lo exige) hay un segundo paso
+        if (twofa.requiereSegundoPaso(cuenta)) {
+            return res.json(twofa.iniciarDesafio(cuenta));
+        }
 
-        res.json({
-            success : true,
-            token,
-            user    : cuenta.user,
-            role    : cuenta.role,
-            nombre  : cuenta.nombre,
-            dni     : cuenta.dni,
-            telefono: cuenta.telefono
-        });
+        res.json(emitirSesion(cuenta));
     });
 });
+
+// ============================================================
+// 2FA (TOTP con app autenticadora) — ver twofa.js
+// ============================================================
+const twofa = require('./twofa').registrar(app, { db, JWT_SECRET, verificarToken, emitirSesion });
 
 // ============================================================
 // PUT /api/usuario/cambiar-password
@@ -278,8 +297,10 @@ app.get('/api/personal', verificarToken, (req, res) => {
         return res.status(403).json({ error: 'Acceso denegado.' });
     }
 
+    // El admin no debe ver que existe el superadmin
+    const filtro = req.usuario.role === 'superadmin' ? '' : " WHERE role <> 'superadmin'";
     db.query(
-        'SELECT id, user, nombre, role, dni, telefono, email, created_at FROM usuarios ORDER BY nombre',
+        'SELECT id, user, nombre, role, dni, telefono, email, created_at FROM usuarios' + filtro + ' ORDER BY nombre',
         (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json(results);
@@ -297,6 +318,19 @@ app.put('/api/personal/:id', verificarToken, async (req, res) => {
 
     const { nombre, email, telefono, dni, role, nuevaPassword } = req.body;
     const id = parseInt(req.params.id);
+
+    // Un admin no puede crear superadmins ni tocar cuentas de superadmin
+    if (req.usuario.role !== 'superadmin') {
+        if (role === 'superadmin') {
+            return res.status(400).json({ error: 'Rol no válido.' });
+        }
+        const objetivo = await new Promise((resolve) =>
+            db.query('SELECT role FROM usuarios WHERE id = ?', [id], (e, r) => resolve(e || !r.length ? null : r[0])));
+        if (objetivo && objetivo.role === 'superadmin') {
+            // Respuesta neutra: para un admin esa cuenta "no existe"
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+    }
 
     let sql    = 'UPDATE usuarios SET nombre=?, email=?, telefono=?, dni=?, role=?';
     let params = [nombre, email, telefono, dni, role];
