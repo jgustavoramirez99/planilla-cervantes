@@ -597,6 +597,32 @@
 
                 <div id="seg-msg" class="alert d-none py-2 small mt-3 mb-0"></div>
 
+                <div id="seg-usuario-box" class="mt-4">
+                    <hr>
+                    <h6 class="fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Cambiar mi nombre de usuario</h6>
+                    <p class="small text-muted mb-2">Al guardar se cerrará la sesión y entrarás con el nuevo usuario. Tu verificación en dos pasos se mantiene.</p>
+                    <div class="row g-2">
+                        <div class="col-sm-5"><input type="text" id="seg-usuario-nuevo" class="form-control form-control-sm" placeholder="Nuevo usuario" maxlength="30" autocomplete="off"></div>
+                        <div class="col-sm-4"><input type="password" id="seg-usuario-pass" class="form-control form-control-sm" placeholder="Tu contraseña actual" autocomplete="current-password"></div>
+                        <div class="col-sm-3"><button class="btn btn-primary btn-sm fw-bold w-100" onclick="segCambiarUsuario()">Guardar</button></div>
+                    </div>
+                    <div id="seg-usuario-msg" class="alert d-none py-2 small mt-2 mb-0"></div>
+                </div>
+
+                <div id="seg-otro-box" class="d-none mt-3 p-3 border rounded bg-light">
+                    <h6 class="fw-bold mb-2"><i class="fa-solid fa-user-pen me-2"></i>Cambiar usuario de: <span id="seg-otro-nombre"></span></h6>
+                    <input type="hidden" id="seg-otro-id">
+                    <div class="row g-2">
+                        <div class="col-sm-5"><input type="text" id="seg-otro-nuevo" class="form-control form-control-sm" placeholder="Nuevo usuario" maxlength="30" autocomplete="off"></div>
+                        <div class="col-sm-4"><input type="password" id="seg-otro-pass" class="form-control form-control-sm" placeholder="Tu contraseña (superadmin)" autocomplete="current-password"></div>
+                        <div class="col-sm-3 d-flex gap-1">
+                            <button class="btn btn-primary btn-sm fw-bold flex-fill" onclick="segCambiarUsuarioOtro()">Guardar</button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('seg-otro-box').classList.add('d-none')">✕</button>
+                        </div>
+                    </div>
+                    <div id="seg-otro-msg" class="alert d-none py-2 small mt-2 mb-0"></div>
+                </div>
+
                 <div id="seg-cuentas-box" class="d-none mt-4">
                     <hr>
                     <h6 class="fw-bold"><i class="fa-solid fa-users-gear me-2"></i>Cuentas administradoras</h6>
@@ -4138,7 +4164,9 @@ function segMsg(texto, tipo) {
 function abrirModalSeguridad() {
     segMsg('');
     ['seg-activar-box', 'seg-qr-box', 'seg-desactivar-box', 'seg-cuentas-box', 'seg-email-box'].forEach(id => document.getElementById(id).classList.add('d-none'));
-    ['seg-email', 'seg-code', 'seg-code-off'].forEach(id => document.getElementById(id).value = '');
+    ['seg-email', 'seg-code', 'seg-code-off', 'seg-usuario-nuevo', 'seg-usuario-pass', 'seg-otro-nuevo', 'seg-otro-pass'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('seg-otro-box').classList.add('d-none');
+    ['seg-usuario-msg', 'seg-otro-msg'].forEach(id => document.getElementById(id).classList.add('d-none'));
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSeguridad')).show();
     cargarEstado2fa();
     if (userRole === 'superadmin') cargarCuentas2fa();
@@ -4225,9 +4253,67 @@ async function cargarCuentas2fa() {
                 <td>${_tfaEsc(c.role)}</td>
                 <td class="small">${_tfaEsc(c.email) || '<span class="text-muted">—</span>'}</td>
                 <td>${c.enabled ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-secondary">No</span>'}</td>
-                <td class="text-end">${c.enabled ? `<button class="btn btn-outline-danger btn-sm" onclick="reiniciar2fa(${Number(c.id)}, '${_tfaEsc(c.user).replace(/'/g, '')}')">Reiniciar 2FA</button>` : ''}</td>
+                <td class="text-end text-nowrap">
+                    <button class="btn btn-outline-primary btn-sm" onclick="segAbrirCambioOtro(${Number(c.id)}, '${_tfaEsc(c.user).replace(/'/g, '')}')">Cambiar usuario</button>
+                    ${c.enabled ? `<button class="btn btn-outline-danger btn-sm" onclick="reiniciar2fa(${Number(c.id)}, '${_tfaEsc(c.user).replace(/'/g, '')}')">Reiniciar 2FA</button>` : ''}</td>
             </tr>`).join('');
     } catch (e) {}
+}
+
+// ---- Cambio de nombre de usuario ----
+function _segMsgEn(id, texto, tipo) {
+    const el = document.getElementById(id);
+    el.className = 'alert py-2 small mt-2 mb-0 alert-' + (tipo || 'info') + (texto ? '' : ' d-none');
+    el.textContent = texto || '';
+}
+
+async function segCambiarUsuario() {
+    const usuarioNuevo = document.getElementById('seg-usuario-nuevo').value.trim();
+    const passwordActual = document.getElementById('seg-usuario-pass').value;
+    if (!usuarioNuevo || !passwordActual) { _segMsgEn('seg-usuario-msg', 'Completa los dos campos.', 'danger'); return; }
+    try {
+        const r = await tfaLlamar('/api/usuario/cambiar-usuario', { usuarioNuevo, passwordActual }, localStorage.getItem('token'), 'PUT');
+        if (r.ok && r.data.success) {
+            alert('✅ Usuario actualizado.\n\nAhora inicia sesión con tu nuevo usuario: ' + usuarioNuevo);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSeguridad')).hide();
+            cerrarSesion();
+        } else {
+            _segMsgEn('seg-usuario-msg', r.data.message || 'No se pudo cambiar el usuario.', 'danger');
+        }
+    } catch (e) { _segMsgEn('seg-usuario-msg', 'Error de conexión.', 'danger'); }
+}
+
+function segAbrirCambioOtro(id, usuario) {
+    document.getElementById('seg-otro-id').value = id;
+    document.getElementById('seg-otro-nombre').textContent = usuario;
+    document.getElementById('seg-otro-nuevo').value = '';
+    document.getElementById('seg-otro-pass').value = '';
+    _segMsgEn('seg-otro-msg', '');
+    document.getElementById('seg-otro-box').classList.remove('d-none');
+    document.getElementById('seg-otro-nuevo').focus();
+}
+
+async function segCambiarUsuarioOtro() {
+    const id = document.getElementById('seg-otro-id').value;
+    const usuarioNuevo = document.getElementById('seg-otro-nuevo').value.trim();
+    const passwordActual = document.getElementById('seg-otro-pass').value;
+    if (!usuarioNuevo || !passwordActual) { _segMsgEn('seg-otro-msg', 'Completa los dos campos.', 'danger'); return; }
+    try {
+        const r = await tfaLlamar('/api/usuarios/' + encodeURIComponent(id) + '/cambiar-usuario', { usuarioNuevo, passwordActual }, localStorage.getItem('token'), 'PUT');
+        if (r.ok && r.data.success) {
+            if (r.data.esPropia) {
+                alert('✅ Usuario actualizado.\n\nInicia sesión con tu nuevo usuario: ' + usuarioNuevo);
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSeguridad')).hide();
+                cerrarSesion();
+                return;
+            }
+            document.getElementById('seg-otro-box').classList.add('d-none');
+            segMsg('✅ Usuario actualizado a "' + usuarioNuevo + '". La próxima vez esa persona debe entrar con ese nombre.', 'success');
+            cargarCuentas2fa();
+        } else {
+            _segMsgEn('seg-otro-msg', r.data.message || 'No se pudo cambiar el usuario.', 'danger');
+        }
+    } catch (e) { _segMsgEn('seg-otro-msg', 'Error de conexión.', 'danger'); }
 }
 
 async function reiniciar2fa(id, usuario) {

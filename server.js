@@ -207,6 +207,105 @@ app.put('/api/usuario/cambiar-password', verificarToken, async (req, res) => {
 });
 
 // ============================================================
+// Cambio de nombre de usuario (solo admin / superadmin)
+//   PUT /api/usuario/cambiar-usuario        -> la propia cuenta (pide contraseña actual)
+//   PUT /api/usuarios/:id/cambiar-usuario   -> el superadmin cambia el de un admin/superadmin
+// Tras el cambio hay que volver a iniciar sesión (el token lleva el nombre anterior).
+// ============================================================
+const REGEX_USUARIO = /^[A-Za-z0-9._@-]{4,30}$/;
+const MSG_USUARIO_FORMATO = 'El usuario debe tener entre 4 y 30 caracteres: letras, números, punto, guion o @ (sin espacios).';
+const MSG_USUARIO_OCUPADO = 'Ese nombre de usuario no está disponible.';
+
+function dbq(sql, params) {
+    return new Promise((resolve, reject) =>
+        db.query(sql, params || [], (e, r) => (e ? reject(e) : resolve(r))));
+}
+
+async function aplicarCambioUsuario(idCuenta, usuarioNuevo) {
+    const otro = await dbq('SELECT id FROM usuarios WHERE user = ? AND id <> ?', [usuarioNuevo, idCuenta]);
+    if (otro.length) return { ok: false, status: 409, message: MSG_USUARIO_OCUPADO };
+    try {
+        await dbq('UPDATE usuarios SET user = ? WHERE id = ?', [usuarioNuevo, idCuenta]);
+    } catch (e) {
+        if (e && e.code === 'ER_DUP_ENTRY') return { ok: false, status: 409, message: MSG_USUARIO_OCUPADO };
+        throw e;
+    }
+    return { ok: true };
+}
+
+app.put('/api/usuario/cambiar-usuario', verificarToken, async (req, res) => {
+    try {
+        if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin') {
+            return res.status(403).json({ success: false, message: 'Acceso denegado.' });
+        }
+        const passwordActual = String(req.body.passwordActual || '');
+        const usuarioNuevo   = String(req.body.usuarioNuevo || '').trim();
+        if (!passwordActual || !usuarioNuevo) {
+            return res.status(400).json({ success: false, message: 'Completa todos los campos.' });
+        }
+        if (!REGEX_USUARIO.test(usuarioNuevo)) {
+            return res.status(400).json({ success: false, message: MSG_USUARIO_FORMATO });
+        }
+        const filas = await dbq('SELECT * FROM usuarios WHERE user = ?', [req.usuario.user]);
+        if (!filas.length) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+        const cuenta = filas[0];
+        if (!(await bcrypt.compare(passwordActual, cuenta.pass))) {
+            return res.status(401).json({ success: false, message: 'La contraseña actual es incorrecta.' });
+        }
+        if (usuarioNuevo === cuenta.user) {
+            return res.status(400).json({ success: false, message: 'Ese ya es tu nombre de usuario.' });
+        }
+        const r = await aplicarCambioUsuario(cuenta.id, usuarioNuevo);
+        if (!r.ok) return res.status(r.status).json({ success: false, message: r.message });
+        console.log(`[USUARIO] ${new Date().toISOString()} — "${cuenta.user}" cambió su usuario a "${usuarioNuevo}".`);
+        res.json({ success: true, message: 'Usuario actualizado. Inicia sesión con el nuevo nombre.' });
+    } catch (e) {
+        console.error('Error cambiar-usuario:', e);
+        res.status(500).json({ success: false, message: 'Error del servidor.' });
+    }
+});
+
+app.put('/api/usuarios/:id/cambiar-usuario', verificarToken, async (req, res) => {
+    try {
+        if (req.usuario.role !== 'superadmin') {
+            return res.status(403).json({ success: false, message: 'Acceso denegado.' });
+        }
+        const id             = parseInt(req.params.id);
+        const passwordActual = String(req.body.passwordActual || '');
+        const usuarioNuevo   = String(req.body.usuarioNuevo || '').trim();
+        if (!id || !passwordActual || !usuarioNuevo) {
+            return res.status(400).json({ success: false, message: 'Completa todos los campos.' });
+        }
+        if (!REGEX_USUARIO.test(usuarioNuevo)) {
+            return res.status(400).json({ success: false, message: MSG_USUARIO_FORMATO });
+        }
+        // Confirmación con la contraseña del propio superadmin
+        const yo = await dbq('SELECT * FROM usuarios WHERE user = ?', [req.usuario.user]);
+        if (!yo.length || !(await bcrypt.compare(passwordActual, yo[0].pass))) {
+            return res.status(401).json({ success: false, message: 'Tu contraseña es incorrecta.' });
+        }
+        const objetivo = await dbq('SELECT id, user, role FROM usuarios WHERE id = ?', [id]);
+        if (!objetivo.length || !['admin', 'superadmin'].includes(objetivo[0].role)) {
+            return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+        }
+        if (usuarioNuevo === objetivo[0].user) {
+            return res.status(400).json({ success: false, message: 'Ese ya es su nombre de usuario.' });
+        }
+        const r = await aplicarCambioUsuario(id, usuarioNuevo);
+        if (!r.ok) return res.status(r.status).json({ success: false, message: r.message });
+        console.log(`[USUARIO] ${new Date().toISOString()} — ${req.usuario.user} cambió el usuario de "${objetivo[0].user}" a "${usuarioNuevo}" (id ${id}).`);
+        res.json({
+            success: true,
+            esPropia: objetivo[0].user === req.usuario.user,
+            message: 'Usuario actualizado.'
+        });
+    } catch (e) {
+        console.error('Error cambiar-usuario (superadmin):', e);
+        res.status(500).json({ success: false, message: 'Error del servidor.' });
+    }
+});
+
+// ============================================================
 // POST /api/usuario/recuperar-password
 // Envía un enlace de restablecimiento al correo registrado.
 // ============================================================
