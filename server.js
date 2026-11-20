@@ -144,7 +144,12 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         const cuenta = results[0];
         const passValida = await bcrypt.compare(pass, cuenta.pass);
 
-        if (!passValida) {
+        // Las cuentas de docentes (rol 'user') no se usan: las boletas las envía el admin por
+        // WhatsApp. Se bloquea su ingreso con el mismo mensaje genérico. Para reabrir el portal
+        // de docentes, definir PERMITIR_LOGIN_DOCENTES=1 en las variables de entorno.
+        const docenteBloqueado = cuenta.role === 'user' && process.env.PERMITIR_LOGIN_DOCENTES !== '1';
+
+        if (!passValida || docenteBloqueado) {
             return res.status(401).json({ success: false, message: 'Usuario o contraseña incorrectos.' });
         }
 
