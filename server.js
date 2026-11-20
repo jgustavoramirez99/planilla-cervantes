@@ -441,6 +441,60 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 });
 
 // ============================================================
+// GET /api/reportes/anual?anio=2026 — Datos para el Excel "Reporte anual"
+// Solo admin/superadmin. Una fila por docente y mes, con los mismos conceptos
+// (y las mismas sumas manual + deudas) que usa /api/docentes.
+// ============================================================
+app.get('/api/reportes/anual', verificarToken, (req, res) => {
+    if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
+        return res.status(403).json({ error: 'Acceso denegado.' });
+
+    const anio = parseInt(req.query.anio) || ANIO_ACTUAL;
+    if (anio < 2020 || anio > 2100) return res.status(400).json({ error: 'Año no válido.' });
+
+    // Meses "vigentes" sin registro aún: solo en el año en curso y hasta el mes actual
+    const mesMax = (anio === ANIO_ACTUAL) ? (new Date().getMonth() + 1) : 0;
+
+    const sql = `
+        SELECT d.id_docente, d.nombre, d.dni, d.activo,
+               d.sb_fijo AS sueldo_base, m.mes,
+               IFNULL(p.pagado, d.pagado_fijo)   AS pagado,
+               (p.id_planilla IS NOT NULL)       AS tiene_registro,
+               IFNULL(p.tipo_afp,   'AFP')       AS tipo_afp,
+               IFNULL(p.tipo_salud, 'ESSALUD')   AS tipo_salud,
+               (IFNULL(p.adelantos,0) + IFNULL(p.adelantos_deuda,0)) AS adelantos,
+               IFNULL(p.faltas, 0)               AS faltas,
+               (IFNULL(p.pension,0) + IFNULL(p.pension_deuda,0))     AS pension,
+               (IFNULL(p.tardanza,0) + IFNULL(p.tardanza_deuda,0))   AS tardanza,
+               IFNULL(p.bono, 0)                 AS bono,
+               IFNULL(p.otros_descuentos, 0)     AS otros_descuentos,
+               IFNULL(p.otros_desc_detalle, '')  AS otros_desc_detalle,
+               IFNULL(p.creditos, 0)             AS creditos,
+               (IFNULL(p.prestamos,0) + IFNULL(p.prestamos_deuda,0)) AS prestamos,
+               IFNULL(p.desmrito_monto, 0)       AS desmrito_monto,
+               IFNULL(p.actividades, 0)          AS actividades
+        FROM docentes d
+        CROSS JOIN (SELECT 1 AS mes UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+                    UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8
+                    UNION ALL SELECT 9 UNION ALL SELECT 10 UNION ALL SELECT 11 UNION ALL SELECT 12) m
+        LEFT JOIN planillas p
+               ON p.id_docente = d.id_docente AND p.mes = m.mes AND p.anio = ?
+        LEFT JOIN docentes_mes dm
+               ON dm.id_docente = d.id_docente AND dm.mes = m.mes AND dm.anio = ?
+        WHERE IFNULL(dm.incluido, 1) = 1
+          AND (p.id_planilla IS NOT NULL OR (d.activo = 1 AND m.mes <= ?))
+        ORDER BY d.nombre, m.mes`;
+
+    db.query(sql, [anio, anio, mesMax], (err, rows) => {
+        if (err) {
+            console.error('Error en /api/reportes/anual:', err);
+            return res.status(500).json({ error: 'No se pudo generar el reporte.' });
+        }
+        res.json({ anio, filas: rows });
+    });
+});
+
+// ============================================================
 // PUT /api/docentes/:id
 // ============================================================
 app.put('/api/docentes/:id', verificarToken, (req, res) => {

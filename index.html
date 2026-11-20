@@ -395,6 +395,14 @@
                     <button class="btn btn-success btn-sm fw-bold shadow-sm me-2" onclick="descargarExcel()">
                         <i class="fa-solid fa-file-excel me-1"></i> Descargar Excel
                     </button>
+                    <select id="reporte-anio" class="form-select form-select-sm d-inline-block w-auto me-1" style="vertical-align:middle;" title="Año del reporte anual">
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                    <button id="btn-reporte-anual" class="btn btn-outline-success btn-sm fw-bold shadow-sm me-2" onclick="descargarReporteAnual()">
+                        <i class="fa-solid fa-chart-column me-1"></i> Reporte anual
+                    </button>
                     <button class="btn btn-outline-danger btn-sm fw-bold shadow-sm" onclick="limpiarMesPrueba()">
                         <i class="fa-solid fa-trash me-1"></i> Limpiar Mes
                     </button>
@@ -2473,6 +2481,251 @@ async function pdConfirmar() {
         alert('❌ Error de conexión');
     }
 }
+// ============================================================
+// REPORTE ANUAL — Excel con hoja 1 de resumen y una hoja por mes
+// ============================================================
+function _r2(v) { return Math.round((Number(v) || 0) * 100) / 100; }
+
+function _calcFilaReporte(r) {
+    const n = v => Number(v) || 0;
+    const vacio = { reg: false, pagado: 0, bono: 0, afp: 0, adel: 0, cred: 0, prest: 0, pens: 0,
+                    faltas: 0, tard: 0, desm: 0, activ: 0, unif: 0, total: 0, neto: 0, pagadoSi: false };
+    if (Number(r.tiene_registro) !== 1) return vacio;
+
+    const PCT    = { ONP: 0.13, Habitat: 0.1284, Integra: 0.1292, Prima: 0.1297, Profuturo: 0.1306 };
+    const pagado = n(r.pagado);
+    const tipo   = r.tipo_afp || 'AFP';
+    const afp    = (pagado === 0 || tipo === 'NINGUNO') ? 0 : _r2(n(r.sueldo_base) * (PCT[tipo] || 0.13));
+
+    // Igual que el Excel de la planilla: los gastos tipo EVENTOS van en Actividades, no en Unif./Deudas
+    const otrosTot = n(r.otros_descuentos);
+    let eventos = 0;
+    try {
+        const det = JSON.parse(r.otros_desc_detalle || '[]');
+        if (Array.isArray(det)) det.forEach(it => {
+            if (String(it.tipo || '').trim().toUpperCase() === 'EVENTOS') eventos += n(it.monto);
+        });
+    } catch (e) { /* detalle antiguo en texto plano */ }
+    eventos = _r2(Math.min(eventos, otrosTot));
+
+    const f = {
+        reg: true, pagado, bono: n(r.bono), afp,
+        adel: n(r.adelantos), cred: n(r.creditos), prest: n(r.prestamos), pens: n(r.pension),
+        faltas: n(r.faltas), tard: n(r.tardanza), desm: n(r.desmrito_monto),
+        activ: _r2(n(r.actividades) + eventos), unif: _r2(otrosTot - eventos)
+    };
+    f.total    = _r2(f.afp + f.adel + f.cred + f.prest + f.pens + f.faltas + f.tard + f.desm + f.activ + f.unif);
+    f.neto     = pagado === 0 ? 0 : _r2(pagado + f.bono - f.total);
+    f.pagadoSi = pagado > 0;
+    return f;
+}
+
+async function descargarReporteAnual() {
+    if (userRole !== 'admin' && userRole !== 'superadmin') return;
+    const sel  = document.getElementById('reporte-anio');
+    const anio = sel ? parseInt(sel.value) : new Date().getFullYear();
+    const btn  = document.getElementById('btn-reporte-anual');
+    if (btn) btn.disabled = true;
+    try {
+        const res  = await fetch(`${SERVER_BASE}/api/reportes/anual?anio=${anio}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await res.json();
+        if (!res.ok) { alert('❌ ' + (data.error || 'No se pudo generar el reporte.')); return; }
+        if (!data.filas || !data.filas.length) { alert('No hay datos registrados en ' + anio + '.'); return; }
+        const hecho = await _armarReporteAnual(anio, data.filas);
+        if (!hecho) alert('No hay pagos registrados en ' + anio + '.');
+    } catch (e) {
+        console.error(e);
+        alert('❌ No se pudo generar el reporte.');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function _armarReporteAnual(anio, filas) {
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const MES3  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+
+    // Agrupar por docente: { nombre, meses: { 1: fila, 2: fila, ... } }
+    const mapa = new Map();
+    filas.forEach(r => {
+        if (!mapa.has(r.id_docente)) mapa.set(r.id_docente, { nombre: r.nombre || '', meses: {} });
+        mapa.get(r.id_docente).meses[r.mes] = _calcFilaReporte(r);
+    });
+    const lista = [...mapa.values()]
+        .filter(d => Object.values(d.meses).some(f => f.reg))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    if (!lista.length) return false;
+
+    // Conteos por mes: docentes con registro y docentes pagados
+    const regMes = Array(12).fill(0), pagadosMes = Array(12).fill(0);
+    lista.forEach(d => { for (let m = 1; m <= 12; m++) {
+        const f = d.meses[m];
+        if (f && f.reg) regMes[m - 1]++;
+        if (f && f.pagadoSi) pagadosMes[m - 1]++;
+    } });
+    const pagadosAnio = lista.filter(d => Object.values(d.meses).some(f => f.pagadoSi)).length;
+
+    // ---------- estilos ----------
+    const AZUL = 'FF1F3864', VERDE = 'FFD5F5E3', CELESTE = 'FFDDEBF7', GRIS = 'FFF2F2F2', AMARILLO = 'FFFFF2CC';
+    const MONEDA = '#,##0.00;[Red]-#,##0.00;"–"';
+    const lado   = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+    const borde  = { top: lado, left: lado, bottom: lado, right: lado };
+    const fill   = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+    const header = cell => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        cell.fill = fill(AZUL);
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = borde;
+    };
+    const celda = (cell, { izq = false, negrita = false, fondo = null, fmt = MONEDA } = {}) => {
+        cell.border = borde;
+        cell.alignment = { horizontal: izq ? 'left' : 'center', vertical: 'middle' };
+        if (negrita) cell.font = { bold: true };
+        if (fondo)   cell.fill = fill(fondo);
+        if (!izq)    cell.numFmt = fmt;
+    };
+    const titulo = (ws, fila, texto, hasta) => {
+        ws.mergeCells(fila, 1, fila, hasta);
+        const c = ws.getCell(fila, 1);
+        c.value = texto;
+        c.font = { bold: true, size: 14, color: { argb: AZUL } };
+        c.alignment = { horizontal: 'left', vertical: 'middle' };
+    };
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Sistema de Planillas Cervantes';
+
+    // ==================== HOJA 1: RESUMEN ====================
+    const ws1 = wb.addWorksheet('Resumen ' + anio);
+    const NC1 = 14;
+    ws1.columns = [{ width: 34 }].concat(Array(12).fill({ width: 11 })).concat([{ width: 15 }]);
+    titulo(ws1, 1, `REPORTE ANUAL ${anio} — CERVANTES SCHOOL`, NC1);
+    let r = 3;
+
+    const bloque = (tituloBloque, getVal, conConteo) => {
+        ws1.mergeCells(r, 1, r, NC1);
+        const t = ws1.getCell(r, 1);
+        t.value = tituloBloque;
+        t.font  = { bold: true, color: { argb: AZUL } };
+        t.fill  = fill(CELESTE);
+        r++;
+        ['Docente'].concat(MES3, ['Total año']).forEach((txt, i) => { const c = ws1.getCell(r, i + 1); c.value = txt; header(c); });
+        r++;
+        const totMes = Array(12).fill(0);
+        lista.forEach((d, idx) => {
+            const fondo = idx % 2 === 0 ? null : GRIS;
+            ws1.getCell(r, 1).value = d.nombre;
+            celda(ws1.getCell(r, 1), { izq: true, negrita: true, fondo });
+            let totAnio = 0;
+            for (let m = 1; m <= 12; m++) {
+                const f = d.meses[m], c = ws1.getCell(r, m + 1);
+                if (f && f.reg) { const v = getVal(f); c.value = v; totAnio += v; totMes[m - 1] += v; }
+                else c.value = '—';
+                celda(c, { fondo });
+            }
+            const ct = ws1.getCell(r, NC1);
+            ct.value = _r2(totAnio);
+            celda(ct, { negrita: true, fondo });
+            r++;
+        });
+        // Total del mes
+        ws1.getCell(r, 1).value = 'TOTAL DEL MES';
+        celda(ws1.getCell(r, 1), { izq: true, negrita: true, fondo: VERDE });
+        let granTotal = 0;
+        for (let m = 1; m <= 12; m++) {
+            const c = ws1.getCell(r, m + 1);
+            c.value = regMes[m - 1] ? _r2(totMes[m - 1]) : '—';
+            granTotal += totMes[m - 1];
+            celda(c, { negrita: true, fondo: VERDE });
+        }
+        const cg = ws1.getCell(r, NC1);
+        cg.value = _r2(granTotal);
+        celda(cg, { negrita: true, fondo: VERDE });
+        r++;
+        // Cantidad de docentes pagados
+        if (conConteo) {
+            ws1.getCell(r, 1).value = 'DOCENTES PAGADOS';
+            celda(ws1.getCell(r, 1), { izq: true, negrita: true, fondo: AMARILLO });
+            for (let m = 1; m <= 12; m++) {
+                const c = ws1.getCell(r, m + 1);
+                c.value = regMes[m - 1] ? pagadosMes[m - 1] : '—';
+                celda(c, { negrita: true, fondo: AMARILLO, fmt: '0' });
+            }
+            const cp = ws1.getCell(r, NC1);
+            cp.value = pagadosAnio;
+            celda(cp, { negrita: true, fondo: AMARILLO, fmt: '0' });
+            r++;
+        }
+        r++; // fila en blanco
+    };
+
+    bloque('TOTAL DE DESCUENTOS POR DOCENTE Y MES (S/) — incluye AFP/ONP', f => f.total, true);
+    bloque('NETO A PAGAR POR DOCENTE Y MES (S/)', f => f.neto, false);
+    ws1.getCell(r, 1).value = 'En "Docentes pagados" el último valor es la cantidad de docentes distintos que recibieron algún pago en el año.';
+    ws1.getCell(r, 1).font = { italic: true, size: 9, color: { argb: 'FF7F7F7F' } };
+    ws1.views = [{ state: 'frozen', xSplit: 1, ySplit: 0 }];
+
+    // ==================== HOJAS 2-13: UNA POR MES ====================
+    const COLS = [
+        ['Docente', 34], ['Pagado', 12], ['Bono', 10], ['AFP / ONP', 12], ['Adelantos', 12], ['Créditos', 12],
+        ['Préstamos', 12], ['Pensión', 12], ['Faltas', 11], ['Tardanzas', 12], ['Desmérito', 12],
+        ['Actividades', 12], ['Unif. / Deudas', 14], ['Total descuentos', 15], ['Neto a pagar', 14]
+    ];
+    const CLAVES = ['pagado','bono','afp','adel','cred','prest','pens','faltas','tard','desm','activ','unif','total','neto'];
+
+    MESES.forEach((nombreMes, i) => {
+        const m  = i + 1;
+        const ws = wb.addWorksheet(nombreMes);
+        ws.columns = COLS.map(c => ({ width: c[1] }));
+        titulo(ws, 1, `${nombreMes.toUpperCase()} ${anio} — DESCUENTOS Y PAGOS POR DOCENTE`, COLS.length);
+        COLS.forEach((c, k) => { const h = ws.getCell(3, k + 1); h.value = c[0]; header(h); });
+        ws.getRow(3).height = 30;
+        ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 3 }];
+
+        const filasMes = lista.map(d => ({ nombre: d.nombre, f: d.meses[m] })).filter(x => x.f);
+        if (!regMes[i]) {
+            ws.mergeCells(4, 1, 4, COLS.length);
+            const n = ws.getCell(4, 1);
+            n.value = 'Sin registros este mes.';
+            n.font  = { italic: true, color: { argb: 'FF7F7F7F' } };
+            return;
+        }
+        let fila = 4;
+        const tot = {};
+        CLAVES.forEach(k => tot[k] = 0);
+        filasMes.forEach((x, idx) => {
+            const fondo = idx % 2 === 0 ? null : GRIS;
+            ws.getCell(fila, 1).value = x.nombre;
+            celda(ws.getCell(fila, 1), { izq: true, negrita: true, fondo });
+            CLAVES.forEach((k, j) => {
+                const c = ws.getCell(fila, j + 2);
+                if (x.f.reg) { c.value = x.f[k]; tot[k] += x.f[k]; } else { c.value = '—'; }
+                celda(c, { negrita: k === 'total' || k === 'neto', fondo: (k === 'total' || k === 'neto') && x.f.reg ? VERDE : fondo });
+            });
+            fila++;
+        });
+        ws.getCell(fila, 1).value = 'TOTALES';
+        celda(ws.getCell(fila, 1), { izq: true, negrita: true, fondo: VERDE });
+        CLAVES.forEach((k, j) => { const c = ws.getCell(fila, j + 2); c.value = _r2(tot[k]); celda(c, { negrita: true, fondo: VERDE }); });
+        fila++;
+        ws.getCell(fila, 1).value = 'DOCENTES PAGADOS';
+        celda(ws.getCell(fila, 1), { izq: true, negrita: true, fondo: AMARILLO });
+        const cp = ws.getCell(fila, 2);
+        cp.value = pagadosMes[i];
+        celda(cp, { negrita: true, fondo: AMARILLO, fmt: '0' });
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link   = document.createElement('a');
+    link.href     = URL.createObjectURL(blob);
+    link.download = `Reporte_anual_${anio}.xlsx`;
+    link.click();
+    return true;
+}
+
 async function descargarExcel() {
     if (userRole !== 'admin' && userRole !== 'superadmin') return;
     if (!docentesData.length) { 
