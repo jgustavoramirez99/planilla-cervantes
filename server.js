@@ -6,7 +6,10 @@ const fs         = require('fs');
 const jwt        = require('jsonwebtoken');
 const bcrypt     = require('bcryptjs');
 const nodemailer = require('nodemailer');
-const ANIO_ACTUAL = new Date().getFullYear(); // ← NUEVO
+// Año calendario de HOY (se calcula en cada uso, no al arrancar el servidor)
+const anioHoy = () => new Date().getFullYear();
+// Año pedido por el cliente (selector de año del panel); si no es válido, el año de hoy
+const anioDe = (v) => { const a = parseInt(v); return (a >= 2020 && a <= 2100) ? a : anioHoy(); };
 require('dotenv').config();
 
 const app        = express();
@@ -469,6 +472,7 @@ app.put('/api/personal/:id', verificarToken, async (req, res) => {
 // ============================================================
 app.get('/api/docentes', verificarToken, (req, res) => {
     const mes  = parseInt(req.query.mes) || 5;
+    const anio = anioDe(req.query.anio);
     const role = req.usuario.role || '';
 
     let sql = `
@@ -509,15 +513,15 @@ app.get('/api/docentes', verificarToken, (req, res) => {
         LEFT JOIN planillas p
                ON d.id_docente = p.id_docente
               AND p.mes  = ?
-              AND p.anio = ${ANIO_ACTUAL}
+              AND p.anio = ?
         LEFT JOIN docentes_mes dm
                ON d.id_docente = dm.id_docente
               AND dm.mes  = ?
-              AND dm.anio = ${ANIO_ACTUAL}
+              AND dm.anio = ?
         WHERE d.activo = 1
           AND IFNULL(dm.incluido, 1) = 1`;
 
-    const params = [mes, mes];
+    const params = [mes, anio, mes, anio];
 
     const dniUsuario = req.usuario.dni || '';
     if (role === 'user' && dniUsuario) {
@@ -548,11 +552,11 @@ app.get('/api/reportes/anual', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
 
-    const anio = parseInt(req.query.anio) || ANIO_ACTUAL;
+    const anio = parseInt(req.query.anio) || anioHoy();
     if (anio < 2020 || anio > 2100) return res.status(400).json({ error: 'Año no válido.' });
 
     // Meses "vigentes" sin registro aún: solo en el año en curso y hasta el mes actual
-    const mesMax = (anio === ANIO_ACTUAL) ? (new Date().getMonth() + 1) : 0;
+    const mesMax = (anio === anioHoy()) ? (new Date().getMonth() + 1) : 0;
 
     const sql = `
         SELECT d.id_docente, d.nombre, d.dni, d.activo,
@@ -600,8 +604,9 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
     if (req.usuario.role !== 'admin' && req.usuario.role !== 'superadmin')
         return res.status(403).json({ error: 'Acceso denegado.' });
 
-    const id  = parseInt(req.params.id);
-    const mes = parseInt(req.body.mes) || 5;
+    const id   = parseInt(req.params.id);
+    const mes  = parseInt(req.body.mes) || 5;
+    const anio = anioDe(req.body.anio);
 
     const {
         sueldo_base, pagado, afp,
@@ -633,7 +638,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
             (id_docente, mes, anio, pagado, afp, adelantos, faltas, pension, tardanza, bono,
              tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
              otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades)
-        VALUES (?, ?, ${ANIO_ACTUAL}, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             pagado           = VALUES(pagado),
             afp              = VALUES(afp),
@@ -656,7 +661,7 @@ app.put('/api/docentes/:id', verificarToken, (req, res) => {
 
     db.query(
         sqlUpsert,
-        [id, mes, pagado||0, afp||null, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
+        [id, mes, anio, pagado||0, afp||null, adelantos||0, faltas||0, pension||0, tardanza||0, bono||0,
          tipo_salud||'ESSALUD', creditos||0, prestamos||0,
          desmrito_nivel||'', desmrito_monto||0, consolidado,
          otros_descuentos||0, otros_desc_detalle||'', num_faltas||0, num_tardanzas||0, actividades||0],
@@ -678,7 +683,7 @@ app.put('/api/docentes/:id/pago-color', verificarToken, (req, res) => {
     const { color, mes } = req.body;
     db.query(
         'UPDATE planillas SET pago_color = ? WHERE id_docente = ? AND mes = ? AND anio = ?',
-        [color, id, mes, ANIO_ACTUAL],
+        [color, id, mes, anioDe(req.body.anio)],
         (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ success: true });
@@ -785,7 +790,7 @@ app.post('/api/docentes', verificarToken, (req, res) => {
             // Excluir explícitamente al docente nuevo de los meses ya pasados
             const filas = [];
             for (let m = 1; m < mesActual; m++) {
-                filas.push([nuevoId, m, ANIO_ACTUAL, 0]);
+                filas.push([nuevoId, m, anioHoy(), 0]);
             }
 
             if (filas.length === 0) {
@@ -881,7 +886,7 @@ app.delete('/api/planillas/limpiar', verificarToken, (req, res) => {
     // Borrar solo las planillas del mes seleccionado
     // pagado y afp ya viven en planillas, asi que con borrar la fila es suficiente
     db.query(
-        'DELETE FROM planillas WHERE mes = ? AND anio = ?', [mes, ANIO_ACTUAL],
+        'DELETE FROM planillas WHERE mes = ? AND anio = ?', [mes, anioDe(req.query.anio)],
         (err, result) => {
             if (err) return res.status(500).json({ error: err.message });
             // También resetear sueldo_base y actividades en docentes
@@ -1302,7 +1307,7 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
 
             db.query(
                 `SELECT id_docente FROM planillas WHERE id_docente = ? AND mes = ? AND anio = ?`,
-                [id_docente, mes, ANIO_ACTUAL],
+                [id_docente, mes, anio],
                 (errSel, rows) => {
                     if (errSel) return cb(errSel);
 
@@ -1315,7 +1320,7 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
                              SET otros_descuentos = ?, otros_desc_detalle = ?,
                                  adelantos_deuda = ?, prestamos_deuda = ?, pension_deuda = ?, tardanza_deuda = ?
                              WHERE id_docente = ? AND mes = ? AND anio = ?`,
-                            [total, detalleJSON, adelantosDeuda, prestamosDeuda, pensionDeuda, tardanzaDeuda, id_docente, mes, ANIO_ACTUAL],
+                            [total, detalleJSON, adelantosDeuda, prestamosDeuda, pensionDeuda, tardanzaDeuda, id_docente, mes, anio],
                             cb
                         );
                     } else {
@@ -1337,11 +1342,11 @@ function empujarDeudaAPlanilla(id_docente, mes, anio, cb) {
                                  tipo_salud, creditos, prestamos, desmrito_nivel, desmrito_monto, consolidado_bcp,
                                  otros_descuentos, otros_desc_detalle, num_faltas, num_tardanzas, actividades,
                                  adelantos_deuda, prestamos_deuda, pension_deuda, tardanza_deuda)
-                             VALUES (?, ?, ${ANIO_ACTUAL}, NULL, NULL, 0, 0, 0, 0, 0,
+                             VALUES (?, ?, ?, NULL, NULL, 0, 0, 0, 0, 0,
                                      'ESSALUD', 0, 0, '', 0, 0,
                                      ?, ?, 0, 0, 0,
                                      ?, ?, ?, ?)`,
-                            [id_docente, mes, total, detalleJSON, adelantosDeuda, prestamosDeuda, pensionDeuda, tardanzaDeuda],
+                            [id_docente, mes, anio, total, detalleJSON, adelantosDeuda, prestamosDeuda, pensionDeuda, tardanzaDeuda],
                             cb
                         );
                     }
