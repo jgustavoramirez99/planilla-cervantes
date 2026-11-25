@@ -477,7 +477,7 @@ app.get('/api/docentes', verificarToken, (req, res) => {
 
     let sql = `
         SELECT d.*,
-               IFNULL(p.pagado,      d.pagado_fijo)   AS pagado,
+               IFNULL(p.pagado,      ${anio > anioHoy() ? '0' : 'd.pagado_fijo'})   AS pagado,
                d.sb_fijo                              AS sueldo_base,
                IFNULL(p.afp,                NULL)          AS afp,
                (IFNULL(p.adelantos,0) + IFNULL(p.adelantos_deuda,0)) AS adelantos,
